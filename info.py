@@ -15,11 +15,17 @@ def list_files_recursive(dir_path, remove=""):
                 total_size += file_size
                 file_size = convert_bytes(file_size)
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    if file_path.rsplit(".", 1)[1] in {
-                        "txt", "py", "dpl", "c", "cfg"
+                    if (EXT:=file_path.rsplit(".", 1)[1]) in {
+                        "txt", "py", "dpl", "cfg", "c"
                     }:
                         head = "Head:\n"
-                        while (temp:=f.readline().lstrip()).startswith("#"):
+                        while (temp:=f.readline().lstrip()).startswith({
+                                "py":"#",
+                                "txt":"#",
+                                "dpl":"#",
+                                "cfg":"#",
+                                "c":"//"
+                            }[EXT]):
                             head += "    " + temp
                         head = head.strip()
                         f.seek(0)
@@ -30,6 +36,8 @@ def list_files_recursive(dir_path, remove=""):
                         head = "[Head Not Available]"
                         line_count = "[Line Count Not Available]"
                     t_files += 1
+                if len(head.strip()) == 5:
+                    head = "[Head Not Available]"
                 print(f"{file_path.replace(remove, '')}:\n  {head}\n  Size: {file_size[0]:,.4f} {file_size[1]}\n  Lines: {line_count}")
             except (OSError, IOError) as e:
                 print(f"Could not read file {file_path}: {e}")

@@ -85,9 +85,9 @@ def parse_config(code, format=None):
                 set_val(data, name, {})
         else:
             ins, op, value = line.split(maxsplit=2)
-            if argproc.is_int_traditional(value):
+            if argproc.is_int(value):
                 value = int(value)
-            elif argproc.is_float_traditional(value):
+            elif argproc.is_float(value):
                 value = float(value)
             elif value == "@list":
                 value = []
@@ -99,6 +99,12 @@ def parse_config(code, format=None):
                 value = ""
             if op == "=":
                 set_val(data, (name+"." if name is not None else "")+ins, value)
+            elif op == "append":
+                temp = get_val(data,  (name+"." if name is not None else "")+ins)
+                if temp is not None:
+                    temp.append(value)
+                else:
+                    set_val(data,  (name+"." if name is not None else "")+ins, [value])
             else:
                 pass
     return data
@@ -109,5 +115,8 @@ def test():
         ARGV = @list
         ARGC = 0
         [meta.internal]
-        
+        search_paths = @list
+        end
+        meta.internal.search_paths append "okay"
+        meta.internal.search_paths append "okay"
     """))

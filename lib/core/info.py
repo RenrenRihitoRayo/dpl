@@ -8,8 +8,9 @@ ARGC = len(ARGV)
 
 INC = {
     "fn", "method",
-    "for", "loop",
-    "if"
+    "for", "loop", "while",
+    "if", "if-then",
+    "thread"
 }
 
 DEC = {
@@ -20,17 +21,21 @@ CHARS = {
     "\\\\":"\\[escape]",
     "\\n":"\n",
     "\\t":"\t",
-    "\\s":"\s",
+    "\\s":" ",
     "\\v":"\v",
     "\\f":"\f",
     "\\r":"\r",
+    "\\a":"\a",
+    "\\0":"\0",
     "\\[win_nl]":"\r\n",
-    "\\[unix_nl]":"\n",
+    "\\[posix_nl]":"\n",
     "\\[null]":"\0",
-    "\\[escape]":"\\"
+    "\\[alert]":"\a",
+    "\\[escape]":"\\",
 }
-
-CACHE = "_dpl_cache"
 
 BINDIR = os.path.dirname(ARGV[0])
 LIBDIR = os.path.join(BINDIR, "lib")
+CORE_DIR = os.path.join(BINDIR, "lib", "core")
+
+PYTHON_VER = sys.version

@@ -1,8 +1,0 @@
-# Test DPL code
-
-START_TIME
-for i in ( range 500000i )
-    print %i
-end
-STOP_TIME
-LOG_TIME
