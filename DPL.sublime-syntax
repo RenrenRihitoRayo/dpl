@@ -1,0 +1,77 @@
+%YAML 1.2
+---
+name: "DPL"
+file_extensions:
+  - 'dpl'
+scope: source.dpl
+contexts:
+  main:
+    - match: '^\s*\b(cmd|(?:raw_)?print(?:ln)?|help|fset|raw_term_print|new|cmd|input|set|object|exit|pycatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
+      scope: support.function
+
+    - match: '^\s*\b(expect-then|then|if-then|if|loop|ismain|panic|expect|module|isntmain|thread|import|while|return|for|end|pass|fn|method|stop|skip|else)\b'
+      scope: keyword.control.dpl
+
+    - match: '\b(len-of|range|to-int|sum|raw_range|to-float|to-str|index)\b'
+      scope: keyword.operator.dpl
+
+    - match: '&(include|enable|disable)'
+      scope: keyword.operator.dpl
+
+    - match: "=="
+      scope: keyword.operator.dpl
+
+    - match: "!="
+      scope: keyword.operator.dpl
+
+    - match: "<="
+      scope: keyword.operator.dpl
+
+    - match: ">="
+      scope: keyword.operator.dpl
+
+    - match: ">"
+      scope: keyword.operator.dpl
+
+    - match: "<"
+      scope: keyword.operator.dpl
+
+    - match: '^#'
+      scope: comment.line.dpl
+      push: line_comment
+
+    - match: '\b(true|false|nil|none)\b'
+      scope: constant.language
+      pop: true
+
+    - match: '-?\d+(?:\.\d+)?'
+      scope: constant.numeric
+      pop: true
+
+    - match: '"'
+      scope: punctuation.definition.string.start.dpl
+      push: double_quoted_string
+
+    - match: '[\%:][\.\w]+'
+      scope: keyword.operator.dpl
+
+    - match: '^\s*\S+'
+      scope: keyword.operator.dpl
+
+    - match: '[\w\.]+'
+      scope: string.quoted
+
+  double_quoted_string:
+    - meta_scope: string.quoted.double.dpl
+    - match: '\\\[.*?\]'
+      scope: constant.character.escape.dpl
+    - match: '\\.'
+      scope: constant.character.escape.dpl
+    - match: '"'
+      scope: punctuation.definition.string.end.dpl
+      pop: true
+
+  line_comment:
+    - meta_scope: comment.line.dpl
+    - match: $  # End of line comment
+      pop: true
