@@ -6,7 +6,12 @@ file_extensions:
 scope: source.dpl
 contexts:
   main:
-    - match: '^\s*\b(cmd|(?:raw_)?print(?:ln)?|help|fset|raw_term_print|new|cmd|input|set|object|exit|pycatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
+
+    - match: '^\s*?#' # this is intentional as comments can only stay on separate lines
+      scope: comment.line.dpl
+      push: line_comment
+
+    - match: '^\s*\b(cmd|(?:raw_)?print(?:ln)?|help|del|fset|raw_term_print|new|cmd|input|set|object|exit|pycatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
       scope: support.function
 
     - match: '^\s*\b(expect-then|then|if-then|if|loop|ismain|panic|expect|module|isntmain|thread|import|while|return|for|end|pass|fn|method|stop|skip|else)\b'
@@ -35,10 +40,6 @@ contexts:
 
     - match: "<"
       scope: keyword.operator.dpl
-
-    - match: '^#'
-      scope: comment.line.dpl
-      push: line_comment
 
     - match: '\b(true|false|nil|none)\b'
       scope: constant.language

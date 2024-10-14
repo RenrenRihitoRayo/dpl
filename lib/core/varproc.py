@@ -116,6 +116,26 @@ def rget(dct, full_name, default=state.bstate("nil"), sep=".", meta=True):
             return default
     return default
 
+def rpop(dct, full_name, default=state.bstate("nil"), sep="."):
+    "Pop a variable"
+    if "." not in full_name:
+        temp = dct.get(full_name, default)
+        return temp
+    path = [*enumerate(full_name.split(sep), 1)][::-1]
+    last = len(path)
+    node = dct
+    while path:
+        pos, name = path.pop()
+        if pos != last and name in node and isinstance(node[name], dict):
+            node = node[name]
+        elif pos == last and name in node:
+            if is_debug_enabled("show_value_updates"):
+                error.info(f"Variable {full_name!r} was popped!")
+            return node.pop(name)
+        else:
+            return default
+    return default
+
 def rset(dct, full_name, value, sep=".", meta=True):
     "Set a variable"
     if isinstance(full_name, str) and "." not in full_name:

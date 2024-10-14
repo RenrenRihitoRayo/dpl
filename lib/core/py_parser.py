@@ -264,9 +264,9 @@ def run(code, frame=None):
                     varproc.pscope(frame)
                     repr = frame[-1].get("repr", state.bstate("nil"))
                     varproc.pscope(frame)
-                    print(repr, end=' ' if item != args[-1] else '')
+                    print(repr, end=' ')
                 else:
-                    print(item, end=' ' if item != args[-1] else '')
+                    print(item, end=' ')
             print()
         elif ins == "print":
             for item in args:
@@ -281,9 +281,9 @@ def run(code, frame=None):
                     varproc.pscope(frame)
                     repr = frame[-1].get("repr", state.bstate("nil"))
                     varproc.pscope(frame)
-                    print(repr, end=' ' if item != args[-1] else '')
+                    print(repr, end=' ')
                 else:
-                    print(item, end=' ' if item != args[-1] else '')
+                    print(item, end=' ')
         elif ins == "input" and argc == 1:
             varproc.rset(frame[-1], args[0], input())
         elif ins == "for" and argc == 3 and args[1] == "in":
@@ -392,6 +392,8 @@ def run(code, frame=None):
             varproc.rset(frame[-1], args[0], args[1])
         elif ins == "fset" and argc == 2:
             varproc.rset(frame[-1], args[0], args[1], meta=False)
+        elif ins == "del" and argc == 1:
+            varproc.rpop(frame[-1], args[0])
         elif ins == "expect" and argc == 1:
             types = args[0]
             temp = get_block(code, p)
