@@ -169,7 +169,7 @@ def py_import(frame, file, search_path=None):
         def add_func(name=None, frame=frame[-1]):
             def wrap(x):
                 if name is None:
-                    fname = getattr(x, "__name__", f"_temp.dump{len(frame[-1]["_temp"])}")
+                    fname = getattr(x, "__name__", f"_temp.dump{len(frame['_temp'])}")
                 else:
                     fname = name
                 varproc.rset(frame, fname, x)
@@ -390,6 +390,20 @@ def run(code, frame=None):
             varproc.rset(frame[-1], args[1],
                 varproc.rget(frame[-1], args[0], meta=False)
             )
+        elif ins == "module" and argc == 1:
+            name = args[0]
+            temp = [frame[-1]]
+            varproc.nscope(temp)
+            btemp = get_block(code, p)
+            if btemp == None:
+                break
+            else:
+                p, body = btemp
+            err = run(body, temp)
+            if err:
+                return err
+            varproc.rset(frame[-1], name, temp[1])
+            del temp
         elif ins == "object" and argc == 1:
             varproc.rset(frame[-1], args[0], {
                 "_internal":{
@@ -399,7 +413,7 @@ def run(code, frame=None):
                 },
                 "_im_repr":{ # define a boring default _im_repr
                     "name":0,
-                    "args":0,
+                    "args":[],
                     "defs":0,
                     "docs":"Default internal method for repr.",
                     "self":0,

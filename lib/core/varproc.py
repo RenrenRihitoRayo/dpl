@@ -92,8 +92,8 @@ def rget(dct, full_name, default=state.bstate("nil"), sep=".", meta=True):
     "Get a variable"
     if "." not in full_name:
         temp = dct.get(full_name, default)
-        if meta and isinstance(temp, dict) and "%meta_value%" in temp:
-            return temp["%meta_value%"]
+        if meta and isinstance(temp, dict) and "[meta_value]" in temp:
+            return temp["[meta_value]"]
         else:
             return temp
     path = [*enumerate(full_name.split(sep), 1)][::-1]
@@ -106,8 +106,8 @@ def rget(dct, full_name, default=state.bstate("nil"), sep=".", meta=True):
         elif pos == last and name in node:
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was read!")
-            if meta and isinstance(node[name], dict) and "%meta_value%" in node[name]:
-                return node[name]["%meta_value%"]
+            if meta and isinstance(node[name], dict) and "[meta_value]" in node[name]:
+                return node[name]["[meta_value]"]
             else:
                 return node[name]
         else:

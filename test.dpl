@@ -1,1 +1,6 @@
 import "typed_vars.py"
+
+defv test %_mods.types.integer
+setv test 90
+
+println %test :test
