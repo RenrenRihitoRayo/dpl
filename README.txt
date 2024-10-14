@@ -85,5 +85,5 @@ Now with advanced meta programming!
 
     # if you have a _im_repr method use raw_print or raw_println
     # or when the default one is not removed.
-    # to bypass that method and see teh object as it is.
+    # to bypass that method and see the object as it is.
     ```
