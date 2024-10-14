@@ -11,4 +11,8 @@ defv name %_mods.types.string
 setv name "Test"
 
 # raises an error
-setv name 69
+expect-then quiet
+	setv name 90
+then
+	println "Oh no 90 is an int!"
+end

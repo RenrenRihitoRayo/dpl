@@ -11,7 +11,8 @@ INC = {
     "for", "loop", "while",
     "if", "if-then",
     "thread",
-    "ismain", "isntmain"
+    "ismain", "isntmain",
+    "expect"
 }
 
 DEC = {

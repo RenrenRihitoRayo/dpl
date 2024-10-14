@@ -92,6 +92,8 @@ def rget(dct, full_name, default=state.bstate("nil"), sep=".", meta=True):
     "Get a variable"
     if "." not in full_name:
         temp = dct.get(full_name, default)
+        if is_debug_enabled("show_value_updates"):
+            error.info(f"Variable {full_name!r} was read!")
         if meta and isinstance(temp, dict) and "[meta_value]" in temp:
             return temp["[meta_value]"]
         else:
@@ -114,11 +116,18 @@ def rget(dct, full_name, default=state.bstate("nil"), sep=".", meta=True):
             return default
     return default
 
-def rset(dct, full_name, value, sep="."):
+def rset(dct, full_name, value, sep=".", meta=True):
     "Set a variable"
     if isinstance(full_name, str) and "." not in full_name:
-        dct[full_name] = value
-        return
+        with W_LOCK:
+            if dct.get("_set_only_when_defined") and full_name not in dct:
+                error.warn(f"Tried to set {full_name!r} but scope was set to set only when defined.")
+                return
+            if meta and full_name in dct and isinstance(dct[full_name], dict) and "[meta_value]" in dct[full_name]:
+                dct[full_name]["[meta_value]"] = value
+            else:
+                dct[full_name] = value
+            return
     path = [*enumerate(full_name.split(sep), 1)][::-1]
     last = len(path)
     node = dct
@@ -131,6 +140,9 @@ def rset(dct, full_name, value, sep="."):
                 error.warn(f"Tried to set {full_name!r} but scope was set to set only when defined.")
                 return
             with W_LOCK:
-                node[name] = value
+                if meta and name in node and isinstance(node[name], dict) and "[meta_value]" in node[name]:
+                    node[name]["[meta_value]"] = value
+                else:
+                    node[name] = value
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was set to `{value!r}`!")

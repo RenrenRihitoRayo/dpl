@@ -171,10 +171,10 @@ def exprs_runtime(frame, args):
             args[p] = c[1:]
             c = ""
             put.clear()
-            while p < len(args) and not c.endswith("\""):
+            while p < len(args) and ((not c.endswith("\"")) if isinstance(c, str) else True):
                 c = args[p]; put.append(c); p += 1
             p -= 1
-            text = " ".join(put)[:-1]
+            text = " ".join(map(str, put))[:-1]
             for c, r in CHARS.items():
                 text = text.replace(c, r)
             res.append(text.replace("\\[quote]", "\""))
@@ -182,7 +182,7 @@ def exprs_runtime(frame, args):
             args[p] = c[1:]
             c = ""
             put.clear()
-            while p < len(args) and not c.endswith(")"):
+            while p < len(args) and ((not c.endswith(")")) if isinstance(c, str) else True):
                 c = args[p]; put.append(c); p += 1
             p -= 1
             put[-1] = put[-1][:-1]
@@ -193,13 +193,13 @@ def exprs_runtime(frame, args):
             args[p] = c[1:]
             c = ""
             put.clear()
-            while p < len(args) and not c.endswith("]"):
+            while p < len(args) and ((not c.endswith("]")) if isinstance(c, str) else True):
                 c = args[p]; put.append(c); p += 1
             p -= 1
             put[-1] = put[-1][:-1]
             if '' in put:
                 put.remove('')
-            res.append([*exprs_runtime(frame, put)])
+            res.append([*map(lambda x:express(frame, x), put)])
         else:
             res.append(expr_runtime(frame, c))
         p += 1

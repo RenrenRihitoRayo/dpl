@@ -8,6 +8,7 @@ import itertools
 import traceback
 import threading
 import pickle
+import builtins
 from copy import deepcopy as copy
 from . import arguments as argproc
 from . import varproc
@@ -20,7 +21,10 @@ IS_STILL_RUNNING = threading.Event()
 
 def my_exit():
     IS_STILL_RUNNING.set()
-    exit()
+    raise SystemExit
+
+sys.exit = my_exit
+exit = my_exit
 
 try:
     import psutil
@@ -293,9 +297,9 @@ def run(code, frame=None):
                 for i in iter:
                     varproc.rset(frame[-1], name, i)
                     err = run(body, frame)
-                    if err == -1:
+                    if err == error.STOP_RESULT:
                         break
-                    elif err == -2:
+                    elif err == error.SKIP_RESULT:
                         continue
                     elif err:
                         return err
@@ -308,9 +312,9 @@ def run(code, frame=None):
             if body:
                 while True:
                     err = run(body, frame)
-                    if err == -1:
+                    if err == error.STOP_RESULT:
                         break
-                    elif err == -2:
+                    elif err == error.SKIP_RESULT:
                         continue
                     elif err:
                         return err
@@ -323,9 +327,9 @@ def run(code, frame=None):
             if body:
                 for _ in range(args[0]):
                     err = run(body, frame)
-                    if err == -1:
+                    if err == error.STOP_RESULT:
                         break
-                    elif err == -2:
+                    elif err == error.SKIP_RESULT:
                         continue
                     elif err:
                         return err
@@ -343,18 +347,18 @@ def run(code, frame=None):
                             break
                     except Exception as e:
                         error.error(pos, file, f"Something went wrong when arguments were processed:\n{e}\n> {args!r}")
-                        return 1
+                        return error.RUNTIME_ERROR
                     err = run(body, frame)
-                    if err == -1:
+                    if err == error.STOP_RESULT:
                         break
-                    elif err == -2:
+                    elif err == error.SKIP_RESULT:
                         continue
                     elif err:
                         return err
         elif ins == "stop" and argc == 0:
-            return -1
+            return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
-            return -2
+            return error.SKIP_RESULT
         elif ins == "if" and argc == 1:
             temp = get_block(code, p)
             if temp is None:
@@ -363,7 +367,7 @@ def run(code, frame=None):
                 p, body = temp
             if args[0]:
                 err = run(body, frame=frame)
-                if err != 0:
+                if err:
                     return err
         elif ins == "if-then" and argc == 1:
             temp = get_block(code, p, {"else"})
@@ -378,18 +382,67 @@ def run(code, frame=None):
                 p, false = temp
             if args[0]:
                 err = run(true, frame=frame)
-                if err != 0:
+                if err:
                     return err
             else:
                 err = run(false, frame=frame)
-                if err != 0:
+                if err:
                     return err
         elif ins == "set" and argc == 2:
             varproc.rset(frame[-1], args[0], args[1])
-        elif ins == "_fset" and argc == 2:
-            varproc.rset(frame[-1], args[1],
-                varproc.rget(frame[-1], args[0], meta=False)
-            )
+        elif ins == "fset" and argc == 2:
+            varproc.rset(frame[-1], args[0], args[1], meta=False)
+        elif ins == "expect" and argc == 1:
+            types = args[0]
+            temp = get_block(code, p)
+            if temp == None:
+                break
+            else:
+                p, body = temp
+            OLD_ERROR = error.error
+            error.error = lambda *x, **y: None
+            err = run(body, frame)
+            error.error = OLD_ERROR
+            if err == 0:
+                if types != "quiet":
+                    error.info("Success!")
+            elif types not in {"any", "quiet"} and err not in types:
+                print(types)
+                return err
+            else:
+                if types != "quiet":
+                    error.info("Error was expected and was not propagated!")
+        elif ins == "expect-then" and argc == 1:
+            types = args[0]
+            temp = get_block(code, p, {"then"})
+            if temp == None:
+                break
+            else:
+                p, body = temp
+
+            temp = get_block(code, p)
+            if temp == None:
+                break
+            else:
+                p, body2 = temp
+
+            OLD_ERROR = error.error
+            error.error = lambda *x, **y: None
+            err = run(body, frame)
+            error.error = OLD_ERROR
+            if err == 0:
+                if types != "quiet":
+                    error.info("Success!")
+            elif types not in {"any", "quiet"} and err not in types:
+                print(types)
+                return err
+            else:
+                if types != "quiet":
+                    error.info("Error was expected and was not propagated!")
+                err = run(body2, frame)
+                if err:
+                    error.error(p, file, "An error was captured but then the clause also raised one.")
+                    return err
         elif ins == "module" and argc == 1:
             name = args[0]
             temp = [frame[-1]]
@@ -446,10 +499,10 @@ def run(code, frame=None):
             })
         elif ins == "import" and argc == 1:
             if py_import(frame, args[0], varproc.meta["internal"]["lib_path"]):
-                return 3
+                return error.IMPORT_ERROR
         elif ins == "import" and argc == 2:
             if py_import(frame, args[0], args[1]):
-                return 3
+                return error.IMPORT_ERROR
         elif ins == "START_TIME" and argc == 0:
             start_time = time.time()
         elif ins == "STOP_TIME" and argc == 0:
@@ -490,7 +543,7 @@ def run(code, frame=None):
             if argc in {1, 2}:
                 error.error(pos, file, args[0])
             if argc in {0, 1}:
-                return 4
+                return error.PANIC_ERROR
             else:
                 return args[1]
         elif ins == "ismain" and argc == 0:
@@ -540,7 +593,7 @@ def run(code, frame=None):
                         varproc.rset(frame[-1], name, value)
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
-                break
+                return error.PYTHON_ERROR
         elif (temp:=varproc.rget(frame[-1], ins)) != state.bstate("nil") and isinstance(temp, dict): # Call a function
             varproc.nscope(frame)
             if temp["defs"]:
@@ -566,12 +619,12 @@ def run(code, frame=None):
                 temp(frame, file, *args)
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
-                break
+                return error.PYTHON_ERROR
         else:
             error.error(pos, file, f"Invalid instruction {ins}")
-            return 2
+            return error.RUNTIME_ERROR
         p += 1
     else:
         return 0
     error.error(pos, file, "Error was raised!")
-    return 1
+    return error.SYNTAX_ERROR

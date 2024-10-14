@@ -4,6 +4,15 @@ import datetime
 import os
 from . import varproc
 
+SYNTAX_ERROR = 1
+RUNTIME_ERROR = 2
+PYTHON_ERROR = 3
+PANIC_ERROR = 4
+IMPORT_ERROR = 5
+
+STOP_RESULT = -1
+SKIP_RESULT = -2
+
 output = varproc.get_debug("debug_output_file")
 
 if os.path.isfile(output):
