@@ -1,26 +1,12 @@
-
-object int_like
-method %int_like new value
-	new _nonlocal.int_like temp
-	# normal dotted.name syntax doesnt support this
-	# which is normal to avoid easily using this.
-	set "temp.[meta_value]" %value
+object my_int
+method %my_int new value
+	new _nonlocal.my_int temp
+	fset "temp.[meta_value]" %value
 	return :temp
 end
-set int_like.new.defs.value 0
+set my_int.new.defs.value 0
 
-catch [my_int] int_like.new 90
-# sets the meta attribute (use fset to work around this)
-set my_int 80
-# should print 160 and <Object int_like>
-println (%my_int * 2) :my_int
+catch [test] my_int.new
 
-# sets my_int and bypasses the meta attribute mechanism
-# so under the hood it is no longer the object we created
-fset my_int 90
-# prints 90 and 90 since fset and not set was used
-println %my_int :my_int
-
-# if you have a _im_repr method use raw_print or raw_println
-# or when the default one is not removed.
-# to bypass that method and see teh object as it is.
+println %test :test
+help my_int.new

@@ -217,7 +217,7 @@ def run(code, frame=None):
                 args = argproc.exprs_runtime(frame, args)
             except Exception as e:
                 error.error(pos, file, f"Something went wrong when arguments were processed:\n{e}\n> {args!r}")
-                raise
+                return error.PYTHON_ERROR
         if varproc.is_debug_enabled("show_instructions"):
             error.info(f"Executing: {code[p]}")
         argc = len(args)
@@ -574,8 +574,18 @@ def run(code, frame=None):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 break
             varproc.nscope(frame)
-            for name, value in zip(temp["args"], args):
-                varproc.rset(frame[-1], name, value)
+            if temp["defs"]:
+                for name, value in itertools.zip_longest(temp["args"], args):
+                    if value is None:
+                        varproc.rset(frame[-1], name, temp["defs"].get(name, state.bstate("nil")))
+                    else:
+                        varproc.rset(frame[-1], name, value)
+            else:
+                if len(args) != len(temp["args"]):
+                    error.error(pos, file, f"Function {ins!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.")
+                    break
+                for name, value in itertools.zip_longest(temp["args"], args):
+                    varproc.rset(frame[-1], name, value)
             varproc.rset(frame[-1], "_returns", rets)
             if temp["self"] != state.bstate("nil"):
                 varproc.rset(frame[-1], "self", temp["self"])
