@@ -12,7 +12,8 @@ INC = {
     "if", "if-then",
     "thread",
     "ismain", "isntmain",
-    "expect"
+    "expect", "expect-then",
+    "block"
 }
 
 DEC = {

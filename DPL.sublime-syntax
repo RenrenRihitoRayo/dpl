@@ -11,10 +11,10 @@ contexts:
       scope: comment.line.dpl
       push: line_comment
 
-    - match: '^\s*\b(cmd|(?:raw_)?print(?:ln)?|help|del|fset|raw_term_print|new|cmd|input|set|object|exit|pycatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
+    - match: '^\s*\b(cmd|help|del|const|fset|new|cmd|input|set|object|exit|pycatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
       scope: support.function
 
-    - match: '^\s*\b(expect-then|then|if-then|if|loop|ismain|panic|expect|module|isntmain|thread|import|while|return|for|end|pass|fn|method|stop|skip|else)\b'
+    - match: '^\s*\b(expect-then|wait_for_threads|assert|block|then|if-then|if|loop|panic|expect|module|thread|import|while|return|for|end|pass|fn|method|stop|skip|else)\b'
       scope: keyword.control.dpl
 
     - match: '\b(len-of|range|to-int|sum|raw_range|to-float|to-str|index)\b'
@@ -45,7 +45,7 @@ contexts:
       scope: constant.language
       pop: true
 
-    - match: '-?\d+(?:\.\d+)?'
+    - match: '-?[\d,]+(?:\.\d+)?'
       scope: constant.numeric
       pop: true
 
@@ -53,13 +53,13 @@ contexts:
       scope: punctuation.definition.string.start.dpl
       push: double_quoted_string
 
-    - match: '[\%:][\.\w]+'
+    - match: '(\%|:)\{?[^\s\{\}]+\}?'
       scope: keyword.operator.dpl
 
     - match: '^\s*\S+'
       scope: keyword.operator.dpl
 
-    - match: '[\w\.]+'
+    - match: '(name\{[^\s]+\}|[\w\.]+)'
       scope: string.quoted
 
   double_quoted_string:

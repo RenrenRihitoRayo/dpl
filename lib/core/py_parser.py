@@ -19,12 +19,27 @@ from . import utils
 
 IS_STILL_RUNNING = threading.Event()
 
-def my_exit():
+threads = []
+
+def my_exit(code=0):
     IS_STILL_RUNNING.set()
-    raise SystemExit
+    raise SystemExit(code)
 
 sys.exit = my_exit
 exit = my_exit
+
+O_RSET = varproc.rset
+O_RPOP = varproc.rpop
+
+def switch_context_to_unsafe():
+    with varproc.W_LOCK:
+        varproc.rset = varproc.unsafe_rset
+        varproc.rpop = varproc.unsafe_rpop
+
+def switch_context_to_safe():
+    with varproc.W_LOCK:
+        varproc.rset = O_RSET
+        varproc.rpop = O_RPOP
 
 try:
     import psutil
@@ -35,9 +50,8 @@ try:
     varproc.meta["internal"]["has_get_memory"] = 1
     varproc.meta["internal"]["get_memory"] = get_memory
 except ModuleNotFoundError as e:
-    print(repr(e))
     varproc.meta["internal"]["has_get_memory"] = 0
-    varproc.meta["internal"]["get_memory"] = lambda _, __: ((0, "Not available!"),)
+    varproc.meta["internal"]["get_memory"] = lambda _, __: (state.bstate("nil"),)
 
 def get_size_of(_, __, object):
     return utils.convert_bytes(sys.getsizeof(object)),
@@ -49,6 +63,11 @@ rules = {
     "strict_include":0,
     "automatic_def":1,
     "warnings":1
+}
+
+varproc.meta["threading"] = {
+    "runtime_event":IS_STILL_RUNNING,
+    "is_still_running":lambda _, __: IS_STILL_RUNNING.is_set()
 }
 
 # Set of included files.
@@ -158,10 +177,11 @@ def process(code, name="__main__"):
         return res
     return []
 
-def py_import(frame, file, search_path=None):
+def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"]):
     if search_path is not None:
         file = os.path.join({
-            "@lib":varproc.meta["internal"]["lib_path"]
+            "@lib":varproc.meta["internal"]["lib_path"],
+            "@loc":loc
         }.get(search_path, search_path), file)
     if not os.path.isfile(file):
         print("File not found:", file)
@@ -184,8 +204,8 @@ def py_import(frame, file, search_path=None):
                 "add_func":add_func,
                 "varproc":varproc,
                 "frame":frame,
-                "run":run,
-                "process":process,
+                "run_code":run,
+                "process_code":process,
                 "os":os,
                 "info":info,
                 "__name__":"__dpl__",
@@ -194,7 +214,10 @@ def py_import(frame, file, search_path=None):
                 "state":state,
                 "logging":error,
                 "raw_print":print,
-                "_import":py_import
+                "_import":py_import,
+                "argproc":argproc,
+                "add_method":argproc.add_method,
+                "error":error
             }
             exec(obj, d)
         except (SystemExit, KeyboardInterrupt):
@@ -236,54 +259,6 @@ def run(code, frame=None):
                 "docs":"Function.",
                 "defs":{}
             })
-        elif ins == "raw_println":
-            print(*args)
-        elif ins == "raw_print":
-            print(*args, end='')
-        elif ins == "raw_term_print":
-            s = ""
-            for i in args:
-                if isinstance(i, int):
-                    s += chr(i)
-                elif isinstance(i, str):
-                    s += i
-                else:
-                    s += repr(i)
-            sys.stdout.write(s)
-            sys.stdout.flush()
-        elif ins == "println":
-            for item in args:
-                if isinstance(item, dict) and "_internal" in item and "_im_repr" in item:
-                    varproc.nscope(frame)
-                    varproc.nscope(frame)
-                    varproc.rset(frame[-1], "self", item)
-                    varproc.rset(frame[-1], "_returns", ("repr",))
-                    err = run(item["_im_repr"]["body"], frame)
-                    if err:
-                        return err
-                    varproc.pscope(frame)
-                    repr = frame[-1].get("repr", state.bstate("nil"))
-                    varproc.pscope(frame)
-                    print(repr, end=' ')
-                else:
-                    print(item, end=' ')
-            print()
-        elif ins == "print":
-            for item in args:
-                if isinstance(item, dict) and "_internal" in item and "_im_repr" in item:
-                    varproc.nscope(frame)
-                    varproc.nscope(frame)
-                    varproc.rset(frame[-1], "self", item)
-                    varproc.rset(frame[-1], "_returns", ("repr",))
-                    err = run(item["_im_repr"]["body"], frame)
-                    if err:
-                        return err
-                    varproc.pscope(frame)
-                    repr = frame[-1].get("repr", state.bstate("nil"))
-                    varproc.pscope(frame)
-                    print(repr, end=' ')
-                else:
-                    print(item, end=' ')
         elif ins == "input" and argc == 1:
             varproc.rset(frame[-1], args[0], input())
         elif ins == "for" and argc == 3 and args[1] == "in":
@@ -389,11 +364,27 @@ def run(code, frame=None):
                 if err:
                     return err
         elif ins == "set" and argc == 2:
-            varproc.rset(frame[-1], args[0], args[1])
+            if varproc.rset(frame[-1], args[0], args[1]):
+                error.error(pos, file, "Tried to set a constant variable!\nPlease use fset instead!")
+                return error.RUNTIME_ERROR
+        elif ins == "const" and argc == 2:
+            name = args[0]
+            if varproc.rset(frame[-1], name, args[1]):
+                error.error(pos, file, "Tried to set a constant variable!\nPlease use fset instead!")
+                return error.RUNTIME_ERROR
+            consts = varproc.rget(frame[-1], "[const]", default=None)
+            if consts:
+                consts.append(name if "." not in name else name.rsplit(".", 1)[-1])
+            else:
+                varproc.rset(frame[-1], "[const]", [name if "." not in name else name.rsplit(".", 1)[-1]], meta=False)
         elif ins == "fset" and argc == 2:
             varproc.rset(frame[-1], args[0], args[1], meta=False)
         elif ins == "del" and argc == 1:
             varproc.rpop(frame[-1], args[0])
+            consts = varproc.rget(frame[-1], "[const]", default=None)
+            name = args[0] if "." not in args[0] else args[0].rsplit(".", 1)[-1]
+            if consts and name in consts:
+                consts.remove(name)
         elif ins == "expect" and argc == 1:
             types = args[0]
             temp = get_block(code, p)
@@ -483,9 +474,12 @@ def run(code, frame=None):
                 error.error(pos, file, f"Unknown object {args[0]!r}")
                 break
             varproc.rset(obj, "_internal.name", args[1])
-            varproc.rset(frame[-1], args[1], obj)
+            varproc.rset(frame[-1], args[1], copy(obj))
         elif ins == "method" and argc >= 2:
             self, name, *params = args
+            if self == state.bstate("nil"):
+                error.error(pos, file, "Cannot bind a method to a value that isnt a context!")
+                return error.RUNTIME_ERROR
             temp = get_block(code, p)
             if temp is None:
                 break
@@ -503,7 +497,7 @@ def run(code, frame=None):
             if py_import(frame, args[0], varproc.meta["internal"]["lib_path"]):
                 return error.IMPORT_ERROR
         elif ins == "import" and argc == 2:
-            if py_import(frame, args[0], args[1]):
+            if py_import(frame, args[0], args[1], loc=os.path.dirname(file)):
                 return error.IMPORT_ERROR
         elif ins == "START_TIME" and argc == 0:
             start_time = time.time()
@@ -524,8 +518,9 @@ def run(code, frame=None):
                 p, body = temp
             def th():
                 if (err:=run(body, frame)):
-                    return err
+                    raise RuntimeError(f"Thread returned an error: {err}")
             th_obj = threading.Thread(target=th)
+            threads.append(th_obj)
             th_obj.start()
         elif ins == "exit" and argc == 0:
             my_exit()
@@ -541,33 +536,10 @@ def run(code, frame=None):
                 print(f"\nHelp for {args[0]}: No documentation was found!")
             else:
                 print(f"\nHelp for {args[0]}:\n{temp}")
-        elif ins == "panic" and argc <= 2:
-            if argc in {1, 2}:
-                error.error(pos, file, args[0])
-            if argc in {0, 1}:
-                return error.PANIC_ERROR
-            else:
-                return args[1]
-        elif ins == "ismain" and argc == 0:
-            temp = get_block(code, p)
-            if temp == None:
-                break
-            else:
-                p, body  = temp
-            if file == "__main__":
-                err = run(body, frame)
-                if err:
-                    return err
-        elif ins == "isntmain" and argc == 0:
-            temp = get_block(code, p)
-            if temp == None:
-                break
-            else:
-                p, body  = temp
-            if file != "__main__":
-                err = run(body, frame)
-                if err:
-                    return err
+        elif ins == "wait_for_threads" and argc == 0:
+            for i in threads:
+                i.join()
+            threads.clear()
         elif ins == "catch" and argc >= 2: # catch return value of a function
             rets, name, *args = args
             if (temp:=varproc.rget(frame[-1], name)) == state.bstate("nil") or not isinstance(temp, dict):
@@ -593,16 +565,53 @@ def run(code, frame=None):
             if err:
                 return err
             varproc.pscope(frame)
+        elif ins == "block" and argc >= 1: # give a code block to a python function
+            name, *args = args
+            if (temp:=varproc.rget(frame[-1], name)) == state.bstate("nil") or not hasattr(temp, "__call__"):
+                error.error(pos, file, f"Invalid function {name!r}!")
+                break
+            try:
+                btemp = get_block(code, p)
+                if btemp == None:
+                    break
+                else:
+                    p, body = btemp
+                res = temp(frame, file, body, *args)
+                if isinstance(res, tuple):
+                    for name, value in zip(rets, res):
+                        varproc.rset(frame[-1], name, value)
+                elif isinstance(res, int) and res:
+                    return res
+                elif isinstance(res, str):
+                    if res == "break":
+                        break
+                    elif res.startswith("err:"):
+                        _, ecode, message = res.split(":", 2)
+                        error.error(pos, file, message)
+                        return int(ecode)
+            except:
+                error.error(pos, file, traceback.format_exc()[:-1])
+                return error.PYTHON_ERROR
         elif ins == "pycatch" and argc >= 2: # catch return value of a python function
             rets, name, *args = args
             if (temp:=varproc.rget(frame[-1], name)) == state.bstate("nil") or not hasattr(temp, "__call__"):
-                error.error(p, file, f"Invalid function {name!r}!")
+                error.error(pos, file, f"Invalid function {name!r}!")
                 break
             try:
                 res = temp(frame, file, *args)
-                if res is not None:
-                    for name, value in zip(rets, res):
-                        varproc.rset(frame[-1], name, value)
+                if isinstance(res, tuple):
+                    if res is not None:
+                        for name, value in zip(rets, res):
+                            varproc.rset(frame[-1], name, value)
+                elif isinstance(res, int) and res:
+                    return res
+                elif isinstance(res, str):
+                    if res == "break":
+                        break
+                    elif res.startswith("err:"):
+                        _, ecode, message = res.split(":", 2)
+                        error.error(pos, file, message)
+                        return int(ecode)
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
@@ -628,7 +637,16 @@ def run(code, frame=None):
             varproc.pscope(frame)
         elif (temp:=varproc.rget(frame[-1], ins)) != state.bstate("nil") and hasattr(temp, "__call__"): # call a python function
             try:
-                temp(frame, file, *args)
+                res = temp(frame, file, *args)
+                if isinstance(res, int) and res:
+                    return res
+                elif isinstance(res, str):
+                    if res == "break":
+                        break
+                    elif res.startswith("err:"):
+                        _, ecode, message = res.split(":", 2)
+                        error.error(pos, file, message)
+                        return int(ecode)
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR

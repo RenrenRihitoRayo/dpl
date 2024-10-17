@@ -26,6 +26,6 @@ def setv(frame, _, name, value):
     if not isinstance(temp, dict) or "[meta_value]" not in temp or "type" not in temp:
         return
     if not isinstance(value, temp["type"]):
-        raise RuntimeError("Invalid type!")
+        raise RuntimeError(f"Invalid type! Expected {temp['type']} but got {type(value)}")
     else:
         temp["[meta_value]"] = value

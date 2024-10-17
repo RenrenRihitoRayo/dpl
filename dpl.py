@@ -31,7 +31,7 @@ def handle_args():
                 varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
                 if (err:=parser.run(code)):
                     print(f"\n[{file}]\nFinished with an error: {err}")
-                parser.my_exit()
+                parser.IS_STILL_RUNNING.set()
                 if err:
                     exit(1)
         case ["rc", file, *args]:
@@ -51,7 +51,7 @@ def handle_args():
                     varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
                     if (err:=parser.run(code)):
                         print(f"\n[{file}]\nFinished with an error: {err}")
-                    parser.my_exit()
+                    parser.IS_STILL_RUNNING.set()
                     if err:
                         exit(1)
             except Exception as e:

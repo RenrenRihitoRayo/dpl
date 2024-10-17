@@ -119,7 +119,8 @@ def rget(dct, full_name, default=state.bstate("nil"), sep=".", meta=True):
 def rpop(dct, full_name, default=state.bstate("nil"), sep="."):
     "Pop a variable"
     if "." not in full_name:
-        temp = dct.get(full_name, default)
+        with W_LOCK:
+            temp = dct.get(full_name, default)
         return temp
     path = [*enumerate(full_name.split(sep), 1)][::-1]
     last = len(path)
@@ -131,7 +132,8 @@ def rpop(dct, full_name, default=state.bstate("nil"), sep="."):
         elif pos == last and name in node:
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was popped!")
-            return node.pop(name)
+            with W_LOCK:
+                return node.pop(name)
         else:
             return default
     return default
@@ -143,6 +145,8 @@ def rset(dct, full_name, value, sep=".", meta=True):
             if dct.get("_set_only_when_defined") and full_name not in dct:
                 error.warn(f"Tried to set {full_name!r} but scope was set to set only when defined.")
                 return
+            if meta and "[const]" in dct and isinstance((temp:=dct.get("[const]")), list) and full_name in temp:
+                return 1
             if meta and full_name in dct and isinstance(dct[full_name], dict) and "[meta_value]" in dct[full_name]:
                 dct[full_name]["[meta_value]"] = value
             else:
@@ -160,6 +164,8 @@ def rset(dct, full_name, value, sep=".", meta=True):
                 error.warn(f"Tried to set {full_name!r} but scope was set to set only when defined.")
                 return
             with W_LOCK:
+                if meta and "[const]" in node and isinstance((temp:=node.get("[const]")), list) and name in temp:
+                    return 1
                 if meta and name in node and isinstance(node[name], dict) and "[meta_value]" in node[name]:
                     node[name]["[meta_value]"] = value
                 else:
