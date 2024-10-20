@@ -19,7 +19,7 @@ close_file file_object
 def open_file(frame, file, file_path, mode):
     "Open a file."
     if file == "__main__":
-        file = "."
+        file = varproc.meta["internal"]["main_path"]
     return open(os.path.join(os.path.basename(file), file_path), mode),
 
 @add_func(frame=temp)
@@ -34,4 +34,4 @@ def write_file(frame, file, file_obj, content):
 def close(frame, file, file_obj):
     file_obj.close()
 
-frame[-1]["file_io"] = temp
+varproc.modules["py"]["file_io"] = temp

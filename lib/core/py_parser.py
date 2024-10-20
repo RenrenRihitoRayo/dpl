@@ -56,7 +56,13 @@ except ModuleNotFoundError as e:
 def get_size_of(_, __, object):
     return utils.convert_bytes(sys.getsizeof(object)),
 
-varproc.meta["internal"]["sizeof"] = get_size_of
+try:
+    get_size_of(0)
+    varproc.meta["internal"]["sizeof"] = get_size_of
+except:
+    def temp(_, __, ___):
+        return "err:3:Cannot get memory usage of an object!\nIf you are using pypy then please use another interpreter."
+    varproc.meta["internal"]["sizeof"] = temp
 
 # Global preprocessing rules
 rules = {
@@ -193,7 +199,7 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
         def add_func(name=None, frame=frame[-1]):
             def wrap(x):
                 if name is None:
-                    fname = getattr(x, "__name__", f"_temp.dump{len(frame['_temp'])}")
+                    fname = getattr(x, "__name__", "_dump")
                 else:
                     fname = name
                 varproc.rset(frame, fname, x)
@@ -259,8 +265,6 @@ def run(code, frame=None):
                 "docs":"Function.",
                 "defs":{}
             })
-        elif ins == "input" and argc == 1:
-            varproc.rset(frame[-1], args[0], input())
         elif ins == "for" and argc == 3 and args[1] == "in":
             name, _, iter = args
             temp = get_block(code, p)
@@ -399,7 +403,7 @@ def run(code, frame=None):
             if err == 0:
                 if types != "quiet":
                     error.info("Success!")
-            elif types not in {"any", "quiet"} and err not in types:
+            elif isinstance(types, str) and types not in {"any", "quiet"} and err not in types:
                 print(types)
                 return err
             else:
@@ -426,7 +430,7 @@ def run(code, frame=None):
             if err == 0:
                 if types != "quiet":
                     error.info("Success!")
-            elif types not in {"any", "quiet"} and err not in types:
+            elif isinstance(types, str) and types not in {"any", "quiet"} and err not in types:
                 print(types)
                 return err
             else:
@@ -565,7 +569,34 @@ def run(code, frame=None):
             if err:
                 return err
             varproc.pscope(frame)
-        elif ins == "block" and argc >= 1: # give a code block to a python function
+        elif ins == "body" and argc >= 1: # give a code block to a python function
+            name, *args = args
+            if (temp:=varproc.rget(frame[-1], name)) == state.bstate("nil") or not hasattr(temp, "__call__"):
+                error.error(pos, file, f"Invalid function {name!r}!")
+                break
+            try:
+                btemp = get_block(code, p)
+                if btemp == None:
+                    break
+                else:
+                    p, body = btemp
+                res = temp(frame, file, body, *args)
+                if isinstance(res, tuple):
+                    for name, value in zip(rets, res):
+                        varproc.rset(frame[-1], name, value)
+                elif isinstance(res, int) and res:
+                    return res
+                elif isinstance(res, str):
+                    if res == "break":
+                        break
+                    elif res.startswith("err:"):
+                        _, ecode, message = res.split(":", 2)
+                        error.error(pos, file, message)
+                        return int(ecode)
+            except:
+                error.error(pos, file, traceback.format_exc()[:-1])
+                return error.PYTHON_ERROR
+        elif ins == "proto-body" and argc >= 1: # give a code block to a python function
             name, *args = args
             if (temp:=varproc.rget(frame[-1], name)) == state.bstate("nil") or not hasattr(temp, "__call__"):
                 error.error(pos, file, f"Invalid function {name!r}!")

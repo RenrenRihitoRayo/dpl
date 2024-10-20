@@ -27,7 +27,7 @@ def io(frame, _, ins, *args):
                 varproc.nscope(frame)
                 varproc.rset(frame[-1], "self", item)
                 varproc.rset(frame[-1], "_returns", ("repr",))
-                err = run(item["_im_repr"]["body"], frame)
+                err = run_code(item["_im_repr"]["body"], frame)
                 if err:
                     return err
                 varproc.pscope(frame)
@@ -44,7 +44,7 @@ def io(frame, _, ins, *args):
                 varproc.nscope(frame)
                 varproc.rset(frame[-1], "self", item)
                 varproc.rset(frame[-1], "_returns", ("repr",))
-                err = run(item["_im_repr"]["body"], frame)
+                err = run_code(item["_im_repr"]["body"], frame)
                 if err:
                     return err
                 varproc.pscope(frame)
@@ -53,3 +53,9 @@ def io(frame, _, ins, *args):
                 raw_print(repr, end=' ')
             else:
                 raw_print(item, end=' ')
+    elif ins == "input" and len(args) == 1:
+        varproc.rset(frame[-1], args[0], input())
+    else:
+        return f"err:{error.RUNTIME_ERROR}:Invalid instruction!"
+
+varproc.modules["py"]["io"] = io

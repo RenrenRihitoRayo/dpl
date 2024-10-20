@@ -79,7 +79,7 @@ def handle_args():
             frame = varproc.new_frame()
             PROMPT_CTL = frame[-1]["_meta"]["internal"]["prompt_ctl"] = {}
             PROMPT_CTL["ps1"] = ">>> "
-            PROMPT_CTL["ps2"] = "..."
+            PROMPT_CTL["ps2"] = "... "
             print(f"DPL REPL for DPL {varproc.meta['internal']['version']}\nPython {info.PYTHON_VER}{(chr(10)+start_text) if start_text else ''}")
             START_FILE = os.path.join(info.BINDIR, "start_script.dpl")
             if os.path.isfile(START_FILE):
@@ -102,6 +102,12 @@ def handle_args():
                         if not aa:
                             break
                         act += "\n"+aa
+                elif act == ".paste":
+                    act = ""
+                    while True:
+                        act += (this := input())
+                        if not this:
+                            break
                 elif act == "exit":
                     break
                 elif act.startswith("$"):

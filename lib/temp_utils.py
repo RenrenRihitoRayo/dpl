@@ -12,4 +12,4 @@ def clear_temp(frame, file):
     "Clear the _temp context"
     frame[-1]["_temp"].clear()
 
-frame[-1]["temp_utils"] = temp
+varproc.modules["py"]["temp_utils"] = temp

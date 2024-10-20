@@ -5,6 +5,8 @@ from .info import *
 from . import state
 from . import error
 
+from . import py_parser as parser
+
 # lock
 W_LOCK = threading.Lock()
 WS_LOCK = threading.Lock()
@@ -39,6 +41,9 @@ meta = {
 }
 
 modules = {
+    "py":{},
+    "dpl":{},
+    "other":{}
 }
 
 def new_frame():
