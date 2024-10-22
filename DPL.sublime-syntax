@@ -7,15 +7,15 @@ scope: source.dpl
 contexts:
   main:
 
+    - match: '^\s*\b((:?proto-)?body|expect-then|wait_for_threads|then|if-then|if|loops|expect|module|thread|import|while|return|loop|for|end|pass|fn|method|stop|skip|else)\b'
+      scope: keyword.control.dpl
+
     - match: '^\s*?#' # this is intentional as comments can only stay on separate lines
       scope: comment.line.dpl
       push: line_comment
 
-    - match: '^\s*\b(cmd|help|del|const|fset|new|cmd|input|set|object|exit|pycatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
+    - match: '^\s*\b(cmd|help|del|const|fset|new|cmd|set|object|exit|pycatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
       scope: support.function
-
-    - match: '^\s*\b(expect-then|wait_for_threads|assert|body|then|if-then|if|loop|panic|expect|module|thread|import|while|return|for|end|pass|fn|method|stop|skip|else)\b'
-      scope: keyword.control.dpl
 
     - match: '\b(len-of|range|to-int|sum|raw_range|to-float|to-str|index)\b'
       scope: keyword.operator.dpl
@@ -53,7 +53,7 @@ contexts:
       scope: punctuation.definition.string.start.dpl
       push: double_quoted_string
 
-    - match: '(\%|:)\{?[^\s\{\}]+\}?'
+    - match: '(\%|:)[^\s\(\)\[\]]+'
       scope: keyword.operator.dpl
 
     - match: '^\s*\S+'

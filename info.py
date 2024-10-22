@@ -30,7 +30,7 @@ def list_files_recursive(dir_path, remove=""):
                 file_size = convert_bytes(file_size)
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     if (EXT:=file_path.rsplit(".", 1)[-1]) in {
-                        "txt", "py", "dpl", "cfg", "c"
+                        "txt", "py", "dpl", "cfg", "c", "yaml", "toml", "md" 
                     }:
                         head = "Head:\n"
                         while (temp:=f.readline().lstrip()).startswith({
@@ -38,6 +38,9 @@ def list_files_recursive(dir_path, remove=""):
                                 "txt":"#",
                                 "dpl":"#",
                                 "cfg":"#",
+                                "toml":"#",
+                                "yaml":"#",
+                                "md":"<--",
                                 "c":"//"
                             }[EXT]):
                             head += "    " + temp

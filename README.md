@@ -2,20 +2,23 @@
 
 ## Info
 
-Created by: Darren Chase Papa<br>
-Written using: Python 3.13 (At least 3.10 and above)
+	Created by: Darren Chase Papa<br>
+	Written using: Python 3.10
 
 ## Hello world
 
-In pursuit of making the parser faster, and also smaller.
-We modularized the functions, since DPL can interface with python,
-we made extensions, one of which is used here (`text_io.py`)
+	In pursuit of making the parser faster, and also smaller.
+	We modularized the functions, since DPL can interface with python,
+	we made extensions, one of which is used here (`text_io.py`)
 
 ```
 # By default the search path is the library path
 import "text_io.py"
 
 io println "Hello, world!"
+
+# To import a local module/extension use @loc
+import "local_module.py" "@loc"
 ```
 
 ## Literals
@@ -146,8 +149,28 @@ pycatch [mem] _meta.internal.sizeof %really
 io println %mem
 ```
 
+## Requirements
+
+- tkinter [(used by tkinter_dpl :: soon to be integreted)](https://github.com/DarrenPapa/tkinter_dpl)
+- psutil
+
+	For runtime info such as current memory usage.
+
+- Python >=3.10
+	
+	For the match statements.
+
+- ncurses (in the future, might get canceled or postponed)
+
+	For CLI interfaces.
+
+- argparse (in the future to ditch the match statements)
+
+	To enhance the CLI logic.
+	Currently we use match statements which are SLOW.
+
 ## Performance
 
-Dont use it. If you do, please use Pypy3.
-Performance on Python 3.13 is good.
-But on Pypy its much more better!
+	Dont use it. If you do, please use Pypy3.
+	Performance on Python 3.13 is good.
+	But on Pypy its much more better!
