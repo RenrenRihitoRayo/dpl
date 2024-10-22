@@ -5,7 +5,7 @@
 	Created by: Darren Chase Papa<br>
 	Written using: Python 3.10
 
-## Whats new in 1.0-a
+## Whats new in 1.1-a (patch release to accomodate tkinter_dpl)
 
 - System info can now be accessed in `_meta.internal.os`
 - Library info can now be accessed in `_meta.internal.libs`
