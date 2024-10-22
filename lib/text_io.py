@@ -55,6 +55,8 @@ def io(frame, _, ins, *args):
                 raw_print(item, end=' ')
     elif ins == "input" and len(args) == 1:
         varproc.rset(frame[-1], args[0], input())
+    elif ins == "flush" and len(args) == 0:
+        sys.stdout.flush()
     else:
         return f"err:{error.RUNTIME_ERROR}:Invalid instruction!"
 

@@ -1,7 +1,21 @@
 # When ran shows the info of the dpl root dir
 
 import os
-from lib.core.utils import convert_bytes
+
+def convert_bytes(byte):
+    "Convert bytes to appropriate units"
+    if byte < 1e3:
+        return byte, "B"
+    elif byte < 1e6:
+        return byte * 1e-3, "KB"
+    elif byte < 1e9:
+        return byte * 1e-6, "MB"
+    elif byte < 1e12:
+        return byte * 1e-9, "GB"
+    elif byte < 1e15:
+        return byte * 1e-12, "TB"
+    else:
+        return byte * 1e-15, "PB"
 
 def list_files_recursive(dir_path, remove=""):
     total_lines = 0
@@ -15,7 +29,7 @@ def list_files_recursive(dir_path, remove=""):
                 total_size += file_size
                 file_size = convert_bytes(file_size)
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    if (EXT:=file_path.rsplit(".", 1)[1]) in {
+                    if (EXT:=file_path.rsplit(".", 1)[-1]) in {
                         "txt", "py", "dpl", "cfg", "c"
                     }:
                         head = "Head:\n"

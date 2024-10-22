@@ -213,6 +213,7 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
                 "run_code":run,
                 "process_code":process,
                 "os":os,
+                "sys":sys,
                 "info":info,
                 "__name__":"__dpl__",
                 "__path__":os.path.dirname(file),
@@ -580,34 +581,12 @@ def run(code, frame=None):
                     break
                 else:
                     p, body = btemp
-                res = temp(frame, file, body, *args)
-                if isinstance(res, tuple):
-                    for name, value in zip(rets, res):
-                        varproc.rset(frame[-1], name, value)
-                elif isinstance(res, int) and res:
-                    return res
-                elif isinstance(res, str):
-                    if res == "break":
-                        break
-                    elif res.startswith("err:"):
-                        _, ecode, message = res.split(":", 2)
-                        error.error(pos, file, message)
-                        return int(ecode)
-            except:
-                error.error(pos, file, traceback.format_exc()[:-1])
-                return error.PYTHON_ERROR
-        elif ins == "proto-body" and argc >= 1: # give a code block to a python function
-            name, *args = args
-            if (temp:=varproc.rget(frame[-1], name)) == state.bstate("nil") or not hasattr(temp, "__call__"):
-                error.error(pos, file, f"Invalid function {name!r}!")
-                break
-            try:
-                btemp = get_block(code, p)
-                if btemp == None:
-                    break
+                if argc == 2 and isinstance(args[0], dict) and args[0].get("[KWARGS]"):
+                    args[0].pop("[KWARGS]")
+                    pa = args[0].pop("[PARGS]", tuple())
+                    res = temp(frame, file, body, *pa, **args[0])
                 else:
-                    p, body = btemp
-                res = temp(frame, file, body, *args)
+                    res = temp(frame, file, body, *args)
                 if isinstance(res, tuple):
                     for name, value in zip(rets, res):
                         varproc.rset(frame[-1], name, value)
@@ -629,7 +608,12 @@ def run(code, frame=None):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 break
             try:
-                res = temp(frame, file, *args)
+                if argc == 3 and isinstance(args[0], dict) and args[0].get("[KWARGS]"):
+                    args[0].pop("[KWARGS]")
+                    pa = args[0].pop("[PARGS]", tuple())
+                    res = temp(frame, file, *pa, **args[0])
+                else:
+                    res = temp(frame, file, *args)
                 if isinstance(res, tuple):
                     if res is not None:
                         for name, value in zip(rets, res):
@@ -668,7 +652,12 @@ def run(code, frame=None):
             varproc.pscope(frame)
         elif (temp:=varproc.rget(frame[-1], ins)) != state.bstate("nil") and hasattr(temp, "__call__"): # call a python function
             try:
-                res = temp(frame, file, *args)
+                if argc == 1 and isinstance(args[0], dict) and args[0].get("[KWARGS]"):
+                    args[0].pop("[KWARGS]")
+                    pa = args[0].pop("[PARGS]", tuple())
+                    res = temp(frame, file, *pa, **args[0])
+                else:
+                    res = temp(frame, file, *args)
                 if isinstance(res, int) and res:
                     return res
                 elif isinstance(res, str):
