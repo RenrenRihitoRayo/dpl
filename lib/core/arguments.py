@@ -95,7 +95,7 @@ def evaluate(frame, expression):
     if ins in methods:
         if methods[ins][0]:
             args = exprs_runtime(frame, exprs_preruntime(args))
-        return methods[ins][0](*args)
+        return methods[ins][0](frame, *args)
     match (expression):
         case ["range", arg]:
             arg = express(frame, arg)
