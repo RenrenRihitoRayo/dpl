@@ -41,6 +41,7 @@ def switch_context_to_safe():
         varproc.rset = O_RSET
         varproc.rpop = O_RPOP
 
+# setup runtime stuff. And yes on import.
 try:
     import psutil
     CUR_PROCESS = psutil.Process()
@@ -52,6 +53,27 @@ try:
 except ModuleNotFoundError as e:
     varproc.meta["internal"]["has_get_memory"] = 0
     varproc.meta["internal"]["get_memory"] = lambda _, __: (state.bstate("nil"),)
+
+varproc.meta["internal"]["os"] = {
+    "uname":info.SYS_MACH_INFO,        # uname
+    "architecture":info.SYS_ARCH,      # system architecture (commonly x86 or ARMv7 or whatever arm proc)
+    "executable_format":info.EXE_FORM, # name is self explanatory
+    "machine":info.SYS_MACH,           # machine information
+    "information":info.SYS_INFO,       # basically the tripple
+    "processor":info.SYS_PROC,         # processor (intel and such)
+    "threads":os.cpu_count()           # physical thread count,
+}
+
+varproc.meta["internal"]["libs"] = {
+    "core_libs":tuple(map(lambda x: os.path.basename(x), filter(
+                os.path.isfile,
+                (os.path.join(info.CORE_DIR, f) for f in os.listdir(info.CORE_DIR))
+            ))),
+    "std_libs":tuple(map(lambda x: os.path.basename(x), filter(
+                os.path.isfile,
+                (os.path.join(info.LIBDIR, f) for f in os.listdir(info.LIBDIR))
+            )))
+}
 
 def get_size_of(_, __, object):
     return utils.convert_bytes(sys.getsizeof(object)),

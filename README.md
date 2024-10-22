@@ -5,6 +5,58 @@
 	Created by: Darren Chase Papa<br>
 	Written using: Python 3.10
 
+## Whats new in 1.0-a
+
+- System info can now be accessed in `_meta.internal.os`
+- Library info can now be accessed in `_meta.internal.libs`
+- New extensions to aid in writing DPL code.
+- `to_callable` adds a way to make DPL code runnable via python without using `run_code`
+- Changes were made to accommodate `tkinter_dpl`
+
+	`tkinter_dpl` is an extension attempting to port tkinter to DPL.
+	Some scripts were made using it, and it shows promissing results.
+- Extension `dicts` helps define dictionaries
+
+	Example:
+	```
+	import "dicts.py"
+	import "text_io.py"
+
+	object :my_dict
+	body _mods.py.dict :my_dict
+		# To define a variable (with true as a value)
+		.def NAME
+		# To define a variable with a name without whitespace
+		NAME = VALUE
+		# To define a variable with white space as a name
+		.let "NAME HERE" = VALUE
+		# You can nests dicts by referencing them.
+		# Example: NAME = :dict
+	end
+	```
+- `io flush` is now added to the `io` extension to manually flush the stdout.
+
+## Using dictionaries as keyword arguments for python functions
+
+```
+import "some_func.py"
+import "dicts.py"
+import "text_io.py"
+
+object :my_dict
+body _mods.py.dict :my_dict
+	.def "[KWARGS]"
+	# Manually give positional arguments
+	.let "[PARGS]" = [key word args here]
+	numerator = 138
+	denominator = 2
+end
+
+# make sure that `my_dict` is the only argument
+pycatch [res] _mods.py.SOME_DIV_FUNC :my_dict
+io println %res
+```
+
 ## Hello world
 
 	In pursuit of making the parser faster, and also smaller.
@@ -29,6 +81,13 @@ import "local_module.py" "@loc"
 - list: `[0 1 2 3 4 5 6 7 8 9 "Also strings!"]` (note that this must be on one line)
 - bool: `true` and `false` (1 and 0)
 
+
+## Variable system
+
+	Using `%name` and `:name` is different adn not just syntactic sugar!
+	`%name` searches for the meta attribute `[meta_value]` and if it is defined it is used as the value,
+	meanwhile `:name` will bypass that behavior. Using `:name` is faster and safer!
+	Only use `%name` when you intend to use its meta value!
 
 ## Variables
 
@@ -86,7 +145,7 @@ io print "Name: "
 io input name
 if-then (%input caseless{==} admin)
 	io println "Hello admin!"
-then
+else
 	io println "Hello user!"
 end
 ```
@@ -151,11 +210,14 @@ io println %mem
 
 ## Requirements
 
+Please make sure these modules are installed.
+Packages such as `ncurses` and `tkinter` may not be
+readily available.
+
 - tkinter [(used by tkinter_dpl :: soon to be integreted)](https://github.com/DarrenPapa/tkinter_dpl)
 - psutil
 
 	For runtime info such as current memory usage.
-
 - Python >=3.10
 	
 	For the match statements.
