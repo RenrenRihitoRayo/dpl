@@ -43,7 +43,7 @@ if os.name == "nt":
     LIBDIR = os.path.join(BINDIR, "lib")
     CORE_DIR = os.path.join(BINDIR, "lib", "core")
 else:
-    BINDIR = "~/.dpl"
+    BINDIR = os.path.expanduser("~/.dpl")
     LIBDIR = os.path.join(BINDIR, "lib")
     CORE_DIR = os.path.join(LIBDIR, "core")
 

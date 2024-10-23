@@ -5,8 +5,6 @@ from .info import *
 from . import state
 from . import error
 
-from . import py_parser as parser
-
 # lock
 W_LOCK = threading.Lock()
 WS_LOCK = threading.Lock()
@@ -19,6 +17,8 @@ debug = {
     "show_imports":0,
     "log_events":0,
     "debug_output_file":"debug_log.txt",
+    "track_time":0,
+    "time_threshold":1.5,
     "_set_only_when_defined":1 # make sure that only defined variables in this scope can be set
 }
 
@@ -33,9 +33,9 @@ meta = {
         "main_path":"__main__",
         "version":0.1,
         "pid":os.getpid(),
-        "_set_only_when_defined":1,
         "python_version":sys.version_info,
-        "python_version_string":PYTHON_VER
+        "python_version_string":PYTHON_VER,
+        "_set_only_when_defined":1
     },
     "_set_only_when_defined":1
 }
@@ -54,7 +54,7 @@ def new_frame():
 
 def get_debug(name):
     "Get a debug option"
-    return debug.get(name, state.bstate("nil"))
+    return debug.get(name, None)
 
 def is_debug_enabled(name):
     "Return a bool if a debug option is enabled"
