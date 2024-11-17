@@ -216,7 +216,7 @@ def exprs_runtime(frame, args):
                     k -= 1
             p -= 1
             put[-1] = put[-1][:-1]
-            if '' in put:
+            while '' in put:
                 put.remove('')
             res.append(evaluate(frame, put))
         elif c.startswith("["):
@@ -234,9 +234,9 @@ def exprs_runtime(frame, args):
                     k -= 1
             p -= 1
             put[-1] = put[-1][:-1]
-            if '' in put:
+            while '' in put:
                 put.remove('')
-            res.append([*exprs_runtime(frame, put)])
+            res.append([*bs_thing(frame, put)])
         else:
             res.append(expr_runtime(frame, c))
         p += 1
@@ -247,3 +247,6 @@ def exprs_preruntime(args):
 
 def express(frame, e):
     return expr_runtime(frame, expr_preruntime(e))
+
+def bs_thing(frame, e):
+    return exprs_runtime(frame, exprs_preruntime(e))

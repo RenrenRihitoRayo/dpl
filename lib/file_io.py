@@ -16,22 +16,26 @@ close_file file_object
 }
 
 @add_func(frame=temp)
-def open_file(frame, file, file_path, mode):
+def open_file(_, file, file_path, mode):
     "Open a file."
     if file == "__main__":
         file = varproc.meta["internal"]["main_path"]
     return open(os.path.join(os.path.basename(file), file_path), mode),
 
 @add_func(frame=temp)
-def read_file(frame, file, file_obj):
+def read_file(_, __, file_obj):
     return file_obj.read(),
 
 @add_func(frame=temp)
-def write_file(frame, file, file_obj, content):
-    return file_obj.write(content),
+def write_file(_, __, file_obj, content):
+    file_obj.write(content)
 
 @add_func(frame=temp)
-def close(frame, file, file_obj):
+def seek(_, __, file_obj, seek_value):
+    file_obj.seek(seek_value)
+
+@add_func(frame=temp)
+def close(_, __, file_obj):
     file_obj.close()
 
 varproc.modules["py"]["file_io"] = temp

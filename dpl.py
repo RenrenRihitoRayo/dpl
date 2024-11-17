@@ -6,18 +6,37 @@ import os
 import sys
 import subprocess
 import shutil
-import pickle
 import lib.core.info as info
+import lib.core.error as error
+
+try: # Try to use the .pyd or .so parser to get some kick
+    import lib.core.parser as parser
+except Exception as e: # fallback to normal python impl if it fails
+    import lib.core.py_parser as parser
+import lib.core.varproc as varproc
+import lib.core.utils as utils
+
+try:
+    import dill as pickle
+except ModuleNotFoundError:
+    print("   [Info]: `dill` was not found.\n           You cannot compile scripts with extensions!")
+    import pickle
+
+ERRORS = {getattr(error, name):name for name in filter(lambda x: x.endswith("ERROR"), dir(error))}
+
+def rec(this, ind=0):
+    if not isinstance(this, (tuple, list)):
+        return this
+    else:
+        for pos, i in enumerate(this):
+            if isinstance(i, (tuple, list)):
+                rec(i, ind+1)
+            else:
+                print(f"{'  '*ind}Error Name {'(original)' if pos == 0 else '(other)'}: {ERRORS.get(i, f'ERROR NAME NOT FOUND <{i}>')}")
 
 def handle_args():
     match (info.ARGV[1:]):
         case ["run", file, *args]:
-            try: # Try to use the .pyd or .so parser to get some kick
-                import lib.core.parser as parser
-            except Exception as e: # fallback to normal python impl if it fails
-                import lib.core.py_parser as parser
-            import lib.core.varproc as varproc
-            import lib.core.utils as utils
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
                 exit(1)
@@ -33,16 +52,12 @@ def handle_args():
                 varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
                 if (err:=parser.run(code)):
                     print(f"\n[{file}]\nFinished with an error: {err}")
+                    rec(err)
                 parser.IS_STILL_RUNNING.set()
+                parser.clean_threads()
                 if err:
                     exit(1)
         case ["rc", file, *args]:
-            try: # Try to use the .pyd or .so parser to get some kick
-                import lib.core.parser as parser
-            except Exception as e: # fallback to normal python impl if it fails
-                import lib.core.py_parser as parser
-            import lib.core.varproc as varproc
-            import lib.core.utils as utils
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
                 exit(1)
@@ -59,7 +74,9 @@ def handle_args():
                     varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
                     if (err:=parser.run(code)):
                         print(f"\n[{file}]\nFinished with an error: {err}")
+                        rec(err)
                     parser.IS_STILL_RUNNING.set()
+                    parser.clean_threads()
                     if err:
                         exit(1)
             except Exception as e:
@@ -101,7 +118,7 @@ def handle_args():
                     os.remove(i)
                 except:
                     print("Failed. Another process may be using it! Terminate it.")
-        case ["install", *flags]:
+        case ["install", python_exec, *flags]:
             print(f"Installing requirements for `{sys.platform}`")
             tmp_dir = os.getcwd()
             if info.BINDIR:
@@ -133,8 +150,11 @@ def handle_args():
                             continue
                     with open(os.devnull, "w") as devnull:
                         print("Installing:", line)
-                        if subprocess.run(["pip", "install", "--ignore-installed", line], stdout=devnull, stderr=devnull).returncode:
-                            print(f"Error while installing: {line}")
+                        try:
+                            if subprocess.run([python_exec, "-m", "pip", "install", "--ignore-installed", line], stdout=devnull, stderr=devnull).returncode:
+                                print(f"Error while installing: {line}")
+                        except Exception as e:
+                            print(f"Failed to install [{line}]: {repr(e)}\nPlease check the usage of `dpl.py install`")
             print('Done!')
             os.chdir(tmp_dir)
         case ["repr"] | []:
@@ -201,6 +221,27 @@ def handle_args():
                         print(f"Error Code: {err}")
                 except Exception as e:
                     print(f"Python Exception was raised while running:\n{repr(e)}")
+        case ["help"]:
+            print(f"""Help for DPL [v{varproc.meta['internal']['version']}]
+
+dpl run [file] args...
+    Runs the given DPL script.
+dpl rc [file] args..
+    Runs the given compiled DPL script.
+dpl compile [file]
+    Compiles the given DPL script.
+    Outputs to [file].cdpl
+dpl install [python_exec] [flags: verbose]
+    Installs runtime requirements.
+    See the requirements.txt file.
+dpl build
+    Builds the parser and cythonizes it.
+    The interpreter chooses which to run automatically.
+    Although it might be changeable in the configs soon!
+dpl build clean
+    Removes the cythonized components.
+dpl repr ALSO JUST dpl
+    Invokes the REPL""")
         case _:
             print("Invalid invokation!")
             exit(1)

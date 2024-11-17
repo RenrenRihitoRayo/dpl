@@ -6,5 +6,6 @@
 !linux echo "You have curses by default!"
 psutil
 requests
+dill
 
 end

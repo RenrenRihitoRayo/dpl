@@ -17,8 +17,22 @@ INC = {
     "body"
 }
 
+INC = {
+    "fn":1,
+    "method":1,
+    "for":1,
+    "loop":1,
+    "while":1,
+    "if":1,
+    "if-then":2,
+    "thread":1,
+    "body":1,
+    "expect":1,
+    "expect-then":2
+}
+
 DEC = {
-    "end"
+    "end", "then"
 }
 
 CHARS = {

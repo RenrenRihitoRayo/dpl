@@ -1,5 +1,3 @@
-
-
 if __name__ != "__dpl__":
     raise Exception
 
@@ -7,6 +5,8 @@ if __name__ != "__dpl__":
 def io(frame, _, ins, *args):
     if ins == "raw_println":
         raw_print(*args)
+    elif ins == "write" and len(args) == 1:
+        sys.stdout.write(str(args[0]))
     elif ins == "raw_print":
         raw_print(*args, end='')
     elif ins == "raw_term_print":

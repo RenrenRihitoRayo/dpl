@@ -4,11 +4,12 @@ import datetime
 import os
 from . import varproc
 
-SYNTAX_ERROR = 1
-RUNTIME_ERROR = 2
-PYTHON_ERROR = 3
-PANIC_ERROR = 4
-IMPORT_ERROR = 5
+ERRORS = (
+    "SYNTAX_ERROR", "RUNTIME_ERROR", "PYTHON_ERROR", "PANIC_ERROR", "ASSERT_ERROR", "IMPORT_ERROR", "THREAD_ERROR"
+)
+
+for pos, name in enumerate(ERRORS, 1):
+    globals()[name] = pos
 
 STOP_RESULT = -1
 SKIP_RESULT = -2
