@@ -56,10 +56,16 @@ if os.name == "nt":
     BINDIR = os.path.dirname(ARGV[0])
     LIBDIR = os.path.join(BINDIR, "lib")
     CORE_DIR = os.path.join(BINDIR, "lib", "core")
+    UNIX = False
 else:
-    BINDIR = os.path.expanduser("~/.dpl")
+    BINDIR = os.path.dirname(sys.argv[0])
     LIBDIR = os.path.join(BINDIR, "lib")
     CORE_DIR = os.path.join(LIBDIR, "core")
+    # lesson learned. dont over complicate linux stuff.
+    # BINDIR = os.path.expanduser("~/.dpl")
+    # LIBDIR = os.path.join(BINDIR, "lib")
+    # CORE_DIR = os.path.join(LIBDIR, "core")
+    UNIX = True
 
 PYTHON_VER = sys.version
 
@@ -71,4 +77,5 @@ SYS_MACH_INFO = platform.uname()
 
 if __name__ == "__main__":
     for name, value in globals().copy().items():
-        print(f"{name} = {value!r}")
+        if not name.startswith("__") and not name.startswith("__"):
+            print(f"{name} = {value!r}")

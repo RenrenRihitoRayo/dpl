@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # DPL CLI
 # We use match statements for te CLI
 # To keep it lightweight, we dont need speed here.
@@ -221,7 +223,7 @@ def handle_args():
                         print(f"Error Code: {err}")
                 except Exception as e:
                     print(f"Python Exception was raised while running:\n{repr(e)}")
-        case ["help"]:
+        case ["help"] | ["--help"]:
             print(f"""Help for DPL [v{varproc.meta['internal']['version']}]
 
 dpl run [file] args...
@@ -240,7 +242,7 @@ dpl build
     Although it might be changeable in the configs soon!
 dpl build clean
     Removes the cythonized components.
-dpl repr ALSO JUST dpl
+dpl repr ALSO JUST `dpl`
     Invokes the REPL""")
         case _:
             print("Invalid invokation!")

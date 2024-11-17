@@ -1,17 +1,3 @@
-import "file_io.py"
+import "error_handling.py"
 
-module file_util
-	object file
-	method %file new file mode
-		new _mods.py.file_util.file temp
-		pycatch [temp.file] _global.file_io.open_file %file %mode
-		return %temp
-	end
-	method %file read
-		pycatch [content] _mods.py.file_io.read_file %self.file
-		return %content
-	end
-	method %file write content
-		 _mods.py.file_io.write_file %self.file content
-	end
-end
+_mods.py.panic "This is deprecated!"

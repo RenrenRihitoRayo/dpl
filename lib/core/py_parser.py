@@ -251,7 +251,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             try:
                 args = argproc.exprs_runtime(frame, args)
             except Exception as e:
-                error.error(pos, file, f"Something went wrong when arguments were processed:\n{e}\n> {args!r}")
+                error.error(pos, file, f"Something went wrong when arguments were processed:\n{traceback.format_exc()}\n> {args!r}")
                 return error.PYTHON_ERROR
         if varproc.is_debug_enabled("show_instructions"):
             error.info(f"Executing: {code[p]}")

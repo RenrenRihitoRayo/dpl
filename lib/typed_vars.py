@@ -11,7 +11,7 @@ varproc.modules["types"] = {
     "list":list
 }
 
-@add_func("_mods.py.defv")
+@add_func("defv")
 def defv(frame, _, name, v_type, value=None):
     if value is not None and not isinstance(value, v_type):
         raise RuntimeError("Invalid type!")
@@ -20,7 +20,7 @@ def defv(frame, _, name, v_type, value=None):
         "type":v_type
     })
 
-@add_func("_mods.py.setv")
+@add_func("setv")
 def setv(frame, _, name, value):
     temp = varproc.rget(frame[-1], name, meta=False)
     if not isinstance(temp, dict) or "[meta_value]" not in temp or "type" not in temp:

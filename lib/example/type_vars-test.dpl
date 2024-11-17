@@ -1,6 +1,7 @@
 # typed variables
 
-# a python extension so the parser remains simple
+# python extensions so the parser remains simple
+import "text_io.py"
 import "typed_vars.py"
 
 # defv name %_mods.types.type
@@ -14,5 +15,5 @@ setv name "Test"
 expect-then quiet
 	setv name 90
 then
-	println "Oh no 90 is an int!"
+	io println "Oh no 90 is an int!"
 end

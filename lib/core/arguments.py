@@ -70,13 +70,13 @@ def expr_runtime(frame, arg):
     if is_id(arg):
         return arg
     elif is_var(arg):
-        return varproc.rget(frame[-1], arg[1:])
+        return varproc.rget(frame[-1], arg[1:], default=varproc.rget(frame[0], arg[1:]))
     elif is_fvar(arg):
-        return varproc.rget(frame[-1], arg[1:], meta=False)
+        return varproc.rget(frame[-1], arg[1:], default=varproc.rget(frame[0], arg[1:], meta=False), meta=False)
     elif is_svar(arg):
-        return varproc.rget(frame[-1], arg[2:-1])
+        return varproc.rget(frame[-1], arg[2:-1], default=varproc.rget(frame[0], arg[2:-1]))
     elif is_sfvar(arg):
-        return varproc.rget(frame[-1], arg[2:-1], meta=False)
+        return varproc.rget(frame[-1], arg[2:-1], default=varproc.rget(frame[0], arg[2:-1], meta=False), meta=False)
     elif is_sid(arg):
         return arg[5:-1]
     else:
@@ -120,7 +120,6 @@ def evaluate(frame, expression):
         case [op1, "-", op2]:
             return express(frame, op1) - express(frame, op2)
         case [op1, "*", op2]:
-            print(express(frame, op2))
             return express(frame, op1) * express(frame, op2)
         case [op1, "/", op2]:
             return express(frame, op1) / express(frame, op2)
@@ -179,6 +178,11 @@ def evaluate(frame, expression):
         case ["to-str", op1]:
             value = express(frame, op1)
             return str(value)
+        case ["append", lst, item]:
+            (lst:=expr_runtime(frame, lst)).append(express(frame, item))
+            return lst
+        case ["pop", list(lst)]:
+            return lst.pop() if lst else state.bstate("nil")
         case _:
             return state.bstate("nil")
 
@@ -210,10 +214,11 @@ def exprs_runtime(frame, args):
             put.clear()
             while p < len(args) and k:
                 c = args[p]; put.append(str(c)); p += 1
-                if c.startswith('('):
-                    k += 1
-                elif c.endswith(')'):
-                    k -= 1
+                if isinstance(c, str):
+                    if c.startswith('('):
+                        k += 1
+                    elif c.endswith(')'):
+                        k -= 1
             p -= 1
             put[-1] = put[-1][:-1]
             while '' in put:
@@ -226,12 +231,11 @@ def exprs_runtime(frame, args):
             k = 1
             while p < len(args) and k:
                 c = args[p]; put.append(str(c)); p += 1
-                if not isinstance(c, str):
-                    continue
-                if c.startswith('['):
-                    k += 1
-                elif c.endswith(']'):
-                    k -= 1
+                if isinstance(c, str):
+                    if c.startswith('['):
+                        k += 1
+                    elif c.endswith(']'):
+                        k -= 1
             p -= 1
             put[-1] = put[-1][:-1]
             while '' in put:

@@ -31,7 +31,8 @@ meta = {
     "internal":{
         "lib_path":LIBDIR,
         "main_path":"__main__",
-        "version":"1.1-b",
+        "version":"1.2.0",
+        "raw_version":(0, 0, 0),
         "pid":os.getpid(),
         "python_version":sys.version_info,
         "python_version_string":PYTHON_VER,
