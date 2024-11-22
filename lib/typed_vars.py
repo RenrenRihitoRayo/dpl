@@ -1,31 +1,25 @@
-# Implements typed vars in DPL
 
 if __name__ != "__dpl__":
-    raise Exception
+    raise Exception("This must be included by a DuProL script!")
 
-varproc.modules["types"] = {
-    "string":str,
-    "integer":int,
-    "float":float,
-    "dictionary":dict,
-    "list":list
-}
+type_vars = dpl.extension()
 
-@add_func("defv")
-def defv(frame, _, name, v_type, value=None):
-    if value is not None and not isinstance(value, v_type):
-        raise RuntimeError("Invalid type!")
-    varproc.rset(frame[-1], name, {
-        "[meta_value]":value if value is not None else state.bstate("none"),
-        "type":v_type
-    })
+def check(var, value):
+    try:
+        return True if isinstance(value, var["type"]) else False
+    except:
+        raise Exception("Type mismatch!")
 
-@add_func("setv")
+@type_vars.add_func()
+def defv(frame, _, name, value_type):
+    dpl.varproc.rset(frame[-1], name, {"type":value_type, "[meta_value]": value_type()})
+
+@type_vars.add_func()
 def setv(frame, _, name, value):
-    temp = varproc.rget(frame[-1], name, meta=False)
-    if not isinstance(temp, dict) or "[meta_value]" not in temp or "type" not in temp:
-        return
-    if not isinstance(value, temp["type"]):
-        raise RuntimeError(f"Invalid type! Expected {temp['type']} but got {type(value)}")
+    old = dpl.varproc.rget(frame[-1], name, meta=False)
+    if old == dpl.state_nil:
+        return f"err:{dpl.error.NAME_ERROR}:Variable {name!r} is not defined!"
     else:
-        temp["[meta_value]"] = value
+        if not check(old, value):
+            return f"err:{dpl.error.TYPE_ERROR}:Variable {name!r} expects type {old['type']} but got {type(value)} ({value!r})"
+        dpl.varproc.rset(frame[-1], name, value)

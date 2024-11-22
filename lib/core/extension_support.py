@@ -9,26 +9,104 @@ from . import info
 from . import error
 from . import state
 from . import restricted
+import types
+import itertools
 import time
 import os, sys
 import traceback
-
-run = None
-process = None
+import __main__
 
 def register_run(func):
-    global run
-    run = func
+    dpl.run_code = func
 
 def register_process(func):
-    global process
-    process = func
+    dpl.process_code = func
+
+class modules:
+    "Capsule for modules."
+    os = os
+    sys = sys
+    traceback = traceback
+    time = time
+    types = types
+    itertools = itertools
+
+class extension:
+    "A class to help define methods and functions."
+    def __init__(self, name=None, meta_name=None):
+        self.__func = {} # functions
+        self.__meth = {} # methods
+        self.name = name           # This is a scope name,              dpl defined name.func_name
+        self.meta_name = meta_name # while this is the mangled name, python defined "{meta_name}:{func_name}"
+    def add_func(self, name=None):
+        "Add a function."
+        def wrap(func):
+            nonlocal name
+            if name is None:
+                name = getattr(func, "__name__", None) or "_"
+            self.__func[name if not self.meta_name else f"{self.meta_name}:{name}"] = func
+            return func
+        return wrap
+    def add_method(self, name=None):
+        "Add a method."
+        def wrap(func):
+            nonlocal name
+            if name is None:
+                name = getattr(func, "__name__", None) or "_"
+            self.__meth[name if not self.meta_name else f"{self.meta_name}:{name}"] = func
+            return func
+        return wrap
+    def __setitem__(self, name, value):
+        self.__func[name if not self.meta_name else f"{self.meta_name}:{name}"] = value
+    def __getitem__(self, name):
+        return self.__func[name if not self.meta_name else f"{self.meta_name}:{name}"]
+    def get(self, name, default=None):
+        return self.__data.get(name, default)
+    @property
+    def functions(self):
+        return self.__func
+    @property
+    def methods(self):
+        return self.__meth
+
+def require(path):
+    "Import a python in the lib dir.\nIn cases of 'dir/.../file' use ['dir', ..., 'file'],\nthis uses os.path.join to increase portability."
+    mod = {
+        "__name__":"__dpl_require__",
+        "modules":modules,
+        "dpl":dpl,
+        "__import__":restricted.restricted(__import__)
+    }
+    if isinstance(path, (list, tuple)):
+        path = os.path.join(*path)
+    try:
+        with open(os.path.join(info.LIBDIR, path), "r") as f:
+            exec(compile(f.read(), path, "exec"), mod)
+        r = types.ModuleType(path)
+        for name, value in mod.items():
+            setattr(r, name, value)
+        return r
+    except:
+        return None
+
+class dpl:
+    require = require
+    utils = utils
+    varproc = varproc
+    arguments = argproc
+    info = info
+    error = error
+    state = state
+    restricted = restricted
+    state_nil = state.bstate("nil")
+    state_none = state.bstate("none")
+    extension = extension
 
 def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"]):
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join({
-                "@lib":varproc.meta["internal"]["lib_path"],
+                "@std":varproc.meta["internal"]["lib_path"],
                 "@loc":loc
             }.get(search_path, search_path), file)
         if not os.path.isfile(file):
@@ -38,36 +116,12 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
         error.info(f"Imported {file!r}")
     with open(file, "r") as f:
         obj = compile(f.read(), file, "exec")
-        def add_func(name=None, frame=frame[-1]):
-            def wrap(x):
-                if name is None:
-                    fname = getattr(x, "__name__", "_dump")
-                else:
-                    fname = name
-                varproc.rset(frame, fname, x)
-                return x
-            return wrap
         try:
             d = {
-                "add_func":add_func,
-                "varproc":varproc,
-                "frame":frame,
-                "run_code":run,
-                "process_code":process,
-                "os":os,
-                "sys":sys,
-                "info":info,
                 "__name__":"__dpl__",
-                "__path__":os.path.dirname(file),
-                "print":error.info,
-                "state":state,
-                "logging":error,
-                "raw_print":print,
-                "_import":py_import,
-                "argproc":argproc,
-                "add_method":argproc.add_method,
-                "error":error,
-                "__import__":__import__
+                "modules":modules,
+                "dpl":dpl,
+                "__import__":restricted.restricted(__import__)
             }
             exec(obj, d)
         except (SystemExit, KeyboardInterrupt):
@@ -75,6 +129,20 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
         except:
             error.error("[N/A]", file, traceback.format_exc())
             return 1
+    funcs = {}
+    meths = {}
+    for name, ext in d.items():
+        if isinstance(ext, extension):
+            if ext.name in frame[-1]:
+                raise Exception(f"Name clashing! For name {ext.name!r}")
+            if ext.name:
+                varproc.rset(frame[-1], ext.name, (temp:={}))
+                temp.update(ext.functions)
+            else:
+                funcs.update(ext.functions)
+            meths.update(ext.methods)
+    frame[-1].update(funcs)
+    argproc.methods.update(meths)
 
 def py_import_string(frame, file_name, code, search_path=None, loc=varproc.meta["internal"]["main_path"]):
     if not os.path.isabs(file_name):
@@ -89,34 +157,12 @@ def py_import_string(frame, file_name, code, search_path=None, loc=varproc.meta[
     if varproc.is_debug_enabled("show_imports"):
         error.info(f"Imported {file_name!r}")
     obj = compile(code, file_name, "exec")
-    def add_func(name=None, frame=frame[-1]):
-        def wrap(x):
-            if name is None:
-                fname = getattr(x, "__name__", "_dump")
-            else:
-                fname = name
-            varproc.rset(frame, fname, x)
-            return x
-        return wrap
     try:
         d = {
-            "add_func":add_func,
-            "varproc":varproc,
-            "frame":frame,
-            "run_code":run,
-            "process_code":process,
-            "os":os,
-            "sys":sys,
-            "info":info,
-            "__path__":os.path.dirname(file_name),
-            "print":error.info,
-            "state":state,
-            "logging":error,
-            "raw_print":print,
-            "_import":py_import,
-            "argproc":argproc,
-            "add_method":argproc.add_method,
-            "error":error
+            "__name__":"__dpl__",
+            "modules":modules,
+            "dpl":dpl,
+            "__import__":restricted.restricted(__import__)
         }
         d.update(restricted.restricted_builtins)
         d["__name__"] = "__dpl__"
@@ -126,6 +172,16 @@ def py_import_string(frame, file_name, code, search_path=None, loc=varproc.meta[
     except:
         error.error("[N/A]", file_name, traceback.format_exc())
         return 1
+    funcs = {}
+    meths = {}
+    for name, ext in d.items():
+        if isinstance(ext, extension):
+            if ext.name in frame[-1]:
+                raise Exception(f"Name clashing! For name {ext.name!r}")
+            funcs.update(ext.functions)
+            meths.update(ext.methods)
+    frame[-1].update(funcs)
+    argproc.methods.update(meths)
 
 def call(func, frame, file, args, kwargs={}):
     if varproc.is_debug_enabled("track_time"):

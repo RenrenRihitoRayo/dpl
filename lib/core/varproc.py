@@ -1,7 +1,10 @@
 # Variable and Scope handling
 
 import threading
-from .info import *
+import os
+import sys
+from . import constants
+from . import info
 from . import state
 from . import error
 
@@ -26,25 +29,30 @@ debug = {
 # and meta programming to the extreme
 meta = {
     "debug":debug,
-    "argv":ARGV,
-    "argc":ARGC,
+    "argv":info.ARGV,
+    "argc":info.ARGC,
     "internal":{
-        "lib_path":LIBDIR,
+        "lib_path":info.LIBDIR,
         "main_path":"__main__",
-        "version":"1.2.0",
-        "raw_version":(0, 0, 0),
+        "version":info.VERSION,
+        "raw_version":info.VERSION_TRIPLE,
         "pid":os.getpid(),
         "python_version":sys.version_info,
-        "python_version_string":PYTHON_VER,
+        "python_version_string":info.PYTHON_VER,
         "_set_only_when_defined":1
     },
     "_set_only_when_defined":1
 }
 
-modules = {
-    "py":{},
-    "dpl":{},
-    "other":{}
+meta["internal"]["libs"] = {
+    "core_libs":tuple(map(lambda x: os.path.basename(x), filter(
+                os.path.isfile,
+                (os.path.join(info.CORE_DIR, f) for f in os.listdir(info.CORE_DIR))
+            ))),
+    "std_libs":tuple(map(lambda x: os.path.basename(x), filter(
+                os.path.isfile,
+                (os.path.join(info.LIBDIR, f) for f in os.listdir(info.LIBDIR))
+            )))
 }
 
 def new_frame():
@@ -69,8 +77,7 @@ def nscope(frame):
     "New scope"
     t = {
         "_meta":meta,
-        "_temp":{},
-        "_mods":modules
+        "_temp":{}
     }
     if frame:
         t["_global"] = frame[0]
@@ -94,7 +101,7 @@ def pscope(frame):
         if is_debug_enabled("show_scope_updates"):
             error.info(f"Tried to discard global scope!")
 
-def rget(dct, full_name, default=state.bstate("nil"), sep=".", meta=True):
+def rget(dct, full_name, default=constants.nil, sep=".", meta=True):
     "Get a variable"
     if "." not in full_name:
         temp = dct.get(full_name, default)
@@ -122,7 +129,7 @@ def rget(dct, full_name, default=state.bstate("nil"), sep=".", meta=True):
             return default
     return default
 
-def rpop(dct, full_name, default=state.bstate("nil"), sep="."):
+def rpop(dct, full_name, default=constants.nil, sep="."):
     "Pop a variable"
     if "." not in full_name:
         with W_LOCK:

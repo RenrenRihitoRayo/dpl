@@ -1,3 +1,0 @@
-import "error_handling.py"
-
-_mods.py.panic "This is deprecated!"

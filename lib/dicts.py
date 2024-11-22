@@ -1,23 +1,36 @@
 
-if __name__ != "__dpl__":
-    raise Exception
+t = dpl.extension(meta_name="dicts")
 
-@add_func("_mods.py.dict")
-def dicts(frame, _, body, obj):
-    data = {}
-    for _, _, name, this in body:
-        if name == ".let":
-            name, eq, value = argproc.exprs_runtime(frame, this)
+@t.add_func()
+def define(frame, _, body, name):
+    dct = {}
+    for _, _, op, args in body:
+        if op == "let":
+            vname, eq, *value = args
+            if value == "...":
+                value = dct
+            else:
+                value, = dpl.arguments.bs_thing(frame, value)
             if eq != "=":
-                raise RuntimeError("Invalid syntax!")
-            data[name] = value
-        elif name == ".def":
-            name, = argproc.exprs_runtime(frame, this)
-            data[name] = 1
+                return f"err:{dpl.error.SYNTAX_ERROR}:Missing equal sign."
+            dct[vname] = value
+        elif op == "def":
+            vname, = args
+            dct[vname] = 1
         else:
-            eq, *value = this
-            if eq != "=":
-                raise RuntimeError("Invalid syntax!")
-            data[name] = argproc.exprs_runtime(frame, value)[0]
-    obj.clear()
-    obj.update(data)
+            return f"err:{dpl.error.PANIC_ERROR}:Invalid op {op!r}"
+    dpl.varproc.rset(frame[-1], name, dct)
+
+@t.add_func()
+def template(frame, _, template, **kwargs):
+    dct = {}
+    for name, item in kwargs.items():
+        if name not in template:
+            return f"err:{dpl.error.NAME_ERROR}:Name {name!r} is not in template."
+        elif not isinstance(item, template[name]):
+            return f"err:{dpl.error.TYPE_ERROR}:Expected {template[name]!r} but got {type(item)!r} ({item!r})"
+        dct[name] = item
+    for i in template.keys():
+        if i not in dct:
+            return f"err:{dpl.error.NAME_ERROR}:Value {i!r} is not defined!"
+    return dct,

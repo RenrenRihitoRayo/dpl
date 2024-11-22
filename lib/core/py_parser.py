@@ -8,7 +8,6 @@ import itertools
 import traceback
 import threading
 import pickle
-import builtins
 from copy import deepcopy as copy
 from . import arguments as argproc
 from . import info
@@ -16,9 +15,14 @@ from . import state
 from . import error
 from . import utils
 from . import varproc
+from . import objects
 from . import extension_support as ext_s # so when this is built using cython it doesnt hang when calling functions
 
 IS_STILL_RUNNING = threading.Event()
+
+dpl_func_attr = [
+    "name", "body", "args", "docs", "defs",
+]
 
 threads = []
 thread_events = [] # Thread events, so any threads can be killed manually or automatically
@@ -31,24 +35,11 @@ def clean_threads(): # kill all threads and wait for them to terminate
 
 def my_exit(code=0):
     IS_STILL_RUNNING.set()
-    clean()
+    clean_threads()
     raise SystemExit(code)
 
 sys.exit = my_exit
 exit = my_exit
-
-O_RSET = varproc.rset
-O_RPOP = varproc.rpop
-
-def switch_context_to_unsafe():
-    with varproc.W_LOCK:
-        varproc.rset = varproc.unsafe_rset
-        varproc.rpop = varproc.unsafe_rpop
-
-def switch_context_to_safe():
-    with varproc.W_LOCK:
-        varproc.rset = O_RSET
-        varproc.rpop = O_RPOP
 
 # setup runtime stuff. And yes on import.
 try:
@@ -57,15 +48,15 @@ try:
     def get_memory(_, __):
         memory_usage = CUR_PROCESS.memory_info().rss
         return utils.convert_bytes(memory_usage),
-    varproc.meta["internal"]["has_get_memory"] = 1
-    varproc.meta["internal"]["get_memory"] = get_memory
+    varproc.meta["internal"]["HasGetMemory"] = 1
+    varproc.meta["internal"]["GetMemory"] = get_memory
 except ModuleNotFoundError as e:
-    varproc.meta["internal"]["has_get_memory"] = 0
-    varproc.meta["internal"]["get_memory"] = lambda _, __: (state.bstate("nil"),)
+    varproc.meta["internal"]["HasGetMemory"] = 0
+    varproc.meta["internal"]["GetMemory"] = lambda _, __: (state.bstate("nil"),)
 
 varproc.meta["internal"].update({
-    "set_env":lambda _, __, name, value:os.putenv(name, value),
-    "get_env":lambda _, __, name, default=None:os.getenv(name, default)
+    "SetEnv":lambda _, __, name, value:os.putenv(name, value),
+    "GetEnv":lambda _, __, name, default=None:os.getenv(name, default)
 })
 
 varproc.meta["internal"]["os"] = {
@@ -77,27 +68,17 @@ varproc.meta["internal"]["os"] = {
     "processor":info.SYS_PROC,         # processor (intel and such)
     "threads":os.cpu_count()           # physical thread count,
 }
-varproc.meta["internal"]["libs"] = {
-    "core_libs":tuple(map(lambda x: os.path.basename(x), filter(
-                os.path.isfile,
-                (os.path.join(info.CORE_DIR, f) for f in os.listdir(info.CORE_DIR))
-            ))),
-    "std_libs":tuple(map(lambda x: os.path.basename(x), filter(
-                os.path.isfile,
-                (os.path.join(info.LIBDIR, f) for f in os.listdir(info.LIBDIR))
-            )))
-}
 
 def get_size_of(_, __, object):
     return utils.convert_bytes(sys.getsizeof(object)),
 
 try:
     get_size_of(0)
-    varproc.meta["internal"]["sizeof"] = get_size_of
+    varproc.meta["internal"]["SizeOf"] = get_size_of
 except:
     def temp(_, __, ___):
         return "err:3:Cannot get memory usage of an object!\nIf you are using pypy then please use another interpreter."
-    varproc.meta["internal"]["sizeof"] = temp
+    varproc.meta["internal"]["SizeOf"] = temp
 
 # Global preprocessing rules
 rules = {
@@ -140,8 +121,10 @@ def get_block(code, current_p):
     res = []
     while p < len(code):
         _, _, ins, _ = code[p]
-        if ins in info.INC:
-            k += info.INC[ins]
+        if ins in info.INC_EXT:
+            k += info.INC_EXT[ins]
+        elif ins in info.INC:
+            k -= 1
         elif ins in info.DEC:
             k -= 1
         if k == 0:
@@ -153,6 +136,9 @@ def get_block(code, current_p):
         print(f"Error in line {pos} file {file!r}\nCause: Block wasnt closed!")
         return None
     return p, res
+
+def has(attrs, dct):
+    return True if False not in map(lambda x: x in dct, attrs) else False
 
 def process(code, name="__main__"):
     "Preprocess a file"
@@ -220,10 +206,10 @@ def process(code, name="__main__"):
                     break
                 with open(file, "r") as f:
                     if ext_s.py_import_string(nframe, file, f.read()):
-                        print("Code dumped. Package error encountered!\n")
+                        print("Package error encountered!\n")
                         return [], [{}]
             else:
-                error.pre_error(lpos, name, f"{name!r}-{lpos}:Invalid directive {ins!r}")
+                error.pre_error(lpos, name, f"{name!r}-{lpos}: Invalid directive {ins!r}")
                 break
         else:
             ins, *args = line.split()
@@ -263,14 +249,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 break
             else:
                 p, body = temp
-            varproc.rset(frame[-1], name, {
-                "name":name,
-                "body":body,
-                "args":params,
-                "self":state.bstate("nil"),
-                "docs":"Function.",
-                "defs":{}
-            })
+            varproc.rset(frame[-1], name, objects.make_function(name, body, params))
         elif ins == "for" and argc == 3 and args[1] == "in":
             name, _, iter = args
             temp = get_block(code, p)
@@ -354,7 +333,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 err = run(body, frame=frame)
                 if err:
                     return err
-        elif ins == "if-then" and argc == 1:
+        elif ins == "if_then" and argc == 1:
             temp = get_block(code, p)
             if temp is None:
                 break
@@ -384,9 +363,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 return error.RUNTIME_ERROR
             consts = varproc.rget(frame[-1], "[const]", default=None)
             if consts:
-                consts.append(name if "." not in name else name.rsplit(".", 1)[-1])
+                consts.append(name)
             else:
-                varproc.rset(frame[-1], "[const]", [name if "." not in name else name.rsplit(".", 1)[-1]], meta=False)
+                varproc.rset(frame[-1], "[const]", [name], meta=False)
         elif ins == "fset" and argc == 2:
             varproc.rset(frame[-1], args[0], args[1], meta=False)
         elif ins == "del" and argc == 1:
@@ -413,8 +392,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 flag, *types = types
             else:
                 flag = None
-            if len(types) == 1 and isinstance(types[0], str):
-                types, = types
             if err == 0:
                 pass
             elif flag == "any":
@@ -425,7 +402,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 return err
             else:
                 error.info("Error was expected and was not propagated!")
-        elif ins == "expect-then" and argc == 1:
+        elif ins == "expect_then" and argc == 1:
             types = args[0]
             temp = get_block(code, p)
             if temp == None:
@@ -437,7 +414,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 break
             else:
                 p, body2 = temp
-
             OLD_ERROR = error.error
             error.error = lambda *x, **y: None
             err = run(body, frame)
@@ -446,8 +422,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 flag, *types = types
             else:
                 flag = None
-            if len(types) == 1 and isinstance(types[0], str):
-                types, = types
             if err == 0:
                 pass
             elif flag == "any":
@@ -476,23 +450,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             varproc.rset(frame[-1], name, temp[1])
             del temp
         elif ins == "object" and argc == 1:
-            varproc.rset(frame[-1], args[0], {
-                "_internal":{
-                    "name":args[0],
-                    "type":"type:"+args[0],
-                    "docs":"An object."
-                },
-                "_im_repr":{ # define a boring default _im_repr
-                    "name":0,
-                    "args":[],
-                    "defs":0,
-                    "docs":"Default internal method for repr.",
-                    "self":0,
-                    "body":[
-                        (0, "_internal", "return", (f"<Object {args[0]}>",))
-                    ]
-                }
-            })
+            varproc.rset(frame[-1], args[0], objects.make_object(args[0]))
         elif ins == "new" and argc == 2:
             obj = varproc.rget(frame[-1], args[0])
             if obj == state.bstate("nil"):
@@ -510,14 +468,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 break
             else:
                 p, body = temp
-            varproc.rset(self, name, {
-                "name":name,
-                "body":body,
-                "args":params,
-                "self":self,
-                "docs":f"Method of {varproc.rget(self, '_internal.name')}",
-                "defs":{}
-            })
+            varproc.rset(self, name, objects.make_method(name, body, params, self))
         elif ins == "import" and argc == 1:
             if ext_s.py_import(frame, args[0], varproc.meta["internal"]["lib_path"]):
                 return error.IMPORT_ERROR
@@ -668,7 +619,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
-        elif (temp:=varproc.rget(frame[-1], ins)) != state.bstate("nil") and isinstance(temp, dict): # Call a function
+        elif (temp:=varproc.rget(frame[-1], ins, default=varproc.rget(frame[0], ins))) != state.bstate("nil") and isinstance(temp, dict) and has(dpl_func_attr, temp): # Call a function
             varproc.nscope(frame)
             if temp["defs"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
@@ -688,7 +639,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if err:
                 return err
             varproc.pscope(frame)
-        elif (temp:=varproc.rget(frame[-1], ins)) != state.bstate("nil") and hasattr(temp, "__call__"): # call a python function
+        elif (temp:=varproc.rget(frame[-1], ins, default=varproc.rget(frame[0], ins))) != state.bstate("nil") and hasattr(temp, "__call__"): # call a python function
             try:
                 if argc == 1 and isinstance(args[0], dict) and args[0].get("[KWARGS]"):
                     args[0].pop("[KWARGS]")

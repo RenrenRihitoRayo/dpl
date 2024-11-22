@@ -10,6 +10,8 @@ import subprocess
 import shutil
 import lib.core.info as info
 import lib.core.error as error
+import lib.core.cli_arguments as cli_args
+import lib.core.extension_support as ext_s
 
 try: # Try to use the .pyd or .so parser to get some kick
     import lib.core.parser as parser
@@ -20,9 +22,10 @@ import lib.core.utils as utils
 
 try:
     import dill as pickle
+    has_dill = True
 except ModuleNotFoundError:
-    print("   [Info]: `dill` was not found.\n           You cannot compile scripts with extensions!")
     import pickle
+    has_dill = False
 
 ERRORS = {getattr(error, name):name for name in filter(lambda x: x.endswith("ERROR"), dir(error))}
 
@@ -36,8 +39,23 @@ def rec(this, ind=0):
             else:
                 print(f"{'  '*ind}Error Name {'(original)' if pos == 0 else '(other)'}: {ERRORS.get(i, f'ERROR NAME NOT FOUND <{i}>')}")
 
+def ez_run(code, process=True, file="???"):
+    if process:
+        code = parser.process(code)
+    if (err:=parser.run(code)):
+        print(f"\n[{file}]\nFinished with an error: {err}")
+        rec(err)
+    parser.IS_STILL_RUNNING.set()
+    parser.clean_threads()
+    if err:
+        exit(1)
+
 def handle_args():
-    match (info.ARGV[1:]):
+    flags = cli_args.flags(info.ARGV, True)
+    if "arg-test" in flags:
+        print(flags)
+        return
+    match (info.ARGV):
         case ["run", file, *args]:
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
@@ -50,15 +68,8 @@ def handle_args():
             info.ARGC = len(info.ARGV)
             varproc.meta["argc"] = info.ARGC
             with open(file, "r") as f:
-                code = parser.process(f.read())
                 varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
-                if (err:=parser.run(code)):
-                    print(f"\n[{file}]\nFinished with an error: {err}")
-                    rec(err)
-                parser.IS_STILL_RUNNING.set()
-                parser.clean_threads()
-                if err:
-                    exit(1)
+                ez_run(f.read(), file=file)
         case ["rc", file, *args]:
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
@@ -74,13 +85,7 @@ def handle_args():
                 with open(file, "rb") as f:
                     code = pickle.loads(f.read())
                     varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
-                    if (err:=parser.run(code)):
-                        print(f"\n[{file}]\nFinished with an error: {err}")
-                        rec(err)
-                    parser.IS_STILL_RUNNING.set()
-                    parser.clean_threads()
-                    if err:
-                        exit(1)
+                    ez_run(code, False, file)
             except Exception as e:
                 print("Something went wrong:", file)
                 print("Error:", repr(e))
@@ -165,6 +170,15 @@ def handle_args():
             else:
                 start_text = ""
             frame = varproc.new_frame()
+            if "import-all" in flags:
+                if "verbose" in flags:
+                    print("Importing all standard modules...")
+                for pos, file in enumerate(temp:=varproc.meta["internal"]["libs"]["std_libs"], 1):
+                    if "verbose" in flags:
+                        print(f"[{(pos/len(temp))*100:7.2f}% ] Importing: {file}")
+                    ext_s.py_import(frame, file, "@std")
+                if "verbose" in flags:
+                    print("Done importing!")
             PROMPT_CTL = frame[-1]["_meta"]["internal"]["prompt_ctl"] = {}
             PROMPT_CTL["ps1"] = ">>> "
             PROMPT_CTL["ps2"] = "... "
@@ -181,7 +195,7 @@ def handle_args():
                     act = input(PROMPT_CTL["ps1"]).strip()
                 except KeyboardInterrupt:
                     exit()
-                if act and act.split(maxsplit=1)[0] in info.INC or act == "#multiline":
+                if act and ((temp:=act.split(maxsplit=1)[0]) in info.INC or temp in info.INC_EXT) or act == "#multiline":
                     while True:
                         try:
                             aa = input(PROMPT_CTL["ps2"])

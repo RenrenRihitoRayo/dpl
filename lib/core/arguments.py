@@ -2,6 +2,7 @@
 # NOT FOR THE CLI
 
 from . import state
+from . import constants
 from . import error
 from . import varproc
 from .info import *
@@ -50,13 +51,13 @@ def expr_preruntime(arg):
     elif is_float(arg.replace(",", "")):
         return float(arg)
     elif arg == "true":
-        return 1
+        return constants.true
     elif arg == "false":
-        return 0
+        return constants.false
     elif arg == "none":
-        return state.bstate("none")
+        return constants.none
     elif arg == "nil":
-        return state.bstate("nil")
+        return constants.nil
     elif arg == "[]":
         return []
     return arg
@@ -97,13 +98,13 @@ def evaluate(frame, expression):
             args = exprs_runtime(frame, exprs_preruntime(args))
         return methods[ins][0](frame, *args)
     match (expression):
-        case ["range", arg]:
+        case ["Range", arg]:
             arg = express(frame, arg)
             return tuple(range(arg))
-        case ["raw_range", arg]:
+        case ["RawRange", arg]:
             arg = express(frame, arg)
             return range(arg)
-        case ["sum", *items]:
+        case ["Sum", *items]:
             items = exprs_runtime(frame, items)
             start_t = type(items[0])
             start = start_t()
@@ -113,7 +114,7 @@ def evaluate(frame, expression):
                 except:
                     start += start_t(i)
             return start
-        case ["index", lst, index]:
+        case ["Index", lst, index]:
             return express(frame, lst)[express(frame, index)]
         case [op1, "+", op2]:
             return express(frame, op1) + express(frame, op2)
@@ -128,60 +129,66 @@ def evaluate(frame, expression):
         case [op1, "^", op2]:
             return express(frame, op1) ** express(frame, op2)
         case [op1, "caseless{==}", *op2]:
-            return 1 if express(frame, op1).lower() == express(frame, op2).lower() else 0
+            return constants.true if express(frame, op1).lower() == express(frame, op2).lower() else constants.false
         case [op1, "caseless{!=}", *op2]:
-            return 1 if express(frame, op1).lower() != express(frame, op2).lower() else 0
+            return constants.true if express(frame, op1).lower() != express(frame, op2).lower() else constants.false
         case [op1, "caseless{>}", *op2]:
-            return 1 if express(frame, op1).lower() > express(frame, op2).lower() else 0
+            return constants.true if express(frame, op1).lower() > express(frame, op2).lower() else constants.false
         case [op1, "caseless{<}", *op2]:
-            return 1 if express(frame, op1).lower() < express(frame, op2).lower() else 0
+            return constants.true if express(frame, op1).lower() < express(frame, op2).lower() else constants.false
         case [op1, "caseless{>=}", *op2]:
-            return 1 if express(frame, op1).lower() >= express(frame, op2).lower() else 0
+            return constants.true if express(frame, op1).lower() >= express(frame, op2).lower() else constants.false
         case [op1, "caseless{<=}", *op2]:
-            return 1 if express(frame, op1).lower() <= express(frame, op2).lower() else 0
+            return constants.true if express(frame, op1).lower() <= express(frame, op2).lower() else constants.false
         case [op1, "==", op2]:
-            return 1 if express(frame, op1) == express(frame, op2) else 0
+            return constants.true if express(frame, op1) == express(frame, op2) else constants.false
         case [op1, "!=", op2]:
-            return 1 if express(frame, op1) != express(frame, op2) else 0
+            return constants.true if express(frame, op1) != express(frame, op2) else constants.false
         case [op1, ">", op2]:
-            return 1 if express(frame, op1) > express(frame, op2) else 0
+            return constants.true if express(frame, op1) > express(frame, op2) else constants.false
         case [op1, "<", op2]:
-            return 1 if express(frame, op1) < express(frame, op2) else 0
+            return constants.true if express(frame, op1) < express(frame, op2) else constants.false
         case [op1, ">=", op2]:
-            return 1 if express(frame, op1) >= express(frame, op2) else 0
+            return constants.true if express(frame, op1) >= express(frame, op2) else constants.false
         case [op1, "<=", op2]:
-            return 1 if express(frame, op1) <= express(frame, op2) else 0
+            return constants.true if express(frame, op1) <= express(frame, op2) else constants.false
         case ["not", op1]:
-            return 1 if not express(frame, op1) else 0
+            return constants.true if not express(frame, op1) else constants.false
         case [op1, "or", op2]:
-            return 1 if express(frame, op1) or express(frame, op2) else 0
+            return constants.true if express(frame, op1) or express(frame, op2) else constants.false
         case [op1, "and", op2]:
-            return 1 if express(frame, op1) and express(frame, op2) else 0
-        case ["len-of", op1]:
+            return constants.true if express(frame, op1) and express(frame, op2) else constants.false
+        case [op1, "in", op2]:
+            return constants.true if express(frame, op1) in express(frame, op2) else constants.false
+        case ["LenOf", op1]:
             value = express(frame, op1)
             if hasattr(value, "__len__"):
                 return len(value)
             else:
                 return state.bstate("nil")
-        case ["to-int", op1]:
+        case ["ToInt", op1]:
             value = express(frame, op1)
             try:
                 return int(value)
             except:
                 return state.bstate("nil")
-        case ["to-float", op1]:
+        case ["ToFloat", op1]:
             value = express(frame, op1)
             try:
                 return int(value)
             except:
                 return state.bstate("nil")
-        case ["to-str", op1]:
+        case ["ToStr", op1]:
             value = express(frame, op1)
             return str(value)
-        case ["append", lst, item]:
+        case ["IsType", op1, t]:
+            value = express(op1)
+            vtype = express(t)
+            return constants.true if isinstance(op1, t) else constants.false
+        case ["Append", lst, item]:
             (lst:=expr_runtime(frame, lst)).append(express(frame, item))
             return lst
-        case ["pop", list(lst)]:
+        case ["Pop", list(lst)]:
             return lst.pop() if lst else state.bstate("nil")
         case _:
             return state.bstate("nil")

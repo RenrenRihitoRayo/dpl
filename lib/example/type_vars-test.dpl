@@ -1,19 +1,21 @@
 # typed variables
 
 # python extensions so the parser remains simple
+set meta.debug.show_instructions true
+
 import "text_io.py"
 import "typed_vars.py"
 
 # defv name %_mods.types.type
-defv name %_mods.types.string
+defv name %types.str
 # not optimal as this skips the type checking.
 # set name 180
 # use this instead:
 setv name "Test"
 
 # raises an error
-expect-then quiet
+expect_then quiet
 	setv name 90
 then
-	io println "Oh no 90 is an int!"
+	io:println "Oh no 90 is an int!"
 end

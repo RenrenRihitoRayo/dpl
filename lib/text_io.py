@@ -1,63 +1,53 @@
+
 if __name__ != "__dpl__":
-    raise Exception
+    raise Exception("This must be included by a DuProL script!")
 
-@add_func()
-def io(frame, _, ins, *args):
-    if ins == "raw_println":
-        raw_print(*args)
-    elif ins == "write" and len(args) == 1:
-        sys.stdout.write(str(args[0]))
-    elif ins == "raw_print":
-        raw_print(*args, end='')
-    elif ins == "raw_term_print":
-        s = ""
-        for i in args:
-            if isinstance(i, int):
-                s += chr(i)
-            elif isinstance(i, str):
-                s += i
-            else:
-                s += repr(i)
-        sys.stdout.write(s)
-        sys.stdout.flush()
-    elif ins == "println":
-        for item in args:
-            if isinstance(item, dict) and "_internal" in item and "_im_repr" in item:
-                varproc.nscope(frame)
-                varproc.nscope(frame)
-                varproc.rset(frame[-1], "self", item)
-                varproc.rset(frame[-1], "_returns", ("repr",))
-                err = run_code(item["_im_repr"]["body"], frame)
-                if err:
-                    return err
-                varproc.pscope(frame)
-                repr = frame[-1].get("repr", state.bstate("nil"))
-                varproc.pscope(frame)
-                raw_print(repr, end=' ')
-            else:
-                raw_print(item, end=' ')
-        raw_print()
-    elif ins == "print":
-        for item in args:
-            if isinstance(item, dict) and "_internal" in item and "_im_repr" in item:
-                varproc.nscope(frame)
-                varproc.nscope(frame)
-                varproc.rset(frame[-1], "self", item)
-                varproc.rset(frame[-1], "_returns", ("repr",))
-                err = run_code(item["_im_repr"]["body"], frame)
-                if err:
-                    return err
-                varproc.pscope(frame)
-                repr = frame[-1].get("repr", state.bstate("nil"))
-                varproc.pscope(frame)
-                raw_print(repr, end=' ')
-            else:
-                raw_print(item, end=' ')
-    elif ins == "input" and len(args) == 1:
-        varproc.rset(frame[-1], args[0], input())
-    elif ins == "flush" and len(args) == 0:
-        sys.stdout.flush()
-    else:
-        return f"err:{error.RUNTIME_ERROR}:Invalid instruction!"
+if not dpl.info.VERSION.isCompat((1, 4, 0)):
+    raise Exception("This is for version 1.4.x!")
 
-varproc.modules["py"]["io"] = io
+helper = dpl.require(["dpl_helpers", "func_helper.py"])
+
+if helper is None:
+    raise Exception("Helper func_helper.py doesnt exist!")
+
+text_io = dpl.extension(meta_name="io")
+
+text_io["output"] = modules.sys.stdout
+
+@text_io.add_func("print")
+def myPrint(_, __, *args, end="", sep=" "):
+    args = list(args)
+    for pos, arg in enumerate(args):
+        if isinstance(arg, dict) and helper.has_repr(arg):
+            arg[pos] = helper.get_repr(arg["_im_repr"])
+    print(*args, end=end, sep=sep, file=text_io["output"])
+
+@text_io.add_func()
+def println(_, __, *args, sep=" "):
+    args = list(args)
+    for pos, arg in enumerate(args):
+        if isinstance(arg, dict) and helper.has_repr(arg):
+            args[pos] = helper.get_repr(arg["_im_repr"])
+    print(*args, sep=sep, file=text_io["output"])
+
+@text_io.add_func()
+def rawprint(_, __, *args, sep=" ", end=""):
+    print(*args, sep=sep, file=text_io["output"], end=end)
+
+@text_io.add_func()
+def rawprintln(_, __, *args, sep=" "):
+    print(*args, sep=sep, file=text_io["output"])
+
+@text_io.add_func("input")
+def myInput(frame, __, prompt=None, name=None):
+    res = input(prompt)
+    if name is not None:
+        dpl.varproc.rset(frame[-1], name, res)
+
+@text_io.add_func()
+def test(_, __, test):
+    print(helper.has_repr(test))
+
+@text_io.add_func()
+def setOutputFile(_, __, file):
+    text_io["output"] = file

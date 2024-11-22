@@ -1,13 +1,16 @@
 # Used to system info and other data
 # Variables are handled in varproc.py
 
+# THIS FILE SHOULD NOT IMPORT DPL MODULES AS A CIRCULAR IMPORT WILL HAPPEN
+# ALMOST EVERY FILE IN lib.core IMPORTS THIS
+
 import os, sys
 import platform
 
 ARGV = sys.argv
 ARGC = len(ARGV)
 
-INC = {
+INC_EXT = {
     "fn", "method",
     "for", "loop", "while",
     "if", "if-then",
@@ -18,16 +21,8 @@ INC = {
 }
 
 INC = {
-    "fn":1,
-    "method":1,
-    "for":1,
-    "loop":1,
-    "while":1,
-    "if":1,
     "if-then":2,
     "thread":1,
-    "body":1,
-    "expect":1,
     "expect-then":2
 }
 
@@ -51,6 +46,29 @@ CHARS = {
     "\\[alert]":"\a",
     "\\[escape]":"\\",
 }
+
+VERSION_TRIPLE = (1, 4, 0)
+
+def isCompat(version, VERSION=VERSION_TRIPLE):
+    major, minor, patch = version
+    if major != VERSION[0]:
+        return False
+    elif minor != VERSION[1]:
+        return False
+    if patch >= VERSION [2]:
+        return True
+    else:
+        return False
+
+class Version:
+    def __init__(self, major, minor, patch=0):
+        self.ver = (major, minor, patch)
+    def isCompat(self, version_triple):
+        return isCompat(version_triple, self.ver)
+    def __repr__(self):
+        return ".".join(map(str, self.ver))
+
+VERSION = Version(1, 4, 0)
 
 if os.name == "nt":
     BINDIR = os.path.dirname(ARGV[0])
