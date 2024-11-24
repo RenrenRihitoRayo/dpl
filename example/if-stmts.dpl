@@ -1,0 +1,9 @@
+&use <text_io.py>
+
+io:input "Name: " name
+
+const admin_name "admin"
+
+if (%name caseless{==} %admin_name)
+    io:println "Welcome admin!"
+end

@@ -46,7 +46,7 @@ def rawprintln(_, __, *args, sep=" "):
 
 @ext.add_func("input")
 def myInput(frame, __, prompt=None, name=None):
-    res = input(prompt)
+    res = input(prompt if prompt not in dpl.falsy else "")
     if name is not None:
         dpl.varproc.rset(frame[-1], name, res)
 
@@ -57,6 +57,24 @@ def test(_, __, test):
 @ext.add_func()
 def setOutputFile(_, __, file):
     ext["output"] = file
+
+@ext.add_func()
+def rawoutput(_, __, *values):
+    s = []
+    for i in values:
+        if isinstance(i, int):
+            try:
+                s.append(chr(i))
+            except:
+                s.append(str(i))
+        else:
+            s.append(str(i))
+    modules.sys.stdout.write("".join(s))
+    modules.sys.stdout.flush()
+
+@ext.add_func()
+def flush(_, __):
+    modules.sys.stdout.flush()
 
 # misc
 

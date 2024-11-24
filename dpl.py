@@ -261,6 +261,8 @@ dpl repr ALSO JUST `dpl`
         case _:
             print("Invalid invokation!")
             exit(1)
+    if "pause" in flags:
+        input("\n[Press Enter To Finish]")
 
 if __name__ == "__main__":
     handle_args()

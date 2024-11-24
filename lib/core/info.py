@@ -13,7 +13,7 @@ ARGC = len(ARGV)
 INC_EXT = {
     "fn", "method",
     "for", "loop", "while",
-    "if", "if-then",
+    "if", "if_else",
     "thread",
     "ismain", "isntmain",
     "expect", "expect-then",
@@ -28,7 +28,7 @@ INC = {
 }
 
 DEC = {
-    "end", "then"
+    "end", "then", "else"
 }
 
 CHARS = {
@@ -56,7 +56,7 @@ def isCompat(version, VERSION=VERSION_TRIPLE):
         return False
     elif minor != VERSION[1]:
         return False
-    if patch >= VERSION [2]:
+    if patch >= VERSION[2]:
         return True
     else:
         return False
@@ -65,7 +65,25 @@ class Version:
     def __init__(self, major, minor, patch=0):
         self.ver = (major, minor, patch)
     def isCompat(self, version_triple):
-        return isCompat(version_triple, self.ver)
+        if isinstance(version_triple, tuple):
+            return isCompat(version_triple, self.ver)
+        elif isinstance(version_triple, Version):
+            return isCompat(version_triple.ver, self.ver)
+    def getDiff(self, version_triple, VERSION=None):
+        VERSION = VERSION or self.ver
+        major, minor, patch = version_triple
+        if major < VERSION[0]:
+            return "Script is outdated!"
+        elif major > VERSION[0]:
+            return "Interpreter is outdated!"
+        elif minor < VERSION[1]:
+            return "Script is outdated!"
+        elif minor > VERSION[1]:
+            return "Interpreter is outdated!"
+        if patch < VERSION[2]:
+            return "Script is outdated!"
+        else:
+            return 0
     def __repr__(self):
         return ".".join(map(str, self.ver))
 

@@ -1,0 +1,72 @@
+&use <text_io.py>
+
+set value 90
+io:println %value
+
+# Can only be set using fset
+const PI 3.14
+io:println %PI
+
+&use <typed_vars.py>
+&use <types.py>
+
+# Can only be set to the correct type.
+defv value %types.str
+setv value "A string."
+io:println :value %value
+
+io:println "\nTemplates"
+
+template person
+    name %types.str
+    age  %types.int
+end
+
+from_template :person henry
+    name $name
+    age  90
+end
+
+io:println %henry
+
+io:println "\nMaking dicts / tables"
+
+from_template none my_table
+    name "Henry Moppet"
+    age  14
+end
+
+io:println %my_table
+
+io:println "\nUsing meta_value"
+
+from_template none my_table
+    name "Henry Moppet"
+    age  14
+    [meta_value] none
+end
+
+io:println :my_table %my_table
+
+io:println "\nUsing update mapping"
+
+from_template none my_mapping
+    [onset] id
+    id "[meta_value]"
+end
+
+from_template none my_table2
+    name "Henry Moppet"
+    age  14
+    id none
+    [meta_value] none
+    [update_mapping] :my_mapping
+end
+
+# triggers [onset] and sets mytable2.id
+set my_table2 90
+io:println %my_table2 :my_table2
+
+# triggers id and sets [meta_value]
+set my_table2.id 180
+io:println %my_table2 :my_table2

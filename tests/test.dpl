@@ -1,5 +1,0 @@
-&use <text_io.py>
-&use <file_io.py>
-
-pycatch [self] io:open "test.dpl"
-io:println %self

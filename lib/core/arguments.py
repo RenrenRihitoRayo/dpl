@@ -21,6 +21,20 @@ methods = {}
 def is_int(arg):
     return arg.replace("-", "").replace(",", "").isdigit()
 
+def is_hex(arg):
+    try:
+        int(arg, 16)
+        return True
+    except:
+        return False
+
+def is_bin(arg):
+    try:
+        int(arg, 2)
+        return True
+    except:
+        return False
+
 def is_float(arg):
     return arg.replace("-", "").replace(",", "").replace(".", "").isdigit()
 
@@ -50,6 +64,10 @@ def expr_preruntime(arg):
         return int(arg.replace(",", ""))
     elif is_float(arg.replace(",", "")):
         return float(arg)
+    elif is_bin(arg):
+        return int(arg, 2)
+    elif is_hex(arg):
+        return int(arg, 16)
     elif arg == "true":
         return constants.true
     elif arg == "false":
@@ -95,7 +113,7 @@ def evaluate(frame, expression):
     ins, *args = expression
     if ins in methods:
         if methods[ins][0]:
-            args = exprs_runtime(frame, exprs_preruntime(args))
+            args = bs_thing(frame, args)
         return methods[ins][0](frame, *args)
     match (expression):
         case ["Range", arg]:
@@ -131,17 +149,18 @@ def evaluate(frame, expression):
         case [op1, "^", op2]:
             return express(frame, op1) ** express(frame, op2)
         case [op1, "caseless{==}", *op2]:
-            return constants.true if express(frame, op1).lower() == express(frame, op2).lower() else constants.false
+            express(frame, op2)[0].lower()
+            return constants.true if express(frame, op1).lower() == bs_thing(frame, op2)[0].lower() else constants.false
         case [op1, "caseless{!=}", *op2]:
-            return constants.true if express(frame, op1).lower() != express(frame, op2).lower() else constants.false
+            return constants.true if express(frame, op1).lower() != bs_thing(frame, op2)[0].lower() else constants.false
         case [op1, "caseless{>}", *op2]:
-            return constants.true if express(frame, op1).lower() > express(frame, op2).lower() else constants.false
+            return constants.true if express(frame, op1).lower() > bs_thing(frame, op2)[0].lower() else constants.false
         case [op1, "caseless{<}", *op2]:
-            return constants.true if express(frame, op1).lower() < express(frame, op2).lower() else constants.false
+            return constants.true if express(frame, op1).lower() < bs_thing(frame, op2)[0].lower() else constants.false
         case [op1, "caseless{>=}", *op2]:
-            return constants.true if express(frame, op1).lower() >= express(frame, op2).lower() else constants.false
+            return constants.true if express(frame, op1).lower() >= bs_thing(frame, op2)[0].lower() else constants.false
         case [op1, "caseless{<=}", *op2]:
-            return constants.true if express(frame, op1).lower() <= express(frame, op2).lower() else constants.false
+            return constants.true if express(frame, op1).lower() <= bs_thing(frame, op2)[0].lower() else constants.false
         case [op1, "==", op2]:
             return constants.true if express(frame, op1) == express(frame, op2) else constants.false
         case [op1, "!=", op2]:
@@ -160,8 +179,8 @@ def evaluate(frame, expression):
             return constants.true if express(frame, op1) or express(frame, op2) else constants.false
         case [op1, "and", op2]:
             return constants.true if express(frame, op1) and express(frame, op2) else constants.false
-        case [op1, "in", op2]:
-            return constants.true if express(frame, op1) in express(frame, op2) else constants.false
+        case [*op1, "in", op2]:
+            return constants.true if bs_thing(frame, op1)[0] in express(frame, op2) else constants.false
         case ["LenOf", op1]:
             value = express(frame, op1)
             if hasattr(value, "__len__"):
@@ -272,6 +291,23 @@ def exprs_runtime(frame, args):
             while '' in put:
                 put.remove('')
             res.append([*bs_thing(frame, put)])
+        elif c.startswith("!["):
+            args[p] = c[2:]
+            c = ""
+            put.clear()
+            k = 1
+            while p < len(args) and k:
+                c = args[p]; put.append(str(c)); p += 1
+                if isinstance(c, str):
+                    if c.startswith('['):
+                        k += 1
+                    elif c.endswith(']'):
+                        k -= 1
+            p -= 1
+            put[-1] = put[-1][:-1]
+            while '' in put:
+                put.remove('')
+            res.append((*bs_thing(frame, put),))
         else:
             res.append(expr_runtime(frame, c))
         p += 1

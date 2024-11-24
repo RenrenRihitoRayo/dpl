@@ -43,7 +43,7 @@ meta = {
     },
     "dependencies":{
         "dpl":set(),
-        "python":set()
+        "python":{}
     },
     "_set_only_when_defined":1
 }
@@ -171,6 +171,10 @@ def rset(dct, full_name, value, sep=".", meta=True):
                 temp[full_name] = value
             if meta and full_name in dct and isinstance((temp:=dct[full_name]), dict) and "[meta_value]" in temp:
                 dct[full_name]["[meta_value]"] = value
+                if "[update_mapping]" in temp:
+                    vname = temp["[update_mapping]"].get("[onset]")
+                    if vname:
+                        temp[vname] = value
             else:
                 dct[full_name] = value
             return
@@ -193,6 +197,10 @@ def rset(dct, full_name, value, sep=".", meta=True):
                     temp[name] = value
                 if meta and name in node and isinstance((temp:=node[name]), dict) and "[meta_value]" in temp:
                     node[name]["[meta_value]"] = value
+                    if "[update_mapping]" in temp:
+                        vname = temp["[update_mapping]"].get("[onset]")
+                        if vname:
+                            temp[vname] = value
                 else:
                     node[name] = value
             if is_debug_enabled("show_value_updates"):

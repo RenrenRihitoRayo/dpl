@@ -13,7 +13,9 @@ def define(frame, __, body, name):
         frame[-1]['args'] = args
         frame[-1]['kwargs'] = kwargs
         dpl.run_code(body, frame)
+        res = dpl.varproc.rget(frame[-1], "_export", default=None)
         dpl.varproc.pscope(frame)
+        return res
     dpl.varproc.rset(frame[-1], name, func)
 
 @ext.add_func()
@@ -36,9 +38,11 @@ def to_py(frame, _, temp):
         err = dpl.run_code(temp["body"], frame)
         if err:
             return err
+        res = dpl.varproc.rget(frame[-1], "_export", default=None)
         dpl.varproc.pscope(frame)
+        return res
     return func,
 
 @ext.add_func()
 def call(_, __, func, *args, **kwargs):
-    func(*args, **kwargs)
+    return func(*args, **kwargs)

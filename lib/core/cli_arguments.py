@@ -10,14 +10,14 @@ def flags(argv: list[str], remove_first=False) -> tuple:
             if pos > end:
                 end = pos
     for pos, value in enumerate(argv):
-        if value == "--":
-            continue
-        elif value.startswith("--"):
+        if value.startswith("--"):
             if "=" not in value:
                 continue
             indexes[pos] = value[2:]
         elif value.startswith("-"):
             indexes[pos] = value[1:]
+        else:
+            break
     for i in indexes.keys():
         if i <= end:
             argv.pop(min(indexes.keys()))

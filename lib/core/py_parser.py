@@ -185,6 +185,7 @@ def process(code, name="__main__"):
                     break
                 with open(file, "r") as f:
                     res.extend(process(f.read(), name=file))
+                varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "set_name" and argc == 1:
                 name = str(args[0])
             elif ins == "enable" and argc == 1:
@@ -207,6 +208,7 @@ def process(code, name="__main__"):
                     break
                 with open(file, "rb") as f:
                     res.extend(pickle.loads(f.read()))
+                varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "extend" and argc == 1:
                 if args[0].startswith("<") and args[0].endswith(">"):
                     file = os.path.join(info.LIBDIR, args[0][1:-1])
@@ -221,25 +223,34 @@ def process(code, name="__main__"):
                     break
                 with open(file, "r") as f:
                     res.extend(process(f.read(), name=name))
+                varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "use" and argc == 1:
                 if args[0].startswith("<") and args[0].endswith(">"):
-                    file = os.path.join(info.LIBDIR, args[0][1:-1])
+                    file = os.path.join(info.LIBDIR, (ofile:=args[0][1:-1]))
+                    search_path = "_std"
                 elif args[0].startswith('"') and args[0].endswith('"'):
-                    file = os.path.join(os.path.dirname(name), args[0][1:-1])
+                    file = os.path.join(os.path.dirname(name), (ofile:=args[0][1:-1]))
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), file)
+                    search_path = "_loc"
                 else:
-                    print(args)
                     assert False, "This is not reachable!"
                 if not os.path.isfile(file):
                     print("File not found:", file)
                     break
-                with open(file, "r") as f:
-                    if ext_s.py_import_string(nframe, file, f.read()):
-                        print("Package error encountered!\n")
-                        return [], [{}]
+                if ext_s.py_import(nframe, file, search_path, loc="."):
+                    print(f"Something wrong happened...")
+                    return error.PREPROCESSING_ERROR
+                if search_path in varproc.meta["dependencies"]["python"]:
+                    varproc.meta["dependencies"]["python"][search_path].add(ofile)
+                else:
+                    varproc.meta["dependencies"]["python"][search_path] = {ofile}
+            elif ins == "version" and argc == 1:
+                if (err:=info.VERSION.getDiff(args[0])):
+                    error.pre_error(lpos, name, f"{name!r}:{lpos}: {err}")
+                    return error.COMPAT_ERROR
             else:
-                error.pre_error(lpos, name, f"{name!r}-{lpos}: Invalid directive {ins!r}")
+                error.pre_error(lpos, name, f"{name!r}:{lpos}: Invalid directive {ins!r}")
                 break
         else:
             ins, *args = line.split()
@@ -387,7 +398,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "set" and argc == 2:
             if varproc.rset(frame[-1], args[0], args[1]):
                 error.error(pos, file, "Tried to set a constant variable!\nPlease use fset instead!")
-                return error.RUNTIME_ERROR
+                return error.NAME_ERROR
         elif ins == "const" and argc == 2:
             name = args[0]
             if varproc.rset(frame[-1], name, args[1]):
@@ -407,66 +418,21 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if consts and name in consts:
                 consts.remove(name)
         elif ins == "expect" and argc == 1:
-            types = args[0]
-            if len(types) == 0:
-                error.error(pos, file, "Invalid expect function!")
-                return error.RUNTIME_ERROR
+            vname = args[0]
             temp = get_block(code, p)
-            if temp == None:
+            if temp is None:
                 break
             else:
                 p, body = temp
-            OLD_ERROR = error.error
-            error.error = lambda *x, **y: None
             err = run(body, frame)
-            error.error = OLD_ERROR
-            if isinstance(types[0], str):
-                flag, *types = types
+            err_name = error.ERRORS_DICT.get(err, err)
+            if isinstance(err_name, int):
+                ...
             else:
-                flag = None
-            if err == 0:
-                pass
-            elif flag == "any":
-                error.info("Error was expected and was not propagated!")
-            elif flag == "anyAndSilent":
-                pass
-            elif err not in types:
-                return err
-            else:
-                error.info("Error was expected and was not propagated!")
-        elif ins == "expect_then" and argc == 1:
-            types = args[0]
-            temp = get_block(code, p)
-            if temp == None:
-                break
-            else:
-                p, body = temp
-            temp = get_block(code, p)
-            if temp == None:
-                break
-            else:
-                p, body2 = temp
-            OLD_ERROR = error.error
-            error.error = lambda *x, **y: None
-            err = run(body, frame)
-            error.error = OLD_ERROR
-            if isinstance(types[0], str):
-                flag, *types = types
-            else:
-                flag = None
-            if err == 0:
-                pass
-            elif flag == "any":
-                error.info("Error was expected and was not propagated!")
-            elif flag == "anyAndSilent":
-                pass
-            elif err not in types:
-                err_n = run(body2, frame)
-                if err_n:
-                    error.error(pos, file, f"Error was handled ({err}) but a new error occured ({err_n})")
-                    return (err, err_n)
-            else:
-                error.info("Error was expected and was not propagated!")
+                err = (err_name, err)
+            varproc.rset(frame[-1], vname, err)
+        elif ins == "raise" and argc == 1 and isinstance(args[0], int):
+            return args[0]
         elif ins == "module" and argc == 1:
             name = args[0]
             temp = [frame[-1]]
@@ -502,7 +468,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 p, body = temp
             varproc.rset(self, name, objects.make_method(name, body, params, self))
         elif ins == "import" and argc == 1:
-            if ext_s.py_import(frame, args[0], varproc.meta["internal"]["lib_path"]):
+            if ext_s.py_import(frame, args[0], "_std"):
                 return error.IMPORT_ERROR
         elif ins == "import" and argc == 2:
             if ext_s.py_import(frame, args[0], args[1], loc=os.path.dirname(file)):
@@ -558,13 +524,22 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 varproc.rset(frame[-1], f"_nonlocal.{name}", value)
             return 0
         elif ins == "help" and argc == 1:
-            temp = varproc.rget(args[0], "docs",
-                default=varproc.rget(args[0], "_internal.docs")
-            )
-            if temp == state.bstate("nil"):
-                print(f"\nHelp: No documentation was found!")
+            if not isinstance(args[0], dict) and hasattr(args[0], "__doc__"):
+                doc = getattr(args[0], "__doc__")
+                if doc:
+                    print(f"\nHelp on {getattr(args[0], '__name__', '???')}, line [{pos}]:\n{doc}")
+                else:
+                    help(args[0])
+            elif not isinstance(args[0], dict):
+                return error.TYPE_ERROR
             else:
-                print(f"\nHelp:\n{temp}")
+                temp = varproc.rget(args[0], "docs",
+                    default=varproc.rget(args[0], "_internal.docs")
+                )
+                if temp == state.bstate("nil"):
+                    print(f"\nHelp, line [{pos}]: No documentation was found!")
+                else:
+                    print(f"\nHelp, line [{pos}]:\n{temp}")
         elif ins == "wait_for_threads" and argc == 0:
             for i in threads:
                 i.join()
@@ -630,7 +605,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             rets, name, *args = args
             if (temp:=varproc.rget(frame[-1], name)) == state.bstate("nil") or not hasattr(temp, "__call__"):
                 error.error(pos, file, f"Invalid function {name!r}!")
-                break
+                return error.NAME_ERROR
             try:
                 if argc == 3 and isinstance(args[0], dict) and args[0].get("[KWARGS]"):
                     args[0].pop("[KWARGS]")

@@ -5,8 +5,9 @@ import os
 from . import varproc
 
 ERRORS = (
-    "PREPROCESSING_ERROR", "SYNTAX_ERROR", "RUNTIME_ERROR", "PYTHON_ERROR", "PANIC_ERROR", "ASSERT_ERROR", "IMPORT_ERROR", "THREAD_ERROR", "TYPE_ERROR", "NAME_ERROR"
+    "PREPROCESSING_ERROR", "SYNTAX_ERROR", "RUNTIME_ERROR", "PYTHON_ERROR", "PANIC_ERROR", "ASSERT_ERROR", "IMPORT_ERROR", "THREAD_ERROR", "TYPE_ERROR", "NAME_ERROR", "COMPAT_ERROR"
 )
+
 
 META_ERR = varproc.meta["err"] = {
     "defined_errors":ERRORS
@@ -18,6 +19,8 @@ for pos, name in enumerate(ERRORS, 1):
 
 STOP_RESULT = -1
 SKIP_RESULT = -2
+
+ERRORS_DICT = {globals().get(name):name for name in filter(lambda x: x.endswith("ERROR"), dir())}
 
 output = varproc.get_debug("debug_output_file")
 

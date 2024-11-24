@@ -42,6 +42,8 @@ class extension:
         "Add a function."
         def wrap(func):
             nonlocal name
+            if func.__doc__ is None:
+                func.__doc__ = (f"Function {self.meta_name}:{name}" if self.meta_name else f"{self.name}.{name}") + ": Default doc string..."
             if name is None:
                 name = getattr(func, "__name__", None) or "_"
             self.__func[name if not self.meta_name else f"{self.meta_name}:{name}"] = func
@@ -100,14 +102,18 @@ class dpl:
     restricted = restricted
     state_nil = state.bstate("nil")
     state_none = state.bstate("none")
+    state_true = 1
+    state_false = 0
     extension = extension
+    falsy = (state_nil, state_none, state_false, None, False)
+    truthy = (state_true, True)
 
 def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"]):
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join({
-                "@std":varproc.meta["internal"]["lib_path"],
-                "@loc":loc
+                "_std":varproc.meta["internal"]["lib_path"],
+                "_loc":loc
             }.get(search_path, search_path), file)
         if not os.path.isfile(file):
             print("File not found:", file)
@@ -120,8 +126,7 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
             d = {
                 "__name__":"__dpl__",
                 "modules":modules,
-                "dpl":dpl,
-                "__import__":restricted.restricted(__import__)
+                "dpl":dpl
             }
             exec(obj, d)
         except (SystemExit, KeyboardInterrupt):
@@ -143,6 +148,10 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
             meths.update(ext.methods)
     frame[-1].update(funcs)
     argproc.methods.update(meths)
+    if search_path in varproc.meta["dependencies"]["python"]:
+        varproc.meta["dependencies"]["python"][search_path].add(file)
+    else:
+        varproc.meta["dependencies"]["python"][search_path] = {file}
 
 def py_import_string(frame, file_name, code, search_path=None, loc=varproc.meta["internal"]["main_path"]):
     if not os.path.isabs(file_name):
@@ -159,12 +168,9 @@ def py_import_string(frame, file_name, code, search_path=None, loc=varproc.meta[
     obj = compile(code, file_name, "exec")
     try:
         d = {
-            "__name__":"__dpl__",
             "modules":modules,
-            "dpl":dpl,
-            "__import__":restricted.restricted(__import__)
+            "dpl":dpl
         }
-        d.update(restricted.restricted_builtins)
         d["__name__"] = "__dpl__"
         exec(obj, d)
     except (SystemExit, KeyboardInterrupt):

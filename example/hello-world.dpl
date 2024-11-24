@@ -1,0 +1,2 @@
+&use <text_io.py>
+io:println "Hello, World!"
