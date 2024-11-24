@@ -1,8 +1,12 @@
 # Utilities for QOL functions
 # Now includes DSL Config Parser
 
-import hashlib
 from . import arguments as argproc
+try:
+    import hashlib
+    has_hash = True
+except ImportError:
+    hash_hash = False
 
 def get_val(dct, full_name, default=0, sep="."):
     "Get a variable"
@@ -38,6 +42,7 @@ def set_val(dct, full_name, value, sep="."):
 
 def constant_hash(obj):
     "Constant hash function"
+    assert has_hash, "hashlib is unavailable."
     obj_representation = repr(obj).encode('utf-8')
     return hashlib.sha256(obj_representation).hexdigest()
 
@@ -108,15 +113,3 @@ def parse_config(code, format=None):
             else:
                 pass
     return data
-
-def test():
-    print(parse_config("""
-        [meta]
-        ARGV = @list
-        ARGC = 0
-        [meta.internal]
-        search_paths = @list
-        end
-        meta.internal.search_paths append "okay"
-        meta.internal.search_paths append "okay"
-    """))

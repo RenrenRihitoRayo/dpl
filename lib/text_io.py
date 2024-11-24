@@ -10,44 +10,58 @@ helper = dpl.require(["dpl_helpers", "func_helper.py"])
 if helper is None:
     raise Exception("Helper func_helper.py doesnt exist!")
 
-text_io = dpl.extension(meta_name="io")
+ext = dpl.extension(meta_name="io")
 
-text_io["output"] = modules.sys.stdout
+ext["output"] = modules.sys.stdout
 
-@text_io.add_func("print")
+@ext.add_func("print")
 def myPrint(_, __, *args, end="", sep=" "):
     args = list(args)
     for pos, arg in enumerate(args):
         if isinstance(arg, dict) and helper.has_repr(arg):
             arg[pos] = helper.get_repr(arg["_im_repr"])
-    print(*args, end=end, sep=sep, file=text_io["output"])
+    print(*args, end=end, sep=sep, file=ext["output"])
 
-@text_io.add_func()
+@ext.add_func()
+def printf(_, __, text, values):
+    for name, value in values.items():
+        text = text.replace(f"${{{name}}}", str(value))
+    print(text, end="", file=ext["output"])
+
+@ext.add_func()
 def println(_, __, *args, sep=" "):
     args = list(args)
     for pos, arg in enumerate(args):
         if isinstance(arg, dict) and helper.has_repr(arg):
             args[pos] = helper.get_repr(arg["_im_repr"])
-    print(*args, sep=sep, file=text_io["output"])
+    print(*args, sep=sep, file=ext["output"])
 
-@text_io.add_func()
+@ext.add_func()
 def rawprint(_, __, *args, sep=" ", end=""):
-    print(*args, sep=sep, file=text_io["output"], end=end)
+    print(*args, sep=sep, file=ext["output"], end=end)
 
-@text_io.add_func()
+@ext.add_func()
 def rawprintln(_, __, *args, sep=" "):
-    print(*args, sep=sep, file=text_io["output"])
+    print(*args, sep=sep, file=ext["output"])
 
-@text_io.add_func("input")
+@ext.add_func("input")
 def myInput(frame, __, prompt=None, name=None):
     res = input(prompt)
     if name is not None:
         dpl.varproc.rset(frame[-1], name, res)
 
-@text_io.add_func()
+@ext.add_func()
 def test(_, __, test):
     print(helper.has_repr(test))
 
-@text_io.add_func()
+@ext.add_func()
 def setOutputFile(_, __, file):
-    text_io["output"] = file
+    ext["output"] = file
+
+# misc
+
+@ext.add_func()
+def stringf(_, __, text, values):
+    for name, value in values.items():
+        text = text.replace(f"${{{name}}}", str(value))
+    return text,

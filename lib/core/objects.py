@@ -18,7 +18,7 @@ def set_repr(frame, name="???", type_name=None):
             "docs":"Default internal method for repr.",
             "self":0,
             "body":[
-                (0, "_internal", "return", (f"<Object {name}>",))
+                (0, "_internal", "return", (f"<{type_name or 'Object'} {name}>",))
             ]
         }
     return frame
@@ -31,33 +31,23 @@ def make_function(name, body, params):
         "self":constants.nil,
         "docs":f"Function {name!r}.",
         "defs":{}
-    }, name, "builtin-function")
+    }, name, "builtin-function-object")
 
 def make_method(name, body, params, self):
-    return {
+    return set_repr({
         "name":name,
         "body":body,
         "args":params,
         "self":self,
         "docs":f"Method of {varproc.rget(self, '_internal.name')}",
         "defs":{}
-    }
+    }, name, "builtin-method-object")
 
 def make_object(name):
-    return {
+    return set_repr({
         "_internal":{
             "name":name,
             "type":f"type:{name}",
             "docs":"An object."
-        },
-        "_im_repr":{ # define a boring default _im_repr
-            "name":0,
-            "args":[],
-            "defs":0,
-            "docs":"Default internal method for repr.",
-            "self":0,
-            "body":[
-                (0, "_internal", "return", (f"<Object {name}>",))
-            ]
         }
-    }
+    }, name, "builtin-object")

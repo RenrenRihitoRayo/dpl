@@ -32,17 +32,6 @@
     _mods will now be deprecated as the new scope mechanisms simply
     doesnt need it anymore.
 
-## Regarding naming conventions
-
-    A naming convention regarding both python extensions and durprol scripts may be added.
-    This is to make the code a little bit more readable.
-
-    For now this will will suffice:
-    Constants: ALL_CAPS
-    Global Vars: snake_case
-    Python Functions: camelCase
-    Functions: PascalCase
-
 ## Posible Future Features
 
 1. HTTPS requests.

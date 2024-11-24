@@ -31,7 +31,7 @@ ERRORS = {getattr(error, name):name for name in filter(lambda x: x.endswith("ERR
 
 def rec(this, ind=0):
     if not isinstance(this, (tuple, list)):
-        return this
+        print(f"{'  '*ind}Error Name: {ERRORS.get(this, f'ERROR NAME NOT FOUND <{this}>')}")
     else:
         for pos, i in enumerate(this):
             if isinstance(i, (tuple, list)):

@@ -1,17 +1,5 @@
-import "text_io.py"
-import "dicts.py"
-import "types.py"
+&use <text_io.py>
+&use <file_io.py>
 
-body dicts:define template
-    let name = :types.str
-    let age = :types.int
-end
-
-body dicts:define test
-    def name{[KWARGS]}
-    let name{[PARGS]} = [:template]
-    let name = "Rihito"
-    let age = 15
-end
-
-pycatch [test] dicts:template :test
+pycatch [self] io:open "test.dpl"
+io:println %self

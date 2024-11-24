@@ -41,6 +41,10 @@ meta = {
         "python_version_string":info.PYTHON_VER,
         "_set_only_when_defined":1
     },
+    "dependencies":{
+        "dpl":set(),
+        "python":set()
+    },
     "_set_only_when_defined":1
 }
 
@@ -153,14 +157,19 @@ def rpop(dct, full_name, default=constants.nil, sep="."):
 
 def rset(dct, full_name, value, sep=".", meta=True):
     "Set a variable"
-    if isinstance(full_name, str) and "." not in full_name:
+    if not isinstance(full_name, str):
+        return 1
+    if "." not in full_name:
         with W_LOCK:
             if dct.get("_set_only_when_defined") and full_name not in dct:
                 error.warn(f"Tried to set {full_name!r} but scope was set to set only when defined.")
                 return
             if meta and "[const]" in dct and isinstance((temp:=dct.get("[const]")), list) and full_name in temp:
                 return 1
-            if meta and full_name in dct and isinstance(dct[full_name], dict) and "[meta_value]" in dct[full_name]:
+            if meta and full_name in dct and "[update_mapping]" in (temp:=dct):
+                temp[temp["[update_mapping]"].get(full_name, full_name)] = value
+                temp[full_name] = value
+            if meta and full_name in dct and isinstance((temp:=dct[full_name]), dict) and "[meta_value]" in temp:
                 dct[full_name]["[meta_value]"] = value
             else:
                 dct[full_name] = value
@@ -179,7 +188,10 @@ def rset(dct, full_name, value, sep=".", meta=True):
             with W_LOCK:
                 if meta and "[const]" in node and isinstance((temp:=node.get("[const]")), list) and name in temp:
                     return 1
-                if meta and name in node and isinstance(node[name], dict) and "[meta_value]" in node[name]:
+                if meta and name in node and "[update_mapping]" in (temp:=node):
+                    temp[temp["[update_mapping]"].get(name, name)] = value
+                    temp[name] = value
+                if meta and name in node and isinstance((temp:=node[name]), dict) and "[meta_value]" in temp:
                     node[name]["[meta_value]"] = value
                 else:
                     node[name] = value

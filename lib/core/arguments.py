@@ -118,6 +118,8 @@ def evaluate(frame, expression):
             return express(frame, lst)[express(frame, index)]
         case [op1, "+", op2]:
             return express(frame, op1) + express(frame, op2)
+        case [op1, "..", op2]:
+            return str(express(frame, op1)) + str(express(frame, op2))
         case [op1, "-", op2]:
             return express(frame, op1) - express(frame, op2)
         case [op1, "*", op2]:
@@ -211,6 +213,28 @@ def exprs_runtime(frame, args):
                 c = args[p]; put.append(c); p += 1
             p -= 1
             text = " ".join(map(str, put))[:-1]
+            for c, r in CHARS.items():
+                text = text.replace(c, r)
+            res.append(text.replace("\\[quote]", "\""))
+        elif c.startswith("<"):
+            args[p] = c
+            c = ""
+            put.clear()
+            while p < len(args) and ((not c.endswith(">")) if isinstance(c, str) else True):
+                c = args[p]; put.append(c); p += 1
+            p -= 1
+            text = " ".join(map(str, put))
+            for c, r in CHARS.items():
+                text = text.replace(c, r)
+            res.append(text.replace("\\[lt]", "<").replace("\\[gt]", ">"))
+        elif c.startswith("!\""):
+            args[p] = c[1:]
+            c = ""
+            put.clear()
+            while p < len(args) and ((not c.endswith("\"")) if isinstance(c, str) else True):
+                c = args[p]; put.append(c); p += 1
+            p -= 1
+            text = " ".join(map(str, put))
             for c, r in CHARS.items():
                 text = text.replace(c, r)
             res.append(text.replace("\\[quote]", "\""))

@@ -17,7 +17,8 @@ INC_EXT = {
     "thread",
     "ismain", "isntmain",
     "expect", "expect-then",
-    "body"
+    "body",
+    "template", "from_template"
 }
 
 INC = {

@@ -16,4 +16,4 @@ class bstate:
     def __bool__(self):
         return False
     def __repr__(self):
-        return f"bstate({self.name!r})"
+        return f"<{self.name}>"
