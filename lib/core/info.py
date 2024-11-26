@@ -87,7 +87,7 @@ class Version:
     def __repr__(self):
         return ".".join(map(str, self.ver))
 
-VERSION = Version(1, 4, 0)
+VERSION = Version(1, 4, 1)
 
 if os.name == "nt":
     BINDIR = os.path.dirname(ARGV[0])
