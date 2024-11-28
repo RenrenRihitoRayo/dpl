@@ -250,7 +250,7 @@ dpl compile [file]
 dpl install [python_exec] [flags: verbose]
     Installs runtime requirements.
     See the requirements.txt file.
-dpl build
+dpl build [python executable]
     Builds the parser and cythonizes it.
     The interpreter chooses which to run automatically.
     Although it might be changeable in the configs soon!
