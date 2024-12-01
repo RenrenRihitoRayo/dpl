@@ -55,6 +55,9 @@ def handle_args():
     if "arg-test" in flags:
         print(flags)
         return
+    elif "info":
+        info.print_info()
+        return
     match (info.ARGV):
         case ["run", file, *args]:
             if not os.path.isfile(file):
@@ -65,8 +68,7 @@ def handle_args():
                     varproc.meta = utils.parse_config(f.read(), {"meta":varproc.meta})["meta"]
             info.ARGV.clear()
             info.ARGV.extend([file, *args])
-            info.ARGC = len(info.ARGV)
-            varproc.meta["argc"] = info.ARGC
+            varproc.meta["argc"] = info.ARGC = len(info.ARGV)
             with open(file, "r") as f:
                 varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
                 ez_run(f.read(), file=file)
@@ -79,8 +81,7 @@ def handle_args():
                     varproc.meta = utils.parse_config(f.read(), {"meta":varproc.meta})["meta"]
             info.ARGV.clear()
             info.ARGV.extend([file, *args])
-            info.ARGC = len(info.ARGV)
-            varproc.meta["argc"] = info.ARGC
+            varproc.meta["argc"] = info.ARGC = len(info.ARGV)
             try:
                 with open(file, "rb") as f:
                     code = pickle.loads(f.read())

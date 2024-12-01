@@ -1,2 +1,3 @@
+# Importing the "text_io.py" module pre-runtime
 &use <text_io.py>
 io:println "Hello, World!"

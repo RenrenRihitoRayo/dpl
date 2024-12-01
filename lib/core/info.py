@@ -48,7 +48,7 @@ CHARS = {
     "\\[escape]":"\\",
 }
 
-VERSION_TRIPLE = (1, 4, 0)
+VERSION_TRIPLE = (1, 4, 2)
 
 def isCompat(version, VERSION=VERSION_TRIPLE):
     major, minor, patch = version
@@ -56,6 +56,8 @@ def isCompat(version, VERSION=VERSION_TRIPLE):
         return False
     elif minor != VERSION[1]:
         return False
+    if VERSION[2] is None or patch is None:
+        return True
     if patch >= VERSION[2]:
         return True
     else:
@@ -80,14 +82,18 @@ class Version:
             return "Script is outdated!"
         elif minor > VERSION[1]:
             return "Interpreter is outdated!"
+        if VERSION[2] is None or patch is None:
+            return 0
         if patch < VERSION[2]:
             return "Script is outdated!"
         else:
             return 0
     def __repr__(self):
+        if self.ver[2] is None:
+            return ".".join(map(str, self.ver[:2]))+".x"
         return ".".join(map(str, self.ver))
 
-VERSION = Version(1, 4, 1)
+VERSION = Version(*VERSION_TRIPLE)
 
 if os.name == "nt":
     BINDIR = os.path.dirname(ARGV[0])
@@ -112,7 +118,10 @@ SYS_MACH = platform.machine()
 SYS_INFO = platform.platform()
 SYS_MACH_INFO = platform.uname()
 
-if __name__ == "__main__":
+def print_info():
     for name, value in globals().copy().items():
         if not name.startswith("__") and not name.startswith("__"):
             print(f"{name} = {value!r}")
+
+if __name__ == "__main__":
+    print_info()

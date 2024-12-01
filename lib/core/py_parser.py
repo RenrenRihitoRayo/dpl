@@ -450,9 +450,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "object" and argc == 1:
             varproc.rset(frame[-1], args[0], objects.make_object(args[0]))
         elif ins == "new" and argc == 2:
-            obj = varproc.rget(frame[-1], args[0])
+            obj = args[0]
             if obj == state.bstate("nil"):
-                error.error(pos, file, f"Unknown object {args[0]!r}")
+                error.error(pos, file, f"Unknown object")
                 break
             varproc.rset(obj, "_internal.name", args[1])
             varproc.rset(frame[-1], args[1], copy(obj))
@@ -545,9 +545,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 i.join()
             threads.clear()
         elif ins == "catch" and argc >= 2: # catch return value of a function
-            rets, name, *args = args
-            if (temp:=varproc.rget(frame[-1], name)) == state.bstate("nil") or not isinstance(temp, dict):
-                error.error(pos, file, f"Invalid function {name!r}!")
+            rets, func_name, *args = args
+            if (temp:=varproc.rget(frame[-1], func_name)) == state.bstate("nil") or not isinstance(temp, dict):
+                error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
             varproc.nscope(frame)
             if temp["defs"]:
@@ -558,7 +558,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         varproc.rset(frame[-1], name, value)
             else:
                 if len(args) != len(temp["args"]):
-                    error.error(pos, file, f"Function {ins!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.")
+                    error.error(pos, file, f"Function {func_name!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.")
                     break
                 for name, value in itertools.zip_longest(temp["args"], args):
                     varproc.rset(frame[-1], name, value)
@@ -601,6 +601,17 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
+        elif ins == "raise" and argc in (0, 1, 2):
+            if argc == 0:
+                return error.RUNTIME_ERROR
+            elif argc == 1:
+                return args[0]
+            elif argc == 2:
+                error.error(file, pos, args[1])
+                return args[0]
+            else:
+                error.error(file, pos, "Invalid raise statement!")
+                break
         elif ins == "pycatch" and argc >= 2: # catch return value of a python function
             rets, name, *args = args
             if (temp:=varproc.rget(frame[-1], name)) == state.bstate("nil") or not hasattr(temp, "__call__"):
