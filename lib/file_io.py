@@ -2,7 +2,7 @@
 if __name__ != "__dpl__":
     raise Exception("This must be included by a DuProL script!")
 
-if not dpl.info.VERSION.isCompat((1, 4, None)):
+if not dpl.info.VERSION.isLater((1, 4, None)):
     raise Exception("This is for version 1.4.x!")
 
 ext = dpl.extension(meta_name="io")
@@ -25,6 +25,13 @@ def myOpen(_, local, file_name, mode="r"):
             "[meta_value]":dpl.state_none,
             "error":repr(e)
         },
+
+@ext.add_func()
+def read(_, __, file_object, default=dpl.state_none):
+    try:
+        return file_object.read()
+    except Exception as e:
+        return repr(e),
 
 @ext.add_func()
 def close(_, __, file_object):

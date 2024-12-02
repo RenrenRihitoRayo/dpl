@@ -9,6 +9,7 @@ from . import info
 from . import error
 from . import state
 from . import restricted
+from . import objects
 import types
 import itertools
 import time
@@ -55,7 +56,7 @@ class extension:
             nonlocal name
             if name is None:
                 name = getattr(func, "__name__", None) or "_"
-            self.__meth[name if not self.meta_name else f"{self.meta_name}:{name}"] = func
+            self.__meth[f"{self.name}.{name}" if not self.meta_name else f"{self.meta_name}:{name}"] = func
             return func
         return wrap
     def __setitem__(self, name, value):
@@ -105,6 +106,7 @@ class dpl:
     state_true = 1
     state_false = 0
     extension = extension
+    objects = objects
     falsy = (state_nil, state_none, state_false, None, False)
     truthy = (state_true, True)
 

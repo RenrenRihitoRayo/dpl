@@ -52,10 +52,11 @@ def ez_run(code, process=True, file="???"):
 
 def handle_args():
     flags = cli_args.flags(info.ARGV, True)
+    info.ARGC = len(info.ARGV)
     if "arg-test" in flags:
         print(flags)
         return
-    elif "info":
+    elif "info" in flags:
         info.print_info()
         return
     match (info.ARGV):

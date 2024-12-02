@@ -3,7 +3,7 @@
 from . import varproc
 from . import constants
 
-def set_repr(frame, name="???", type_name=None):
+def set_repr(frame, name="???", type_name=None, repr=None):
     if "_internal" not in frame:
         frame["_internal"] = {
             "name":name,
@@ -15,10 +15,10 @@ def set_repr(frame, name="???", type_name=None):
             "name":0,
             "args":[],
             "defs":0,
-            "docs":"Default internal method for repr.",
+            "docs":f"Default internal method for ({name}).",
             "self":0,
             "body":[
-                (0, "_internal", "return", (f"<{type_name or 'Object'} {name}>",))
+                (0, "_internal", "return", (repr_text or f"<{type_name or 'Object'} {name}>",))
             ]
         }
     return frame
@@ -29,7 +29,7 @@ def make_function(name, body, params):
         "body":body,
         "args":params,
         "self":constants.nil,
-        "docs":f"Function {name!r}.",
+        "docs":f"Function. ({name!r})",
         "defs":{}
     }, name, "builtin-function-object")
 
@@ -39,7 +39,7 @@ def make_method(name, body, params, self):
         "body":body,
         "args":params,
         "self":self,
-        "docs":f"Method of {varproc.rget(self, '_internal.name')}",
+        "docs":f"Method of {varproc.rget(self, '_internal.name')}. ({name})",
         "defs":{}
     }, name, "builtin-method-object")
 
@@ -48,6 +48,6 @@ def make_object(name):
         "_internal":{
             "name":name,
             "type":f"type:{name}",
-            "docs":"An object."
+            "docs":f"An object. ({name})"
         }
-    }, name, "builtin-object")
+    }, name, "builtin-object:Object")

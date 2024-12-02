@@ -17,7 +17,7 @@ from . import utils
 from . import varproc
 from . import objects
 from . import constants
-from . import extension_support as ext_s # so when this is built using cython it doesnt hang when calling functions
+from . import extension_support as ext_s
 
 IS_STILL_RUNNING = threading.Event()
 
@@ -74,42 +74,17 @@ def get_size_of(_, __, object):
     return utils.convert_bytes(sys.getsizeof(object)),
 
 try:
-    get_size_of(0)
+    get_size_of(0, 0, 0)
     varproc.meta["internal"]["SizeOf"] = get_size_of
 except:
     def temp(_, __, ___):
-        return "err:3:Cannot get memory usage of an object!\nIf you are using pypy then please use another interpreter."
+        return f"err:{error.PYTHON_ERROR}:Cannot get memory usage of an object!\nIf you are using pypy, pypy does not support this feature."
     varproc.meta["internal"]["SizeOf"] = temp
-
-# Global preprocessing rules
-rules = {
-    "strict_include":0,
-    "automatic_def":1,
-    "warnings":1
-}
 
 varproc.meta["threading"] = {
     "runtime_event":IS_STILL_RUNNING,
     "is_still_running":lambda _, __: IS_STILL_RUNNING.is_set()
 }
-
-def rule_enabled(rule):
-    "Check if a rule is enabled"
-    if rule not in rules:
-        error.pre_warn(f"Invalid rule {rule!r}")
-        return False
-    return bool(rules.get(rule))
-
-def enable_rule(rule):
-    "Enable a rule"
-    rules[rule] = 1
-
-def disable_rule(rule):
-    "Disable a rule"
-    if rule not in rules:
-        error.pre_warn(f"Invalid rule {rule!r}")
-        return
-    rules[rule] = 0
     
 def get_block(code, current_p):
     "Get a code block"
@@ -188,10 +163,6 @@ def process(code, name="__main__"):
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "set_name" and argc == 1:
                 name = str(args[0])
-            elif ins == "enable" and argc == 1:
-                enable_rule(args[0])
-            elif ins == "disable" and argc == 1:
-                disable_rule(args[0])
             elif ins == "define" and argc == 0:
                 includes.add(name)
             elif ins == "includec" and argc == 1:

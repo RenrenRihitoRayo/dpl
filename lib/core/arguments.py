@@ -203,9 +203,9 @@ def evaluate(frame, expression):
             value = express(frame, op1)
             return str(value)
         case ["IsType", op1, t]:
-            value = express(op1)
-            vtype = express(t)
-            return constants.true if isinstance(op1, t) else constants.false
+            value = express(frame, op1)
+            vtype = express(frame, t)
+            return constants.true if isinstance(value, vtype) else constants.false
         case ["Append", lst, item]:
             (lst:=expr_runtime(frame, lst)).append(express(frame, item))
             return lst

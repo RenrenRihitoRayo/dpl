@@ -1,7 +1,7 @@
 if __name__ != "__dpl__":
     raise Exception("This must be included by a DuProL script!")
 
-if not dpl.info.VERSION.isCompat((1, 4, None)):
+if not dpl.info.VERSION.isLater((1, 4, None)):
     raise Exception("This is for version 1.4.x!")
 
 type_vars = dpl.extension()

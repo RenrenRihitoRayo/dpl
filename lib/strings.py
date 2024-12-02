@@ -2,27 +2,32 @@
 if __name__ != "__dpl__":
     raise Exception("This must be included by a DuProL script!")
 
-if not dpl.info.VERSION.isCompat((1, 4, None)):
+if not dpl.info.VERSION.isLater((1, 4, None)):
     raise Exception("This is for version 1.4.x!")
 
 ext = dpl.extension("string")
 
+@ext.add_method()
 @ext.add_func()
 def split(_, __, string, delim=" ", times=-1):
     return string.split(delim, times)
 
+@ext.add_method()
 @ext.add_func()
 def lower(_, __, string):
     return string.lower()
 
+@ext.add_method()
 @ext.add_func()
 def upper(_, __, string):
     return string.upper()
 
+@ext.add_method()
 @ext.add_func()
 def isLower():
     return string.islower()
 
+@ext.add_method()
 @ext.add_func()
 def isUpper():
     return string.isupper()
