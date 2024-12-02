@@ -72,6 +72,7 @@ def handle_args():
             varproc.meta["argc"] = info.ARGC = len(info.ARGV)
             with open(file, "r") as f:
                 varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
+                varproc.meta["internal"]["main_file"] = file
                 ez_run(f.read(), file=file)
         case ["rc", file, *args]:
             if not os.path.isfile(file):
@@ -86,6 +87,7 @@ def handle_args():
             try:
                 with open(file, "rb") as f:
                     code = pickle.loads(f.read())
+                    varproc.meta["internal"]["main_file"] = file
                     varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
                     ez_run(code, False, file)
             except Exception as e:

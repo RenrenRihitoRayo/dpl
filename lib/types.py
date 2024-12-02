@@ -13,3 +13,4 @@ types["dict"] = dict
 types["tuple"] = tuple
 types["complex"] = complex
 types["any"] = dpl.state.bstate("types:any")
+types["Exception"] = Exception

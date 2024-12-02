@@ -275,11 +275,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 for i in iter:
                     varproc.rset(frame[-1], name, i)
                     err = run(body, frame)
-                    if err == error.STOP_RESULT:
-                        break
-                    elif err == error.SKIP_RESULT:
-                        continue
-                    elif err:
+                    if err:
+                        if err == error.STOP_RESULT:
+                            break
+                        elif err == error.SKIP_RESULT:
+                            continue
                         return err
         elif ins == "loop" and argc == 0:
             temp = get_block(code, p)
@@ -290,11 +290,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if body:
                 while not thread_event.is_set():
                     err = run(body, frame)
-                    if err == error.STOP_RESULT:
-                        break
-                    elif err == error.SKIP_RESULT:
-                        continue
-                    elif err:
+                    if err:
+                        if err == error.STOP_RESULT:
+                            break
+                        elif err == error.SKIP_RESULT:
+                            continue
                         return err
         elif ins == "loop" and argc == 1:
             temp = get_block(code, p)
@@ -305,11 +305,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if body:
                 for _ in range(args[0]):
                     err = run(body, frame)
-                    if err == error.STOP_RESULT:
-                        break
-                    elif err == error.SKIP_RESULT:
-                        continue
-                    elif err:
+                    if err:
+                        if err == error.STOP_RESULT:
+                            break
+                        elif err == error.SKIP_RESULT:
+                            continue
                         return err
         elif ins == "while" and argc != 0:
             temp = get_block(code, p)
@@ -327,11 +327,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         error.error(pos, file, f"Something went wrong when arguments were processed:\n{e}\n> {args!r}")
                         return error.RUNTIME_ERROR
                     err = run(body, frame)
-                    if err == error.STOP_RESULT:
-                        break
-                    elif err == error.SKIP_RESULT:
-                        continue
-                    elif err:
+                    if err:
+                        if err == error.STOP_RESULT:
+                            break
+                        elif err == error.SKIP_RESULT:
+                            continue
                         return err
         elif ins == "stop" and argc == 0:
             return error.STOP_RESULT

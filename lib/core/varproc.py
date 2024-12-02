@@ -34,6 +34,7 @@ meta = {
     "internal":{
         "lib_path":info.LIBDIR,
         "main_path":"__main__",
+        "main_file":constants.none,
         "version":info.VERSION,
         "raw_version":info.VERSION_TRIPLE,
         "pid":os.getpid(),

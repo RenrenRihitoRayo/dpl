@@ -14,24 +14,36 @@ def myOpen(_, local, file_name, mode="r"):
             file = file_name
         else:
             file = modules.os.path.join(local, file_name)
-        return {
-            "path":file,
-            "[meta_value]":open(file, mode="r"),
-            "error":dpl.state_none
-        },
+        return open(file),
     except Exception as e:
-        return {
-            "path":file,
-            "[meta_value]":dpl.state_none,
-            "error":repr(e)
-        },
+        return e,
 
 @ext.add_func()
-def read(_, __, file_object, default=dpl.state_none):
+def read(_, __, file_object):
     try:
-        return file_object.read()
+        return file_object.read(),
     except Exception as e:
-        return repr(e),
+        file_object.close()
+        return e,
+
+@ext.add_func()
+def write(_, __, file_object, content):
+    try:
+        file_object.write(content)
+    except Exception as e:
+        file_object.close()
+        return f"err:{dpl.error.PYTHON_ERROR}:{repr(e)}"
+
+@ext.add_func()
+def append(_, __, file_object, content):
+    try:
+        if (mode:=file_object.mode) == "a":
+            file_object.append(content)
+        else:
+            raise Exception(f"Invalid operation on a file! Expected the mode to be \"a\" but got \"{mode}\"")
+    except Exception as e:
+        file_object.close()
+        return f"err:{dpl.error.PYTHON_ERROR}:{repr(e)}"
 
 @ext.add_func()
 def close(_, __, file_object):
