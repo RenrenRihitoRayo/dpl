@@ -316,8 +316,8 @@ def group(text):
                 continue
             if i == "\\":
                 this = True
-            elif i == '"':
-                res.append("".join(str_tmp)+'"')
+            elif i == quotes[str_type]:
+                res.append("".join(str_tmp)+quotes[str_type])
                 str_tmp.clear()
             else:
                 str_tmp.append(i)
@@ -331,11 +331,11 @@ def group(text):
             if id_tmp:
                 res.append("".join(id_tmp))
                 id_tmp.clear()
-        elif i == '"':
+        elif i in '"<':
             if id_tmp:
                 res.append("".join(id_tmp))
                 id_tmp.clear()
-            str_tmp.append('"')
+            str_tmp.append(i)
             if i == '"':
                 str_type = "str"
             elif i == '<':
@@ -347,6 +347,7 @@ def group(text):
         continue
     if id_tmp:
         res.append("".join(id_tmp))
+    print(res)
     return res
 
 def exprs_preruntime(args):
