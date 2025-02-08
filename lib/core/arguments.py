@@ -347,7 +347,6 @@ def group(text):
         continue
     if id_tmp:
         res.append("".join(id_tmp))
-    print(res)
     return res
 
 def exprs_preruntime(args):
