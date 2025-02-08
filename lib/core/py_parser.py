@@ -224,8 +224,13 @@ def process(code, name="__main__"):
                 error.pre_error(lpos, name, f"{name!r}:{lpos}: Invalid directive {ins!r}")
                 break
         else:
-            ins, *args = line.split()
-            args = argproc.exprs_preruntime(args)
+            if " " in line:
+                ins, arg = line.split(maxsplit=1)
+                args = argproc.exprs_preruntime(argproc.group(arg))
+            else:
+                ins = line
+                args = []
+            print(args)
             res.append((lpos, name, ins, args))
     else:
         return {"code":res, "frame":nframe or None}

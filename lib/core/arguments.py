@@ -313,6 +313,49 @@ def exprs_runtime(frame, args):
         p += 1
     return res
 
+sep = " "
+special_sep = "()"
+
+def group(text):
+    res = []
+    str_tmp = []
+    id_tmp = []
+    this = False
+    for i in text:
+        if str_tmp:
+            if this:
+                str_tmp.append()
+                this = False
+                continue
+            if i == "\\":
+                this = True
+            elif i == '"':
+                res.append("".join(str_tmp)+'"')
+                str_tmp.clear()
+            else:
+                str_tmp.append(i)
+            continue
+        elif i in sep:
+            if id_tmp:
+                res.append("".join(id_tmp))
+                id_tmp.clear()
+        elif i in special_sep:
+            res.append(i)
+            if id_tmp:
+                res.append("".join(id_tmp))
+                id_tmp.clear()
+        elif i == '"':
+            if id_tmp:
+                res.append("".join(id_tmp))
+                id_tmp.clear()
+            str_tmp.append('"')
+        else:
+            id_tmp.append(i)
+        continue
+    if id_tmp:
+        res.append("".join(id_tmp))
+    return res
+
 def exprs_preruntime(args):
     return [*map(expr_preruntime, args)]
 
