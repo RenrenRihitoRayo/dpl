@@ -1,3 +1,7 @@
+# Version 1.4.3
+
+    Bugs has been removed.
+
 # Updated as of 1.4.x
 
     This is the updated docs...
