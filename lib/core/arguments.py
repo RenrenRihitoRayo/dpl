@@ -224,28 +224,6 @@ def exprs_runtime(frame, args):
         c = args[p]
         if not isinstance(c, str):
             res.append(c)
-        elif c.startswith("\""):
-            args[p] = c[1:]
-            c = ""
-            put.clear()
-            while p < len(args) and ((not c.endswith("\"")) if isinstance(c, str) else True):
-                c = args[p]; put.append(c); p += 1
-            p -= 1
-            text = " ".join(map(str, put))[:-1]
-            for c, r in CHARS.items():
-                text = text.replace(c, r)
-            res.append(text.replace("\\[quote]", "\""))
-        elif c.startswith("<"):
-            args[p] = c
-            c = ""
-            put.clear()
-            while p < len(args) and ((not c.endswith(">")) if isinstance(c, str) else True):
-                c = args[p]; put.append(c); p += 1
-            p -= 1
-            text = " ".join(map(str, put))
-            for c, r in CHARS.items():
-                text = text.replace(c, r)
-            res.append(text.replace("\\[lt]", "<").replace("\\[gt]", ">"))
         elif c.startswith("!\""):
             args[p] = c[1:]
             c = ""
@@ -308,6 +286,10 @@ def exprs_runtime(frame, args):
             while '' in put:
                 put.remove('')
             res.append((*bs_thing(frame, put),))
+        elif c.startswith('"') and c.endswith('"'):
+            res.append(c[1:-1])
+        elif c.startswith('<') and c.endswith('>'):
+            res.append(c)
         else:
             res.append(expr_runtime(frame, c))
         p += 1
@@ -321,6 +303,11 @@ def group(text):
     str_tmp = []
     id_tmp = []
     this = False
+    quotes = {
+        "str":'"',
+        "pre":">"
+    }
+    str_type = "str"
     for i in text:
         if str_tmp:
             if this:
@@ -349,6 +336,12 @@ def group(text):
                 res.append("".join(id_tmp))
                 id_tmp.clear()
             str_tmp.append('"')
+            if i == '"':
+                str_type = "str"
+            elif i == '<':
+                str_type = "pre"
+            else:
+                str_type = "str"
         else:
             id_tmp.append(i)
         continue
@@ -363,4 +356,4 @@ def express(frame, e):
     return expr_runtime(frame, expr_preruntime(e))
 
 def bs_thing(frame, e):
-    return exprs_runtime(frame, exprs_preruntime(e))
+    return exprs_runtime(frame, exprs_preruntime(group(" ".join(e))))

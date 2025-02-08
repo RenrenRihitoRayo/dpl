@@ -49,20 +49,7 @@ CHARS = {
     "\\[escape]":"\\",
 }
 
-VERSION_TRIPLE = (1, 4, 2)
-
-def isCompat(version, VERSION=VERSION_TRIPLE):
-    major, minor, patch = version
-    if major != VERSION[0]:
-        return False
-    elif minor != VERSION[1]:
-        return False
-    if VERSION[2] is None or patch is None:
-        return True
-    if patch >= VERSION[2]:
-        return True
-    else:
-        return False
+VERSION_TRIPLE = (1, 4, 3)
 
 def isCompat(version, VERSION=VERSION_TRIPLE):
     major, minor, patch = version
@@ -153,7 +140,7 @@ class VersionSpec(Version):
         if not (ver:=tuple(filter(str.isdigit, ver_str.split('.')))):
             raise Exception(f"Invalid version format!")
         ver = *map(int, ver),
-        self.ver = ver + (None,) * (3 - len(ver))
+        self.ver = ver + (0,) * (3 - len(ver))
 
 VERSION = Version(*VERSION_TRIPLE)
 
@@ -166,10 +153,6 @@ else:
     BINDIR = os.path.dirname(sys.argv[0])
     LIBDIR = os.path.join(BINDIR, "lib")
     CORE_DIR = os.path.join(LIBDIR, "core")
-    # lesson learned. dont over complicate linux stuff.
-    # BINDIR = os.path.expanduser("~/.dpl")
-    # LIBDIR = os.path.join(BINDIR, "lib")
-    # CORE_DIR = os.path.join(LIBDIR, "core")
     UNIX = True
 
 PYTHON_VER = sys.version

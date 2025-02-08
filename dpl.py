@@ -238,7 +238,7 @@ def handle_args():
                     continue
                 try:
                     if (err:=parser.run(parser.process(act), frame=frame)):
-                        print(f"Error Code: {err}")
+                        rec(err)
                 except Exception as e:
                     print(f"Python Exception was raised while running:\n{repr(e)}")
         case ["help"] | ["--help"]:

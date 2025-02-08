@@ -230,7 +230,6 @@ def process(code, name="__main__"):
             else:
                 ins = line
                 args = []
-            print(args)
             res.append((lpos, name, ins, args))
     else:
         return {"code":res, "frame":nframe or None}
