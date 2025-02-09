@@ -1,9 +1,5 @@
-# Todo list for the core libs
-
-## Parser specific
-
-- Make extensions work with the cythonized parser.
-
-## Feature specific
-
-- Add a way to bundle scripts with python extensions.
+# Todo
+- Add more features
+- Add a automated way of converting files version to version
+- Make C integration possible
+- Logging
