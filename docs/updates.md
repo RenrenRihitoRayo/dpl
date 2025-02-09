@@ -4,6 +4,46 @@
     Example: "This is a test" becomes "This is 10 test"
     It is now fixed by making strings parsed before the hex literals.
 
+    Benchmarks (not totally accurate)
+    Device:    Oppo A18
+    OS:        Android 14
+    RAM:       4Gb
+    Processor: Helio G85
+
+    1 million loop
+    
+    With string parsing
+    1.4.3: 11.812s
+    1.4.2: 17.017s
+    
+    Code:
+    ```DuProL
+        START_TIME
+        for i in (Range 1,000,000)
+            # This tests the string parsing speed
+            pass "test"
+        end
+        STOP_TIME
+        LOG_TIME
+    ```
+    
+    Without string parsing
+    1.4.3: 65.914ms
+    1.4.2: 80.352ms
+    
+    Code:
+    ```DuProL
+        START_TIME
+        for i in (Range 1,000,000)
+        end
+        STOP_TIME
+        LOG_TIME
+    ```
+    
+    Since the string parsing is now on the
+    preruntime side. The loops are a ton more
+    faster.
+
 # Additions 1.4.0
 
     DuProL/Python API Update!
