@@ -54,10 +54,13 @@ def handle_args():
     flags = cli_args.flags(info.ARGV, True)
     info.ARGC = len(info.ARGV)
     if "arg-test" in flags:
-        print(flags)
+        print("Flags:", flags)
         return
-    elif "info" in flags:
+    if "info" in flags:
         info.print_info()
+        return
+    if "version" in flags or "v" in flags:
+        print(f"DPL v{info.VERSION}\nUsing Python {info.PYTHON_VER}\n© Darren Chase Papa 2024\nMIT License (see LICENSE)")
         return
     match (info.ARGV):
         case ["run", file, *args]:
@@ -241,12 +244,12 @@ def handle_args():
                         rec(err)
                 except Exception as e:
                     print(f"Python Exception was raised while running:\n{repr(e)}")
-        case ["help"] | ["--help"]:
+        case ["help"]:
             print(f"""Help for DPL [v{varproc.meta['internal']['version']}]
 
 dpl run [file] args...
     Runs the given DPL script.
-dpl rc [file] args..
+dpl rc [file] args...
     Runs the given compiled DPL script.
 dpl compile [file]
     Compiles the given DPL script.
@@ -261,9 +264,16 @@ dpl build [python executable]
 dpl build clean
     Removes the cythonized components.
 dpl repr ALSO JUST `dpl`
-    Invokes the REPL""")
+    Invokes the REPL
+dpl -info
+    Prints info.
+dpl -arg-test
+    Tests flag handling.
+dpl -version
+    Prints version and some info.""")
         case _:
             print("Invalid invokation!")
+            print("See 'dpl help' for more")
             exit(1)
     if "pause" in flags:
         input("\n[Press Enter To Finish]")
