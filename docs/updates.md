@@ -17,7 +17,7 @@
     1.4.2: 17.017s
     
     Code:
-    ```DuProL
+```DuProL
         START_TIME
         for i in (Range 1,000,000)
             # This tests the string parsing speed
@@ -25,20 +25,20 @@
         end
         STOP_TIME
         LOG_TIME
-    ```
+```
     
     Without string parsing
     1.4.3: 65.914ms
     1.4.2: 80.352ms
     
     Code:
-    ```DuProL
+```DuProL
         START_TIME
         for i in (Range 1,000,000)
         end
         STOP_TIME
         LOG_TIME
-    ```
+```
     
     Since the string parsing is now on the
     preruntime side. The loops are a ton more
