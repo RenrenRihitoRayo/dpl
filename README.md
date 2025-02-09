@@ -1,3 +1,14 @@
+# Repo Notice As Of Feb 9 2025
+
+    Every new versions including patches
+    will be made on separate branches.
+
+    This is to improve security.
+
+# 1.4.3 Patch Alpha (1.4.3-a)
+
+    Added new info.
+
 # Fixes 1.4.3
 
     Fixed a bug that misinterpreted hex literals in strings.
