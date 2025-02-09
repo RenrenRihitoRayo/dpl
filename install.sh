@@ -14,7 +14,7 @@ echo "Adding privileges..."
 chmod +x ./dpl.sh
 # link file
 echo "Making a symbolic link..."
-ln -s ./dpl.sh "$ROOT/bin/dpl"
+ln -sf ./dpl.sh "$ROOT/bin/dpl"
 
 echo "Checking link"
 if command -v dpl >/dev/null 2>&1; then

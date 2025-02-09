@@ -49,7 +49,7 @@ CHARS = {
     "\\[escape]":"\\",
 }
 
-VERSION_TRIPLE = (1, 4, 3)
+VERSION_TRIPLE = (1, 4, 4)
 
 def isCompat(version, VERSION=VERSION_TRIPLE):
     major, minor, patch = version
