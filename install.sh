@@ -1,10 +1,10 @@
 
-if [ -n "$ROOT" ]; then
+if [ -z "$ROOT" ]; then
     echo "\$ROOT not defined!"
     exit 1
 fi
 
-if [ "$1" -eq "remove" ]; then
+if [ "$1" = "remove" ]; then
     rm "$ROOT/bin/dpl"
     exit
 fi
