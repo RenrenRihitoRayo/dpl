@@ -327,10 +327,10 @@ def group(text):
                 res.append("".join(id_tmp))
                 id_tmp.clear()
         elif i in special_sep:
-            res.append(i)
             if id_tmp:
                 res.append("".join(id_tmp))
                 id_tmp.clear()
+            res.append(i)
         elif i in '"<':
             if id_tmp:
                 res.append("".join(id_tmp))

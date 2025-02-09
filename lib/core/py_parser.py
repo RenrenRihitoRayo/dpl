@@ -700,7 +700,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
         else:
-            error.error(pos, file, f"Invalid instruction {ins}")
+            error.error(pos, file, f"Invalid instruction {ins}\n{args}")
             return error.RUNTIME_ERROR
         p += 1
     else:
