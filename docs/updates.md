@@ -1,3 +1,9 @@
+# Fixes 1.4.3
+
+    Fixed a bug that misinterpreted hex literals in strings.
+    Example: "This is a test" becomes "This is 10 test"
+    It is now fixed by making strings parsed before the hex literals.
+
 # Additions 1.4.0
 
     DuProL/Python API Update!
