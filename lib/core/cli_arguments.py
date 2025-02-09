@@ -6,12 +6,10 @@ def flags(argv: list[str], remove_first=False) -> tuple:
     indexes: dict[int, str] = {}
     end = 0
     for pos, value in enumerate(argv):
-        print(pos, value)
         if value.startswith("-"):
             if pos > end:
                 end = pos
     for pos, value in enumerate(argv):
-        print(pos, value)
         if value.startswith("--"):
             if "=" not in value:
                 continue
