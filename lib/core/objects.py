@@ -18,7 +18,7 @@ def set_repr(frame, name="???", type_name=None, repr=None):
             "docs":f"Default internal method for ({name}).",
             "self":0,
             "body":[
-                (0, "_internal", "return", (repr_text or f"<{type_name or 'Object'} {name}>",))
+                (0, "_internal", "return", (repr or f"<{type_name or 'Object'} {name}>",))
             ]
         }
     return frame
