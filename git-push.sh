@@ -9,4 +9,4 @@ fi
 cp ./docs/updates.md README.md
 git add .
 git commit -m "$2"
-git push origin "$1" --force # scary (0o0)
+git push origin
