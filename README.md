@@ -2,8 +2,8 @@
 
 Release Date: March 15, 2025
 Features:
-- Dead code optimization. :white_check:
-- Profiling. :white_check:
+- Dead code optimization. :white_check_mark:
+- Profiling. :white_check_mark:
 
 # Repo Notice As Of Feb 9 2025
 
