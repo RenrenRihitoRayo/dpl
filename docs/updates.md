@@ -1,3 +1,10 @@
+# 1.4.4 On comming release
+
+    Release Date: March 30, 2025
+    Features:
+        - Dead code optimization.
+        - Profiling.
+
 # Repo Notice As Of Feb 9 2025
 
     Every new versions including patches
