@@ -49,6 +49,9 @@ CHARS = {
     "\\[escape]":"\\",
 }
 
+WARNINGS = True
+DEAD_CODE_OPT = True
+
 VERSION_TRIPLE = (1, 4, 4)
 
 def isCompat(version, VERSION=VERSION_TRIPLE):

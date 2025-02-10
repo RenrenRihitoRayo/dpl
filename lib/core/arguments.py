@@ -303,6 +303,7 @@ def group(text):
     str_tmp = []
     id_tmp = []
     this = False
+    rq = False
     quotes = {
         "str":'"',
         "pre":">"
@@ -317,8 +318,12 @@ def group(text):
             if i == "\\":
                 this = True
             elif i == quotes[str_type]:
-                res.append("".join(str_tmp)+quotes[str_type])
+                text = "".join(str_tmp)+quotes[str_type]
+                if rq:
+                    text = f'"{text}"'
+                res.append(text)
                 str_tmp.clear()
+                rq = False
             else:
                 str_tmp.append(i)
             continue
@@ -331,6 +336,8 @@ def group(text):
                 res.append("".join(id_tmp))
                 id_tmp.clear()
             res.append(i)
+        elif i == "!":
+            rq = True
         elif i in '"<':
             if id_tmp:
                 res.append("".join(id_tmp))

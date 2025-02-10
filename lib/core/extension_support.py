@@ -1,6 +1,6 @@
 # A module to help the parser call dynamically loaded functions and to load them too
 # This is needed for the cythonized parser and slows down the pure python impl!
-# I tried it, it still failed :))
+# I tried it, it still failed :)
 
 from . import utils
 from . import varproc
@@ -150,10 +150,11 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
             meths.update(ext.methods)
     frame[-1].update(funcs)
     argproc.methods.update(meths)
+    file = os.path.realpath(file)
     if search_path in varproc.meta["dependencies"]["python"]:
-        varproc.meta["dependencies"]["python"][search_path].add(file)
+        varproc.dependencies["python"][search_path].add(file)
     else:
-        varproc.meta["dependencies"]["python"][search_path] = {file}
+        varproc.dependencies["python"][search_path] = {file}
 
 def py_import_string(frame, file_name, code, search_path=None, loc=varproc.meta["internal"]["main_path"]):
     if not os.path.isabs(file_name):

@@ -141,6 +141,9 @@ def process(code, name="__main__"):
     "Preprocess a file"
     res = []
     nframe = varproc.new_frame()
+    dead_code = True
+    warnings = True
+    define_func = False
     for lpos, line in filter(lambda x: (
         True if x[1] and not x[1].startswith("#") else False
     ),enumerate(map(str.strip, code.split("\n")), 1)):
@@ -160,6 +163,7 @@ def process(code, name="__main__"):
                     break
                 with open(file, "r") as f:
                     res.extend(process(f.read(), name=file))
+                file = os.path.realpath(file)
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "set_name" and argc == 1:
                 name = str(args[0])
@@ -179,6 +183,7 @@ def process(code, name="__main__"):
                     break
                 with open(file, "rb") as f:
                     res.extend(pickle.loads(f.read()))
+                file = os.path.realpath(file)
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "extend" and argc == 1:
                 if args[0].startswith("<") and args[0].endswith(">"):
@@ -194,6 +199,7 @@ def process(code, name="__main__"):
                     break
                 with open(file, "r") as f:
                     res.extend(process(f.read(), name=name))
+                file = os.path.realpath(file)
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "use" and argc == 1:
                 if args[0].startswith("<") and args[0].endswith(">"):
@@ -212,6 +218,7 @@ def process(code, name="__main__"):
                 if ext_s.py_import(nframe, file, search_path, loc="."):
                     print(f"Something wrong happened...")
                     return error.PREPROCESSING_ERROR
+                ofile = os.path.realpath(file)
                 if search_path in varproc.meta["dependencies"]["python"]:
                     varproc.meta["dependencies"]["python"][search_path].add(ofile)
                 else:
@@ -220,6 +227,18 @@ def process(code, name="__main__"):
                 if (err:=info.VERSION.getDiff(args[0])):
                     error.pre_error(lpos, name, f"{name!r}:{lpos}: {err}")
                     return error.COMPAT_ERROR
+            elif ins == "dead_code_disable" and argc == 0:
+                dead_code = False
+            elif ins == "dead_code_enable" and argc == 0:
+                dead_code = True
+            elif ins == "warn_code_disable" and argc == 0:
+                warnings = False
+            elif ins == "warn_code_enable" and argc == 0:
+                warnings = True
+            elif ins == "def_fn_disable" and argc == 0:
+                define_func = False
+            elif ins == "def_fn_enable" and argc == 0:
+                define_func = True
             else:
                 error.pre_error(lpos, name, f"{name!r}:{lpos}: Invalid directive {ins!r}")
                 break
@@ -232,7 +251,37 @@ def process(code, name="__main__"):
                 args = []
             res.append((lpos, name, ins, args))
     else:
-        return {"code":res, "frame":nframe or None}
+        if dead_code and info.DEAD_CODE_OPT:
+            p = 0
+            warn_num = 0
+            nres = []
+            while p < len(res):
+                line = pos, file, ins, *_ = res[p]
+                if ins in {"for", "loop", "while", "thread", "if", "if_else"} and p+1 < len(res) and res[p+1][2] in {"end", "stop"}:
+                    if warnings and info.WARNINGS: print(f"Warning: Loop is empty!\nLine {pos}\nIn file {file!r}")
+                    temp = get_block(res, p)
+                    if temp:
+                        p, _ = temp
+                    else:
+                        return []
+                    warn_num += 1
+                elif ins in {"fn"} and p+1 < len(res) and res[p+1][2] in {"end", "return"}:
+                    if len(args) == 0:
+                        print("Error: Malformed function definition!\nLine {pos}\nIn file {file!r}")
+                    if warnings and info.WARNINGS: print(f"Warning: Function {line[3][0]!r} is empty!\nLine {pos}\nIn file {file!r}")
+                    temp = get_block(res, p)
+                    if temp:
+                        p, _ = temp
+                    else:
+                        return []
+                    if define_func:
+                        nres.append((pos, file, "set", [f'"{line[3][0]}"', constants.none]))
+                    warn_num += 1
+                else:
+                    nres.append(line)
+                p += 1
+            if warnings and info.WARNINGS and warn_num: print(f"Warning Info: {warn_num:,} Total warnings.")
+        return {"code":nres if dead_code and info.DEAD_CODE_OPT else res, "frame":nframe or None}
     return error.PREPROCESSING_ERROR
 
 def run(code, frame=None, thread_event=IS_STILL_RUNNING):

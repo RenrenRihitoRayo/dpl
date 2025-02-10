@@ -12,6 +12,11 @@ from . import error
 W_LOCK = threading.Lock()
 WS_LOCK = threading.Lock()
 
+dependencies = {
+    "dpl":set(),
+    "python":{}
+}
+
 # debug options
 debug = {
     "show_instructions":0,
@@ -42,10 +47,7 @@ meta = {
         "python_version_string":info.PYTHON_VER,
         "_set_only_when_defined":1
     },
-    "dependencies":{
-        "dpl":set(),
-        "python":{}
-    },
+    "dependencies":dependencies,
     "_set_only_when_defined":1
 }
 
