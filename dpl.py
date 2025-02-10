@@ -8,10 +8,14 @@ import os
 import sys
 import subprocess
 import shutil
+import time
+import pstats
 import lib.core.info as info
+import lib.core.utils as utils
 import lib.core.error as error
 import lib.core.cli_arguments as cli_args
 import lib.core.extension_support as ext_s
+import cProfile
 
 try: # Try to use the .pyd or .so parser to get some kick
     import lib.core.parser as parser
@@ -39,27 +43,32 @@ def rec(this, ind=0):
             else:
                 print(f"{'  '*ind}Error Name {'(original)' if pos == 0 else '(other)'}: {ERRORS.get(i, f'ERROR NAME NOT FOUND <{i}>')}")
 
-def ez_run(code, process=True, file="???"):
+def ez_run(code, process=True, file="???", profile=False):
     if process:
         code = parser.process(code)
+    if profile:
+        stime = time.perf_counter()
     if (err:=parser.run(code)):
         print(f"\n[{file}]\nFinished with an error: {err}")
         rec(err)
+    if profile:
+        delta = time.perf_counter() - stime
     parser.IS_STILL_RUNNING.set()
     parser.clean_threads()
+    if profile:
+        s, u = utils.convert_sec(delta)
+        print(f"\nProgram Time: {s:,.2f}{u}")
     if err:
         exit(1)
 
 def handle_args():
-    flags = cli_args.flags(info.ARGV, True)
-    info.ARGC = len(info.ARGV)
-    if "arg-test" in flags:
-        print("Flags:", flags)
+    if "arg-test" in varproc.flags:
+        print("Flags:", varproc.flags)
         return
-    if "info" in flags:
+    if "info" in varproc.flags:
         info.print_info()
         return
-    if "version" in flags or "v" in flags:
+    if "version" in varproc.flags or "v" in varproc.flags:
         print(f"DPL v{info.VERSION}\nUsing Python {info.PYTHON_VER}\n© Darren Chase Papa 2024\nMIT License (see LICENSE)")
         return
     match (info.ARGV):
@@ -76,7 +85,7 @@ def handle_args():
             with open(file, "r") as f:
                 varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
                 varproc.meta["internal"]["main_file"] = file
-                ez_run(f.read(), file=file)
+                ez_run(f.read(), file=file, profile="profile" in varproc.flags or "p" in varproc.flags)
         case ["rc", file, *args]:
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
@@ -92,7 +101,7 @@ def handle_args():
                     code = pickle.loads(f.read())
                     varproc.meta["internal"]["main_file"] = file
                     varproc.meta["internal"]["main_path"] = os.path.dirname(os.path.abspath(file))+os.sep
-                    ez_run(code, False, file)
+                    ez_run(code, False, file, profile="profile" in varproc.flags or "p" in varproc.flags)
             except Exception as e:
                 print("Something went wrong:", file)
                 print("Error:", repr(e))
@@ -144,18 +153,18 @@ def handle_args():
                     if not line:
                         continue
                     if line.startswith("?"):
-                        if "verbose" in flags:
+                        if "verbose" in varproc.flags:
                             print(f"Conditional install [for {(temp:=line[1:line.index(' ')])}{' (match)' if temp == sys.platform or temp == 'any' else ' (mismatch)'}]: {line[len(sys.platform)+2:]}")
                         if line[1:].startswith(sys.platform) or line[1:line.index(' ')] == "any":
                             line = line[len(sys.platform)+1:].strip()
                         else:
                             continue
                     elif line.startswith("!"):
-                        if "verbose" in flags:
+                        if "verbose" in varproc.flags:
                             print(f"Conditional command [for {(temp:=line[1:line.index(' ')])}{' (match)' if temp == sys.platform or temp == 'any' else ' (mismatch)'}]: {line[len(sys.platform)+2:]}")
                         if line[1:].startswith(sys.platform) or line[1:line.index(' ')] == "any":
                             line = line[len(sys.platform)+2:].strip()
-                            if "verbose" in flags:
+                            if "verbose" in varproc.flags:
                                 print(f"Running: {line}")
                             if (err:=os.system(line)):
                                 print(f"Error code: {err}")
@@ -177,14 +186,14 @@ def handle_args():
             else:
                 start_text = ""
             frame = varproc.new_frame()
-            if "import-all" in flags:
-                if "verbose" in flags:
+            if "import-all" in varproc.flags:
+                if "verbose" in varproc.flags:
                     print("Importing all standard modules...")
                 for pos, file in enumerate(temp:=varproc.meta["internal"]["libs"]["std_libs"], 1):
-                    if "verbose" in flags:
+                    if "verbose" in varproc.flags:
                         print(f"[{(pos/len(temp))*100:7.2f}% ] Importing: {file}")
                     ext_s.py_import(frame, file, "@std")
-                if "verbose" in flags:
+                if "verbose" in varproc.flags:
                     print("Done importing!")
             PROMPT_CTL = frame[-1]["_meta"]["internal"]["prompt_ctl"] = {}
             PROMPT_CTL["ps1"] = ">>> "
@@ -269,14 +278,35 @@ dpl -info
     Prints info.
 dpl -arg-test
     Tests flag handling.
-dpl -version
-    Prints version and some info.""")
+'dpl -version' or 'dpl -v'
+    Prints version and some info.
+'dpl -profile ...' or 'dpl -p ...'
+    Profiles the code using 'time.perf_counter' for inaccurate but fast execution.
+dpl -cprofile ...
+    Profiles the code using cProfile for more accurate but slower execution.
+""")
         case _:
             print("Invalid invokation!")
             print("See 'dpl help' for more")
             exit(1)
-    if "pause" in flags:
+    if "pause" in varproc.flags:
         input("\n[Press Enter To Finish]")
 
 if __name__ == "__main__":
+    flags = cli_args.flags(info.ARGV, True)
+    varproc.flags.update(flags)
+    info.ARGC = len(info.ARGV)
+    if 'cprofile' in flags:
+        profiler = cProfile.Profile()
+        profiler.enable()
     handle_args()
+    if 'cprofile' in flags:
+        profiler.disable()  
+        default = 'tottime'
+        order_by = None
+        for i in flags:
+            if i.startswith("order_profile="):
+                order_by = i[14:]
+        print("\nProfile Result")
+        stats = pstats.Stats(profiler)
+        stats.sort_stats(order_by or default).print_stats()

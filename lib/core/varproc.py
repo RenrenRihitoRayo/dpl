@@ -30,12 +30,15 @@ debug = {
     "_set_only_when_defined":1 # make sure that only defined variables in this scope can be set
 }
 
+flags = set()
+
 # related to interpreter methods or behavior
 # and meta programming to the extreme
 meta = {
     "debug":debug,
     "argv":info.ARGV,
     "argc":info.ARGC,
+    "inter_flags":flags,
     "internal":{
         "lib_path":info.LIBDIR,
         "main_path":"__main__",
