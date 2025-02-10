@@ -23,17 +23,22 @@ Example: "This is a test" becomes "This is 10 test"
 It is now fixed by making strings parsed before the hex literals.
 
 Benchmarks (not totally accurate)
-    Device:    Oppo A18
-    OS:        Android 14
-    RAM:       4Gb
-    Processor: Helio G85
+```
+Device:    Oppo A18
+OS:        Android 14
+RAM:       4Gb
+Processor: Helio G85
+Python 3.11.9 (Pydroid3)
+```
 
 1 million loop
     
 With string parsing
-    1.4.3: `11.812s`
-    1.4.2: `17.017s`
-    
+```
+1.4.3: 11.812s
+1.4.2: 17.017s
+```
+
 Code:
 ```DuProL
     START_TIME
@@ -46,8 +51,10 @@ Code:
 ```
     
 Without string parsing
-    1.4.3: `65.914ms`
-    1.4.2: `80.352ms`
+```
+1.4.3: 65.914ms
+1.4.2: 80.352ms
+```
     
 Code:
 ```DuProL
