@@ -6,6 +6,7 @@ Features:
 - :white_check_mark: Profiling.
 - :x: Build system.
 - :stop_sign: Generators
+- :white_check_mark: Formatted strings.
 
 # Repo Notice As Of Feb 9 2025
 
