@@ -31,7 +31,7 @@ Device:    Oppo A18
 OS:        Android 14
 RAM:       4Gb
 Processor: Helio G85
-Python 3.11.9 (Pydroid3)
+Python 3.11.4 (Pydroid3)
 ```
 
 1 million loop
