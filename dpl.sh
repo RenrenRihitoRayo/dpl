@@ -1,2 +1,2 @@
 #!/bin/bash
-~/dpl/dpl.py "$@"
+python3 ~/dpl/dpl.py "$@"
