@@ -245,7 +245,7 @@ def process(code, name="__main__"):
                 break
         else:
             if " " in line:
-                ins, arg = line.split(maxsplit=1)
+                ins, arg = line.strip().split(maxsplit=1)
                 args = argproc.exprs_preruntime(argproc.group(arg))
             else:
                 ins = line
@@ -597,24 +597,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
             if err:
                 return err
             varproc.pscope(frame)
-        elif ins == "gen" and argc >= 2: # call as generator
-            binded_name, func_name, *args = args
-            if (temp:=varproc.rget(frame[-1], func_name)) == state.bstate("nil") or not isinstance(temp, dict):
-                error.error(pos, file, f"Invalid function {func_name!r}!")
-                break
-            gpc = gen_pc.gen_pc()
-            if temp["self"] != state.bstate("nil"):
-                varproc.rset(frame[-1], "self", temp["self"])
-            def thread(frame, code, gpc):
-                varproc.rset(frame[-1], binded_name, gpc)
-                varproc.nscope(frame)
-                err = run(code, frame, generator_pc=gpc)
-                varproc.pscope(frame)
-                if err:
-                    error.error(pos, file, f"Generator {func_name!r} had an error!")
-            tmp = threading.Thread(target=thread, args=(frame, temp["body"], gpc))
-            threads.append(tmp)
-            tmp.start()
         elif ins == "body" and argc >= 1: # give a code block to a python function
             name, *args = args
             if (temp:=varproc.rget(frame[-1], name)) == state.bstate("nil") or not hasattr(temp, "__call__"):
@@ -730,17 +712,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
                 for pos, _, vname, vitem in body:
                     dct[vname], = argproc.bs_thing(frame, vitem)
             varproc.rset(frame[-1], args[1], dct)
-        elif ins == "yield":
-            if generator_pc is None:
-                error.error(pos, file, f"Not in generator!")
-                return error.RUNTIME_ERROR
-            generator_pc.set()
-            generator_pc.set_result(args)
-            generator_pc.wait_til_ready()
-        elif ins == "next" and argc == 2 and isinstance(args[0], gen_pc.gen_pc):
-            args[0].wait_til_waiting()
-            varproc.rset(frame[-1], args[1], args[0].get_current_result())
-            args[0].unset()
         elif (temp:=varproc.rget(frame[-1], ins, default=varproc.rget(frame[0], ins))) != state.bstate("nil") and isinstance(temp, dict) and has(dpl_func_attr, temp): # Call a function
             varproc.nscope(frame)
             if temp["defs"]:

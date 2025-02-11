@@ -1,3 +1,40 @@
+# Another set of features
+
+DPL now allows commas to seprate arguments!
+Its still optional though.
+
+```
+set this [0,1,2,3]
+# is just
+set this [0 1 2 3]
+```
+
+Since the parser has evolved we can
+finally not use spaces in our expressions!
+
+```
+set result (90+90)
+```
+
+# 1.4.4 Modules
+
+New Modules:
+- array_utils.py
+```
+    Contains functions and methods to
+    join two arrays, reverse an array,
+    and to slice an array.
+```
+New Functions:
+- io:printf in text_io.py
+```
+    Has a simple formatter.
+    io:printf "%N" value0 value1 ... valueN
+    where N is the index of a value.
+    Example:
+    set test (90+90)
+    io:printf "Result: %0\n" :test
+```
 # 1.4.4 In-comming Release
 
 Release Date: March 15, 2025
@@ -31,7 +68,7 @@ Device:    Oppo A18
 OS:        Android 14
 RAM:       4Gb
 Processor: Helio G85
-Python 3.11.9 (Pydroid3)
+Python 3.11.4 (Pydroid3)
 ```
 
 1 million loop
