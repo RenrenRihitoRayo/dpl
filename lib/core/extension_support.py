@@ -50,13 +50,13 @@ class extension:
             self.__func[name if not self.meta_name else f"{self.meta_name}:{name}"] = func
             return func
         return wrap
-    def add_method(self, name=None):
+    def add_method(self, name=None, process=True, from_func=False):
         "Add a method."
         def wrap(func):
             nonlocal name
             if name is None:
                 name = getattr(func, "__name__", None) or "_"
-            self.__meth[f"{self.name}.{name}" if not self.meta_name else f"{self.meta_name}:{name}"] = func
+            self.__meth[f"{self.name}.{name}" if not self.meta_name else f"{self.meta_name}:{name}"] = process, (func if not from_func else lambda *args: func(args[0], None, *args[1:])[0])
             return func
         return wrap
     def __setitem__(self, name, value):

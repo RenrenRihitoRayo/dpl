@@ -7,6 +7,29 @@ from . import error
 from . import varproc
 from .info import *
 
+# Functions in utils that ciuldnt be imported
+
+def flatten_dict(d, parent_key='', sep='.', seen=None):
+    if seen is None:
+        seen = set()
+    items = {}
+    dict_id = id(d)
+    if dict_id in seen:
+        return d
+    seen.add(dict_id)
+    for key, value in d.items():
+        new_key = f"{parent_key}{sep}{key}" if parent_key else key
+        if isinstance(value, dict):
+            items.update(flatten_dict(value, new_key, sep, seen))
+        elif isinstance(value, list):
+            items[f"{new_key}"] = value
+            for i, item in enumerate(value):
+                items[f"{new_key}->{i}"] = item
+        else:
+            items[new_key] = value
+    seen.remove(dict_id)
+    return items
+
 # Use to make the argument handler to handle
 # char literals
 class char:
@@ -101,10 +124,10 @@ def expr_runtime(frame, arg):
     else:
         return expr_preruntime(arg)
 
-def add_method(name=None, process=True):
+def add_method(name=None, from_func=False, process=True):
     def wrapper(func):
         fname = name if name is not None else getattr(func, "__name__", "_dump")
-        methods[fname] = (func, process)
+        methods[fname] = (lambda *arg: func(None, None, *arg) if from_func else func, process)
         return func
     return wrapper
 
@@ -114,7 +137,7 @@ def evaluate(frame, expression):
     if ins in methods:
         if methods[ins][0]:
             args = bs_thing(frame, args)
-        return methods[ins][0](frame, *args)
+        return methods[ins][1](frame, *args)
     match (expression):
         case ["Range", arg]:
             arg = express(frame, arg)
@@ -287,7 +310,13 @@ def exprs_runtime(frame, args):
                 put.remove('')
             res.append((*bs_thing(frame, put),))
         elif c.startswith('"') and c.endswith('"'):
-            res.append(c[1:-1])
+            text = c[1:-1]
+            res.append(text)
+        elif c.startswith("'") and c.endswith("'"):
+            text = c[1:-1]
+            for c, cc in flatten_dict(frame[-1]).items():
+                text = text.replace(f"${{{c}}}", str(cc))
+            res.append(text)
         elif c.startswith('<') and c.endswith('>'):
             res.append(c)
         else:
@@ -299,6 +328,8 @@ sep = " "
 special_sep = "()"
 
 def group(text):
+    for c, cc in CHARS.items():
+        text = text.replace(c, cc)
     res = []
     str_tmp = []
     id_tmp = []
@@ -312,7 +343,7 @@ def group(text):
     for i in text:
         if str_tmp:
             if this:
-                str_tmp.append()
+                str_tmp.append(i)
                 this = False
                 continue
             if i == "\\":

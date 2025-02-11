@@ -5,7 +5,7 @@ Features:
 - :white_check_mark: Dead code optimization.
 - :white_check_mark: Profiling.
 - :x: Build system.
-- :x: Generators
+- :stop_sign: Generators
 
 # Repo Notice As Of Feb 9 2025
 

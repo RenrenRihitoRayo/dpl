@@ -79,7 +79,7 @@ def flush(_, __):
 # misc
 
 @ext.add_func()
-def stringf(_, __, text, values):
-    for name, value in values.items():
-        text = text.replace(f"${{{name}}}", str(value))
-    return text,
+def printf(_, __, fmt, *values, sep=" ", end=""):
+    for pos, value in enumerate(values):
+        fmt = fmt.replace(f"%{pos}", str(value))
+    print(fmt, sep=sep, end=end)
