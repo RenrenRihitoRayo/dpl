@@ -257,7 +257,7 @@ def process(code, name="__main__"):
             warn_num = 0
             nres = []
             while p < len(res):
-                line = pos, file, ins, *_ = res[p]
+                line = pos, file, ins, args = res[p]
                 if ins in {"for", "loop", "while", "thread", "if", "if_else"} and p+1 < len(res) and res[p+1][2] in {"end", "stop"}:
                     if warnings and info.WARNINGS: print(f"Warning: Loop is empty!\nLine {pos}\nIn file {file!r}")
                     temp = get_block(res, p)
@@ -268,7 +268,7 @@ def process(code, name="__main__"):
                     warn_num += 1
                 elif ins in {"fn"} and p+1 < len(res) and res[p+1][2] in {"end", "return"}:
                     if len(args) == 0:
-                        print("Error: Malformed function definition!\nLine {pos}\nIn file {file!r}")
+                        print(f"Error: Malformed function definition!\nLine {pos}\nIn file {file!r}")
                     if warnings and info.WARNINGS: print(f"Warning: Function {line[3][0]!r} is empty!\nLine {pos}\nIn file {file!r}")
                     temp = get_block(res, p)
                     if temp:
@@ -276,7 +276,9 @@ def process(code, name="__main__"):
                     else:
                         return []
                     if define_func:
+                        if warnings and info.WARNINGS: print(f"Warning: set \"{line[3][0]}\" none\nLine {pos}\nIn file {file!r}")
                         nres.append((pos, file, "set", [f'"{line[3][0]}"', constants.none]))
+                        warn_num += 1
                     warn_num += 1
                 else:
                     nres.append(line)
@@ -780,6 +782,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
         else:
+            if not isinstance((obj:=varproc.rget(frame[-1], ins)), dict) and obj in (None, constants.none):
+                print("\nAdditional Info: User may have called a partially defined function!", end="")
             error.error(pos, file, f"Invalid instruction {ins}\n{args}")
             return error.RUNTIME_ERROR
         p += 1

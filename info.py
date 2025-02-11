@@ -22,7 +22,11 @@ def list_files_recursive(dir_path, remove=""):
     total_size = 0
     t_files = 0
     for root, dirs, files in os.walk(dir_path):
+        if os.path.relpath(root).startswith(".") or "__pycache__" in root:
+            continue
         for file in files:
+            if file.strip(os.path.sep).startswith('.'):
+                continue
             file_path = os.path.join(root, file)
             try:
                 file_size = os.path.getsize(file_path)

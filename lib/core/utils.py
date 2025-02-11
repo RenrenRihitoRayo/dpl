@@ -8,6 +8,16 @@ try:
 except ImportError:
     hash_hash = False
 
+def flatten_dict(d, parent_key='', sep='.'):
+    items = {}
+    for key, value in d.items():
+        new_key = f"{parent_key}{sep}{key}" if parent_key else key
+        if isinstance(value, dict):
+            items.update(flatten_dict(value, new_key, sep=sep))
+        else:
+            items[new_key] = value
+    return items
+
 def get_val(dct, full_name, default=0, sep="."):
     "Get a variable"
     if "." not in full_name:
