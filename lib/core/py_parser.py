@@ -245,7 +245,7 @@ def process(code, name="__main__"):
                 break
         else:
             if " " in line:
-                ins, arg = line.split(maxsplit=1)
+                ins, arg = line.strip().split(maxsplit=1)
                 args = argproc.exprs_preruntime(argproc.group(arg))
             else:
                 ins = line
