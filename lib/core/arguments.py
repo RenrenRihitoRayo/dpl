@@ -324,7 +324,7 @@ def exprs_runtime(frame, args):
         p += 1
     return res
 
-sep = " "
+sep = " ,"
 special_sep = "()+-/*[]"
 
 def group(text):
