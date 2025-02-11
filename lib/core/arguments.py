@@ -325,7 +325,7 @@ def exprs_runtime(frame, args):
     return res
 
 sep = " "
-special_sep = "()"
+special_sep = "()+-/*[]"
 
 def group(text):
     for c, cc in CHARS.items():
@@ -337,7 +337,9 @@ def group(text):
     rq = False
     quotes = {
         "str":'"',
-        "pre":">"
+        "pre":">",
+        "str1":"'",
+        "tup":"]"
     }
     str_type = "str"
     for i in text:
@@ -369,7 +371,7 @@ def group(text):
             res.append(i)
         elif i == "!":
             rq = True
-        elif i in '"<':
+        elif i in '"<\'':
             if id_tmp:
                 res.append("".join(id_tmp))
                 id_tmp.clear()
@@ -378,11 +380,12 @@ def group(text):
                 str_type = "str"
             elif i == '<':
                 str_type = "pre"
+            elif i == "'":
+                str_type = "str1"
             else:
                 str_type = "str"
         else:
             id_tmp.append(i)
-        continue
     if id_tmp:
         res.append("".join(id_tmp))
     return res

@@ -1,3 +1,22 @@
+# 1.4.4 Modules
+
+New Modules:
+- array_utils.py
+
+    Contains functions and methods to
+    join two arrays, reverse an array,
+    and to slice an array.
+
+New Functions:
+- io:printf in text_io.py
+
+    Has a simple formatter.
+    io:printf "%N" value0 value1 ... valueN
+    where N is the index of a value.
+    Example:
+    set test (90+90)
+    io:printf "Result: %0\n" :test
+
 # 1.4.4 In-comming Release
 
 Release Date: March 15, 2025

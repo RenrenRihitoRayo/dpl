@@ -81,7 +81,7 @@ def is_debug_enabled(name):
 
 def set_debug(name, value):
     "Set a debug option"
-    debg[name] = value
+    debug[name] = value
 
 def nscope(frame):
     "New scope"
@@ -92,9 +92,11 @@ def nscope(frame):
     if frame:
         t["_global"] = frame[0]
         t["_nonlocal"] = frame[-1]
+        t["_local"] = t
     else:
         t["_global"] = t
         t["_nonlocal"] = t
+        t["_local"] = t
     with WS_LOCK:
         frame.append(t)
     if is_debug_enabled("show_scope_updates"):
