@@ -1,3 +1,17 @@
+if [ "$1" = "help" ]; then
+    cat << 'EOF'
+DPL Installation Tool [DIT] 1.0
+
+install help     - print this
+
+Privileges are required for the following commands.
+install          - ROOT must be defined
+install remove   - Remove the generated symlink
+install abs_root - It install it in the root
+EOF
+    exit
+fi
+
 if [ "$1" = "remove" ]; then
     rm "$ROOT/bin/dpl"
     exit
