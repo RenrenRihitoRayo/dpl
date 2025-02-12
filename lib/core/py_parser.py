@@ -168,8 +168,6 @@ def process(code, name="__main__"):
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "set_name" and argc == 1:
                 name = str(args[0])
-            elif ins == "define" and argc == 0:
-                includes.add(name)
             elif ins == "includec" and argc == 1:
                 if args[0].startswith("<") and args[0].endswith(">"):
                     file = os.path.join(info.LIBDIR, args[0][1:-1])
