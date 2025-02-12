@@ -1,0 +1,13 @@
+
+goto .main
+
+!label main
+	dump
+	gosub .some_stuff
+halt
+
+!label some_stuff
+	push "This is a test"
+	println
+	dump
+return
