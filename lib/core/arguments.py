@@ -45,15 +45,19 @@ def is_int(arg):
     return arg.replace("-", "").replace(",", "").isdigit()
 
 def is_hex(arg):
+    if not arg.startswith("0x"):
+        return False
     try:
-        int(arg, 16)
+        int(arg[2:], 16)
         return True
     except:
         return False
 
 def is_bin(arg):
+    if not arg.startswith("0b"):
+        return False
     try:
-        int(arg, 2)
+        int(arg[2:], 2)
         return True
     except:
         return False
@@ -192,9 +196,9 @@ def evaluate(frame, expression):
             return constants.true if express(frame, op1) > express(frame, op2) else constants.false
         case [op1, "<", op2]:
             return constants.true if express(frame, op1) < express(frame, op2) else constants.false
-        case [op1, ">=", op2]:
+        case [op1, ">", "=", op2]:
             return constants.true if express(frame, op1) >= express(frame, op2) else constants.false
-        case [op1, "<=", op2]:
+        case [op1, "<", "=", op2]:
             return constants.true if express(frame, op1) <= express(frame, op2) else constants.false
         case ["not", op1]:
             return constants.true if not express(frame, op1) else constants.false
@@ -325,7 +329,7 @@ def exprs_runtime(frame, args):
     return res
 
 sep = " ,"
-special_sep = "()+-/*[]"
+special_sep = "()+/*[]<>"
 
 def group(text):
     for c, cc in CHARS.items():
@@ -337,9 +341,8 @@ def group(text):
     rq = False
     quotes = {
         "str":'"',
-        "pre":">",
-        "str1":"'",
-        "tup":"]"
+        "pre":"}",
+        "str1":"'"
     }
     str_type = "str"
     for i in text:
@@ -371,14 +374,14 @@ def group(text):
             res.append(i)
         elif i == "!":
             rq = True
-        elif i in '"<\'':
+        elif i in '"{\'':
             if id_tmp:
                 res.append("".join(id_tmp))
                 id_tmp.clear()
             str_tmp.append(i)
             if i == '"':
                 str_type = "str"
-            elif i == '<':
+            elif i == '{':
                 str_type = "pre"
             elif i == "'":
                 str_type = "str1"
@@ -397,4 +400,4 @@ def express(frame, e):
     return expr_runtime(frame, expr_preruntime(e))
 
 def bs_thing(frame, e):
-    return exprs_runtime(frame, exprs_preruntime(group(" ".join(e))))
+    return exprs_runtime(frame, exprs_preruntime(group(" ".join(map(str,e)))))

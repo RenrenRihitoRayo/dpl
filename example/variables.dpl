@@ -1,4 +1,4 @@
-&use <text_io.py>
+&use {text_io.py}
 
 set value 90
 io:println %value
@@ -7,8 +7,8 @@ io:println %value
 const PI 3.14
 io:println %PI
 
-&use <typed_vars.py>
-&use <types.py>
+&use {typed_vars.py}
+&use {types.py}
 
 # Can only be set to the correct type.
 defv value %types.str
@@ -37,36 +37,3 @@ from_template none my_table
 end
 
 io:println %my_table
-
-io:println "\nUsing meta_value"
-
-from_template none my_table
-    name "Henry Moppet"
-    age  14
-    [meta_value] none
-end
-
-io:println :my_table %my_table
-
-io:println "\nUsing update mapping"
-
-from_template none my_mapping
-    [onset] id
-    id "[meta_value]"
-end
-
-from_template none my_table2
-    name "Henry Moppet"
-    age  14
-    id none
-    [meta_value] none
-    [update_mapping] :my_mapping
-end
-
-# triggers [onset] and sets mytable2.id
-set my_table2 90
-io:println %my_table2 :my_table2
-
-# triggers id and sets [meta_value]
-set my_table2.id 180
-io:println %my_table2 :my_table2

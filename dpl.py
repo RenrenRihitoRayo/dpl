@@ -6,6 +6,11 @@
 
 import os
 import sys
+
+# DANGEROUS
+sys.setrecursionlimit(10**6)
+sys.set_int_max_str_digits(10**6)
+
 import subprocess
 import shutil
 import time

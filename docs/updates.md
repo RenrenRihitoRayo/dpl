@@ -1,9 +1,83 @@
+# Repo Notice
+
+The master branch will always be the bleeding edge branch.
+
+# Changes to 1.4.4
+
+A major change in syntax.
+Instead of `&use <standard_lib.py>` the new
+syntax is `&use {standard_lib.py}`
+
+Operations +, -, *, /, >, < must now have spaces.
+Meaning `(2+2)` must now be `(2 + 2)`, I infer that
+most people use the latter anyways.
+
+Memoization has been builtin but not automatic.
+It is controlled by the user and can only be used
+by functions that can return.
+
+```DuProL
+# DEPENDS ON DEVICE
+# AND MUSNT BE TAKEN AT FACE VALUE
+
+&use {text_io.py}
+
+fn memoize_fact n
+    if (:n <= 1)
+        return 1
+    end
+    # mcatch stands for [m]emoized [catch]
+    mcatch [f] _global.fact (:n - 1)
+    return (:n * :f)
+end
+
+fn fact n
+    if (:n <= 1)
+        return 1
+    end
+    catch [f] _global.fact (:n - 1)
+    return (:n * :f)
+end
+
+# with memo - 5.10s
+
+START_TIME
+catch [this] memoize_fact 20000
+STOP_TIME
+LOG_TIME
+
+# without   - 5.14s
+
+START_TIME
+catch [this] fact 20000
+STOP_TIME
+LOG_TIME
+
+# with memo   4.78s
+
+START_TIME
+catch [this] memoize_fact 18000
+STOP_TIME
+LOG_TIME
+
+# without   - 4.58s
+
+START_TIME
+catch [this] fact 18000
+STOP_TIME
+LOG_TIME
+```
+
+We might introduce a version bump to 1.5.x
+Although we are going to be consistent so
+1.4.4 might be the final choice.
+
 # Another set of features
 
 DPL now allows commas to seprate arguments!
 Its still optional though.
 
-```
+```DuProL
 set this [0,1,2,3]
 # is just
 set this [0 1 2 3]
@@ -12,7 +86,7 @@ set this [0 1 2 3]
 Since the parser has evolved we can
 finally not use spaces in our expressions!
 
-```
+```DuProL
 set result (90+90)
 ```
 

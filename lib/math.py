@@ -7,7 +7,12 @@ if not dpl.info.VERSION.isLater((1, 4, None)):
 
 ext = dpl.extension("math")
 
-@ext.add_method(from_func=True)
+ext["memoize"] = {}
+
+@ext.add_method(from_func=True, process=True)
 @ext.add_func()
-def expr(_, __, expression):
-    return eval(expression, {"__builtins__":{}}),
+def expr(frame, __, expression):
+    res = eval(expression, {"__builtins__":{}, **frame[-1]})
+    if expression not in ext["memoize"]:
+        ext["memoize"][expression] = res
+    return res,

@@ -30,7 +30,8 @@ def make_function(name, body, params):
         "args":params,
         "self":constants.nil,
         "docs":f"Function. ({name!r})",
-        "defs":{}
+        "defs":{},
+        "memoize":{}
     }, name, "builtin-function-object")
 
 def make_method(name, body, params, self):

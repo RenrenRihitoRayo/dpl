@@ -1,9 +1,9 @@
-&use <text_io.py>
+&use {text_io.py}
 
-io:input "Name: " name
+io:input "Name: ", name
 
-const admin_name "admin"
+const admin_name, "admin"
 
-if (%name caseless{==} %admin_name)
+if (%name === %admin_name)
     io:println "Welcome admin!"
 end

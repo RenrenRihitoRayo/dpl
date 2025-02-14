@@ -46,7 +46,7 @@ meta = {
         "version":info.VERSION,
         "raw_version":info.VERSION_TRIPLE,
         "pid":os.getpid(),
-        "python_version":sys.version_info,
+        "python_version":str(sys.version_info),
         "python_version_string":info.PYTHON_VER,
         "_set_only_when_defined":1
     },
@@ -166,7 +166,7 @@ def rpop(dct, full_name, default=constants.nil, sep="."):
 def rset(dct, full_name, value, sep=".", meta=True):
     "Set a variable"
     if not isinstance(full_name, str):
-        return 1
+        return full_name
     if "." not in full_name:
         with W_LOCK:
             if dct.get("_set_only_when_defined") and full_name not in dct:

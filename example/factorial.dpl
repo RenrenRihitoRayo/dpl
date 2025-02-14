@@ -1,0 +1,48 @@
+# DEPENDS ON DEVICE
+# AND MUSNT BE TAKEN AT FACE VALUE
+
+&use {text_io.py}
+
+fn memoize_fact n
+    if (:n <= 1)
+        return 1
+    end
+    mcatch [f] _global.fact (:n - 1)
+    return (:n * :f)
+end
+
+fn fact n
+    if (:n <= 1)
+        return 1
+    end
+    catch [f] _global.fact (:n - 1)
+    return (:n * :f)
+end
+
+# with memo - 5.10s
+
+START_TIME
+catch [this] memoize_fact 20000
+STOP_TIME
+LOG_TIME
+
+# without   - 5.14s
+
+START_TIME
+catch [this] fact 20000
+STOP_TIME
+LOG_TIME
+
+# with memo   4.78s
+
+START_TIME
+catch [this] memoize_fact 18000
+STOP_TIME
+LOG_TIME
+
+# without   - 4.58s
+
+START_TIME
+catch [this] fact 18000
+STOP_TIME
+LOG_TIME

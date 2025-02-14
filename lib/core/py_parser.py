@@ -153,7 +153,7 @@ def process(code, name="__main__"):
             args = argproc.bs_thing(nframe, args)
             argc = len(args)
             if ins == "include" and argc == 1:
-                if args[0].startswith("<") and args[0].endswith(">"):
+                if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.join(info.LIBDIR, args[0][1:-1])
                 elif args[0].startswith('"') and args[0].endswith('"'):
                     file = os.path.join(os.path.dirname(name), args[0][1:-1])
@@ -169,7 +169,7 @@ def process(code, name="__main__"):
             elif ins == "set_name" and argc == 1:
                 name = str(args[0])
             elif ins == "includec" and argc == 1:
-                if args[0].startswith("<") and args[0].endswith(">"):
+                if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.join(info.LIBDIR, args[0][1:-1])
                 elif args[0].startswith('"') and args[0].endswith('"'):
                     file = os.path.join(os.path.dirname(name), args[0][1:-1])
@@ -185,7 +185,7 @@ def process(code, name="__main__"):
                 file = os.path.realpath(file)
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "extend" and argc == 1:
-                if args[0].startswith("<") and args[0].endswith(">"):
+                if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.join(info.LIBDIR, args[0][1:-1])
                 elif args[0].startswith('"') and args[0].endswith('"'):
                     file = os.path.join(os.path.dirname(name), args[0][1:-1])
@@ -201,7 +201,7 @@ def process(code, name="__main__"):
                 file = os.path.realpath(file)
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "use" and argc == 1:
-                if args[0].startswith("<") and args[0].endswith(">"):
+                if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.join(info.LIBDIR, (ofile:=args[0][1:-1]))
                     search_path = "_std"
                 elif args[0].startswith('"') and args[0].endswith('"'):
@@ -256,8 +256,16 @@ def process(code, name="__main__"):
             nres = []
             while p < len(res):
                 line = pos, file, ins, args = res[p]
-                if ins in {"for", "loop", "while", "thread", "if", "if_else"} and p+1 < len(res) and res[p+1][2] in {"end", "stop"}:
-                    if warnings and info.WARNINGS: print(f"Warning: Loop is empty!\nLine {pos}\nIn file {file!r}")
+                if ins in {"for", "loop", "while", "thread"} and p+1 < len(res) and res[p+1][2] in {"end", "stop", "skip"}:
+                    if warnings and info.WARNINGS: print(f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}")
+                    temp = get_block(res, p)
+                    if temp:
+                        p, _ = temp
+                    else:
+                        return []
+                    warn_num += 1
+                elif ins in {"if", "if_else"} and p+1 < len(res) and res[p+1][2] == "end":
+                    if warnings and info.WARNINGS: print(f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}")
                     temp = get_block(res, p)
                     if temp:
                         p, _ = temp
@@ -422,8 +430,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
                 if err:
                     return err
         elif ins == "set" and argc == 2:
-            if varproc.rset(frame[-1], args[0], args[1]):
-                error.error(pos, file, "Tried to set a constant variable!\nPlease use fset instead!")
+            if (t:=varproc.rset(frame[-1], args[0], args[1])):
+                error.error(pos, file, f"Tried to set a constant variable!\nPlease use fset instead!")
                 return error.NAME_ERROR
         elif ins == "const" and argc == 2:
             name = args[0]
@@ -509,6 +517,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
         elif ins == "LOG_TIME" and argc == 0:
             ct, unit = utils.convert_sec(end_time)
             error.info(f"Elapsed time: {ct:,.8f}{unit}")
+        elif ins == "LOG_TIME" and argc == 1:
+            ct, unit = utils.convert_sec(end_time)
+            error.info(f"Elapsed time: {args[0]} {ct:,.8f}{unit}")
         elif ins == "cmd" and argc == 1:
             os.system(args[0])
         elif ins == "pass":
@@ -545,10 +556,15 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
             th_obj.start()
         elif ins == "exit" and argc == 0:
             my_exit()
-        elif ins == "return" and (temp:=varproc.rget(frame[-1], "_returns")) != state.bstate("nil"): # Return to the latched names
-            for name, value in zip(temp, args):
-                varproc.rset(frame[-1], f"_nonlocal.{name}", value)
-            return 0
+        elif ins == "return": # Return to the latched names
+            if not (temp:=varproc.rget(frame[-1], "_returns")) != state.bstate("nil"):
+                ...
+            else:
+                for name, value in zip(temp, args):
+                    varproc.rset(frame[-1], f"_nonlocal.{name}", value)
+                if (tmp:=varproc.rget(frame[-1], "_memoize")) != state.bstate("nil") and tmp[1] in tmp[0]:
+                    tmp[0][tmp[1]] = tuple(map(lambda x: str(x) if not isinstance(x, (str, int, float, tuple, complex)) else id(x), args))
+            return error.STOP_RESULT
         elif ins == "help" and argc == 1:
             if not isinstance(args[0], dict) and hasattr(args[0], "__doc__"):
                 doc = getattr(args[0], "__doc__")
@@ -592,7 +608,36 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
             if temp["self"] != state.bstate("nil"):
                 varproc.rset(frame[-1], "self", temp["self"])
             err = run(temp["body"], frame)
-            if err:
+            if err > 0:
+                return err
+            varproc.pscope(frame)
+        elif ins == "mcatch" and argc >= 2: # catch return value of a function
+            rets, func_name, *args = args
+            mem_args = tuple(map(lambda x: str(x) if not isinstance(x, (str, int, float, tuple, complex)) else id(x), args))
+            if (temp:=varproc.rget(frame[-1], func_name)) == state.bstate("nil") and isinstance(temp, dict) and mem_args in temp:
+                error.error(pos, file, f"Invalid function {func_name!r}!")
+                break
+            if mem_args in temp['memoize']:
+                for name, value in zip(rets, args):
+                    varproc.rset(frame[-1], name, value)
+            varproc.nscope(frame)
+            if temp["defs"]:
+                for name, value in itertools.zip_longest(temp["args"], args):
+                    if value is None:
+                        varproc.rset(frame[-1], name, temp["defs"].get(name, state.bstate("nil")))
+                    else:
+                        varproc.rset(frame[-1], name, value)
+            else:
+                if len(args) != len(temp["args"]):
+                    error.error(pos, file, f"Function {func_name!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.")
+                    break
+                for name, value in itertools.zip_longest(temp["args"], args):
+                    varproc.rset(frame[-1], name, value)
+            varproc.rset(frame[-1], "_returns", rets)
+            if temp["self"] != state.bstate("nil"):
+                varproc.rset(frame[-1], "_memoize", (temp["_memoize"], mem_args))
+            err = run(temp["body"], frame)
+            if err > 0:
                 return err
             varproc.pscope(frame)
         elif ins == "body" and argc >= 1: # give a code block to a python function
@@ -627,6 +672,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
+        elif ins == "pause" and argc == 0:
+            input()
         elif ins == "raise" and argc in (0, 1, 2):
             if argc == 0:
                 return error.RUNTIME_ERROR
