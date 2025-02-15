@@ -1,3 +1,13 @@
+# 1.4.4 Patch Alpha
+
+The memoization had some bugs in it.
+The example too had some logic errors.
+It is now fixed.
+
+From my device `mcatch [] memoize_fact 28000`
+in the first pass is `8s` while in the second
+`below 1ms`
+
 # Repo Notice
 
 The master branch will always be the bleeding edge branch.
@@ -27,7 +37,7 @@ fn memoize_fact n
         return 1
     end
     # mcatch stands for [m]emoized [catch]
-    mcatch [f] _global.fact (:n - 1)
+    mcatch [f] _global.memoize_fact (:n - 1)
     return (:n * :f)
 end
 

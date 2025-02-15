@@ -7,7 +7,7 @@ fn memoize_fact n
     if (:n <= 1)
         return 1
     end
-    mcatch [f] _global.fact (:n - 1)
+    mcatch [f] _global.memoize_fact (:n - 1)
     return (:n * :f)
 end
 
@@ -16,33 +16,37 @@ fn fact n
         return 1
     end
     catch [f] _global.fact (:n - 1)
-    return (:n * :f)
+    freturn (:n * :f)
 end
 
-# with memo - 5.10s
-
-START_TIME
-catch [this] memoize_fact 20000
-STOP_TIME
-LOG_TIME
-
-# without   - 5.14s
-
-START_TIME
-catch [this] fact 20000
-STOP_TIME
-LOG_TIME
+io:println "Factorial Program\n"
 
 # with memo   4.78s
 
 START_TIME
-catch [this] memoize_fact 18000
+mcatch [this] memoize_fact 28000
 STOP_TIME
-LOG_TIME
+LOG_TIME "With memoization"
 
 # without   - 4.58s
 
 START_TIME
-catch [this] fact 18000
+catch [this] fact 28000
 STOP_TIME
-LOG_TIME
+LOG_TIME "Without"
+
+io:println "\nSecond Pass\n"
+
+# with memo   4.78s
+
+START_TIME
+mcatch [this] memoize_fact 28000
+STOP_TIME
+LOG_TIME "With memoization"
+
+# without   - 4.58s
+
+START_TIME
+catch [this] fact 28000
+STOP_TIME
+LOG_TIME "Without"

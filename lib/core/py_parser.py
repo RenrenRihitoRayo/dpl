@@ -562,8 +562,15 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
             else:
                 for name, value in zip(temp, args):
                     varproc.rset(frame[-1], f"_nonlocal.{name}", value)
-                if (tmp:=varproc.rget(frame[-1], "_memoize")) != state.bstate("nil") and tmp[1] in tmp[0]:
-                    tmp[0][tmp[1]] = tuple(map(lambda x: str(x) if not isinstance(x, (str, int, float, tuple, complex)) else id(x), args))
+                if (tmp:=frame[-1].get("_memoize")) not in constants.constants_false:
+                    tmp[0][tmp[1]] = tuple(map(lambda x: x if isinstance(x, (str, int, float, tuple, complex)) else f"{type(x)}:{id(x)}", args))
+            return error.STOP_RESULT
+        elif ins == "freturn": # Return to the latched names with no memoization detection (faster)
+            if not (temp:=varproc.rget(frame[-1], "_returns")) != state.bstate("nil"):
+                ...
+            else:
+                for name, value in zip(temp, args):
+                    varproc.rset(frame[-1], f"_nonlocal.{name}", value)
             return error.STOP_RESULT
         elif ins == "help" and argc == 1:
             if not isinstance(args[0], dict) and hasattr(args[0], "__doc__"):
@@ -595,47 +602,50 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
             if temp["defs"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        varproc.rset(frame[-1], name, temp["defs"].get(name, state.bstate("nil")))
+                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
                     else:
-                        varproc.rset(frame[-1], name, value)
+                        frame[-1][name] = value
             else:
                 if len(args) != len(temp["args"]):
                     error.error(pos, file, f"Function {func_name!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.")
                     break
                 for name, value in itertools.zip_longest(temp["args"], args):
                     varproc.rset(frame[-1], name, value)
-            varproc.rset(frame[-1], "_returns", rets)
-            if temp["self"] != state.bstate("nil"):
-                varproc.rset(frame[-1], "self", temp["self"])
+            if temp["self"] != constants.nil:
+                frame[-1]["self"] = temp["self"]
+            frame[-1]["_returns"] = rets
             err = run(temp["body"], frame)
             if err > 0:
                 return err
             varproc.pscope(frame)
         elif ins == "mcatch" and argc >= 2: # catch return value of a function
             rets, func_name, *args = args
-            mem_args = tuple(map(lambda x: str(x) if not isinstance(x, (str, int, float, tuple, complex)) else id(x), args))
+            mem_args = tuple(map(lambda x: x if isinstance(x, (str, int, float, tuple, complex)) else f"{type(x)}:{id(x)}", args))
             if (temp:=varproc.rget(frame[-1], func_name)) == state.bstate("nil") and isinstance(temp, dict) and mem_args in temp:
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
             if mem_args in temp['memoize']:
-                for name, value in zip(rets, args):
+                for name, value in zip(rets, temp['memoize'][mem_args]):
                     varproc.rset(frame[-1], name, value)
+                p += 1
+                continue
             varproc.nscope(frame)
             if temp["defs"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        varproc.rset(frame[-1], name, temp["defs"].get(name, state.bstate("nil")))
+                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
                     else:
-                        varproc.rset(frame[-1], name, value)
+                        frame[-1][name] = value
             else:
                 if len(args) != len(temp["args"]):
                     error.error(pos, file, f"Function {func_name!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.")
                     break
                 for name, value in itertools.zip_longest(temp["args"], args):
                     varproc.rset(frame[-1], name, value)
-            varproc.rset(frame[-1], "_returns", rets)
-            if temp["self"] != state.bstate("nil"):
-                varproc.rset(frame[-1], "_memoize", (temp["_memoize"], mem_args))
+            if temp["self"] != constants.nil:
+                frame[-1]["self"] = temp["self"]
+            frame[-1]["_returns"] = rets
+            frame[-1]["_memoize"] = (temp["memoize"], mem_args)
             err = run(temp["body"], frame)
             if err > 0:
                 return err
@@ -762,17 +772,17 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
             if temp["defs"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        varproc.rset(frame[-1], name, temp["defs"].get(name, state.bstate("nil")))
+                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
                     else:
-                        varproc.rset(frame[-1], name, value)
+                        frame[-1][name] = value
             else:
                 if len(args) != len(temp["args"]):
-                    error.error(pos, file, f"Function {ins!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.")
+                    error.error(pos, file, f"Function {func_name!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.")
                     break
                 for name, value in itertools.zip_longest(temp["args"], args):
                     varproc.rset(frame[-1], name, value)
-            if temp["self"] != state.bstate("nil"):
-                varproc.rset(frame[-1], "self", temp["self"])
+            if temp["self"] != constants.nil:
+                frame[-1]["self"] = temp["self"]
             err = run(temp["body"], frame)
             if err:
                 return err
