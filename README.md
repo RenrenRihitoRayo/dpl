@@ -26,6 +26,9 @@ Memoization has been builtin but not automatic.
 It is controlled by the user and can only be used
 by functions that can return.
 
+(previous execution times removed as they could
+fall under misinformation)
+
 ```DuProL
 # DEPENDS ON DEVICE
 # AND MUSNT BE TAKEN AT FACE VALUE
@@ -49,28 +52,20 @@ fn fact n
     return (:n * :f)
 end
 
-# with memo - 5.10s
-
 START_TIME
 catch [this] memoize_fact 20000
 STOP_TIME
 LOG_TIME
-
-# without   - 5.14s
 
 START_TIME
 catch [this] fact 20000
 STOP_TIME
 LOG_TIME
 
-# with memo   4.78s
-
 START_TIME
 catch [this] memoize_fact 18000
 STOP_TIME
 LOG_TIME
-
-# without   - 4.58s
 
 START_TIME
 catch [this] fact 18000
