@@ -1,6 +1,6 @@
 
-&use {text_io.py}
-&use {math.py}
+&use {std/text_io.py}
+&use {std/math.py}
 
 # Pure DPL runs faster since we just interpret it.
 fn fib n

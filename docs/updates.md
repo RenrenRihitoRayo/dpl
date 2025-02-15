@@ -1,3 +1,17 @@
+# 1.4.5 Minor changes
+
+`import*` is now deprecated.
+The new directory structure in which all
+standard library modules are in "std".
+This is to facilitate order and to avoid
+conflicts with future packages.
+
+`dpl package install `<user> <repo> <branch>`,
+`dpl package installto: <path_dest> `<user> <repo> <branch>`
+and
+`dpl package remove <package_name>`
+has been added.
+
 # 1.4.4 Patch Alpha
 
 The memoization had some bugs in it.

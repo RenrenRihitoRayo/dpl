@@ -1,7 +1,7 @@
 # DEPENDS ON DEVICE
 # AND MUSNT BE TAKEN AT FACE VALUE
 
-&use {text_io.py}
+&use {std/text_io.py}
 
 fn memoize_fact n
     if (:n <= 1)

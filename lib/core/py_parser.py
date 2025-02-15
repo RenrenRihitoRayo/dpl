@@ -18,7 +18,6 @@ from . import varproc
 from . import objects
 from . import constants
 from . import extension_support as ext_s
-from .generators import gen_pc as gen_pc
 
 IS_STILL_RUNNING = threading.Event()
 
@@ -507,9 +506,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
         elif ins == "import" and argc == 2:
             if ext_s.py_import(frame, args[0], args[1], loc=os.path.dirname(file)):
                 return error.IMPORT_ERROR
-        elif ins == "import*" and argc == 0:
-            for ext_file in varproc.meta["internal"]["libs"]["std_libs"]:
-                ext_s.py_import(frame, ext_file, "_std")
         elif ins == "START_TIME" and argc == 0:
             start_time = time.perf_counter()
         elif ins == "STOP_TIME" and argc == 0:

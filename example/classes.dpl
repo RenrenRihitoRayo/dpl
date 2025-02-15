@@ -1,6 +1,6 @@
 #!/usr/bin/dpl-run
 
-&use {text_io.py}
+&use {std/text_io.py}
 
 object Person
 method :Person new name age

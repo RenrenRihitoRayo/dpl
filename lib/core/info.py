@@ -147,15 +147,13 @@ class VersionSpec(Version):
 
 VERSION = Version(*VERSION_TRIPLE)
 
+BINDIR = os.path.dirname(ARGV[0])
+LIBDIR = os.path.join(BINDIR, "lib")
+CORE_DIR = os.path.join(BINDIR, "lib", "core")
+
 if os.name == "nt":
-    BINDIR = os.path.dirname(ARGV[0])
-    LIBDIR = os.path.join(BINDIR, "lib")
-    CORE_DIR = os.path.join(BINDIR, "lib", "core")
     UNIX = False
 else:
-    BINDIR = os.path.dirname(sys.argv[0])
-    LIBDIR = os.path.join(BINDIR, "lib")
-    CORE_DIR = os.path.join(LIBDIR, "core")
     UNIX = True
 
 PYTHON_VER = sys.version

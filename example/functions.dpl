@@ -1,4 +1,4 @@
-&use {text_io.py}
+&use {std/text_io.py}
 
 fn greet name
     io:println (Sum "Hello " %name "!")

@@ -20,6 +20,7 @@ import lib.core.utils as utils
 import lib.core.error as error
 import lib.core.cli_arguments as cli_args
 import lib.core.extension_support as ext_s
+from dfpm import dfpm
 import cProfile
 
 try: # Try to use the .pyd or .so parser to get some kick
@@ -186,6 +187,27 @@ def handle_args():
                             print(f"Failed to install [{line}]: {repr(e)}\nPlease check the usage of `dpl.py install`")
             print('Done!')
             os.chdir(tmp_dir)
+        case ["package", *args]:
+            match args:
+                case ["install", user, repo, branch]:
+                    dfpm.dl_repo(user, repo, branch, location=info.LIBDIR)
+                case ["install", user, repo]:
+                    dfpm.dl_repo(user, repo, location=info.LIBDIR)
+                case ["installto:", ipath, user, repo, branch]:
+                    dfpm.dl_repo(user, repo, branch, location=ipath)
+                case ["installto:", ipath, user, repo]:
+                    dfpm.dl_repo(user, repo, location=ipath)
+                case ["remove", pack_name]:
+                    if not os.path.isdir(pack_path:=os.path.join(info.LIBDIR, pack_name)):
+                        print("Package doesnt exist!")
+                        return
+                    print(pack_path, "Is going to be removed.")
+                    if input("Enter y to continue: ").lower() in {"y", "yes"}:
+                        dfpm.delete(pack_path)
+                    print("Done!")
+                case _:
+                    print("Invalid command!")
+                    return
         case ["repr"] | []:
             if os.path.isfile(os.path.join(info.BINDIR, 'start_prompt.txt')):
                 start_text = open(os.path.join(info.BINDIR, 'start_prompt.txt')).read()
@@ -280,6 +302,14 @@ dpl build-clean
     Removes the cythonized components.
 dpl repr ALSO JUST `dpl`
     Invokes the REPL
+dpl package install <user> <repo> <branch>
+    Install a package hosted on github.
+    Default branch is 'master'
+dpl package installto: <path_to_dest> <user> <repo> <branch>
+    Install a package hosted on github.
+    Default branch is 'master'
+dpl package remove <package_name>
+    Delete that package.
 dpl -info
     Prints info.
 dpl -arg-test

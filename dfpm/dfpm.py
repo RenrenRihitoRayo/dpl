@@ -5,13 +5,8 @@ import os, sys
 import zipfile
 import shutil
 import socket
-from urllib.parse import urlparse
 
-def dl_repo(url, branch="main"):
-    parsed_url = urlparse(url)
-    repo_name = parsed_url.path.strip('/').split('/')[-1]
-    user_name = parsed_url.path.strip('/').split('/')[-2]
-    
+def dl_repo(user_name, repo_name, branch="master", location="."):
     zip_url = f"https://github.com/{user_name}/{repo_name}/archive/refs/heads/{branch}.zip"
     
     try:
@@ -21,7 +16,7 @@ def dl_repo(url, branch="main"):
         print("Must be connected to the internet!")
         return
     
-    destination_dir = f"{repo_name}-{branch}"
+    destination_dir = os.path.join(location, f"{repo_name}-{branch}")
     if os.path.exists(destination_dir):
         if os.path.isfile(destination_dir):
             print('Error: A file has the same name as the repo. Please rename the file.')
@@ -32,14 +27,14 @@ def dl_repo(url, branch="main"):
                 return
             print(f"{destination_dir}: Deleting the directory...")
             shutil.rmtree(destination_dir)
-    if not os.path.exists(destination_dir):
-        os.makedirs(destination_dir)
     print(f"{repo_name}: Downloading zip...")
     try:
         response = requests.get(zip_url)
     except Exception as e:
         print(e)
         return
+    if not os.path.exists(destination_dir):
+        os.makedirs(destination_dir)
     print(f"{repo_name}: Done!")
     if response.status_code == 200:
         zip_path = os.path.join(destination_dir, f"{repo_name}-{branch}.zip")
@@ -64,10 +59,12 @@ def dl_repo(url, branch="main"):
         
         print(f"{destination_dir}: Deleting zipfile...")
         os.remove(zip_path)
-        print("Done!")
+        print(f"Done!\nInstalled as: {destination_dir}")
     else:
         print(f"Failed to download repository. Status code: {response.status_code}")
 
+def delete(path):
+    shutil.rmtree(path)
 
 def main():
     if len(sys.argv) != 2:
