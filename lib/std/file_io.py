@@ -19,6 +19,10 @@ def myOpen(_, local, file_name, mode="r"):
         return e,
 
 @ext.add_func()
+def seek(_, __, file_object, position, whence=0):
+    file_object.seek(position, whence)
+
+@ext.add_func()
 def read(_, __, file_object):
     try:
         return file_object.read(),

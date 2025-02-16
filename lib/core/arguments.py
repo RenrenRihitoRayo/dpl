@@ -24,7 +24,7 @@ def flatten_dict(d, parent_key='', sep='.', seen=None):
         elif isinstance(value, list):
             items[f"{new_key}"] = value
             for i, item in enumerate(value):
-                items[f"{new_key}->{i}"] = item
+                items[f"{new_key}[{i}]"] = item
         else:
             items[new_key] = value
     seen.remove(dict_id)
@@ -135,6 +135,17 @@ def add_method(name=None, from_func=False, process=True):
         return func
     return wrapper
 
+def my_range(start, end):
+    def pos(start, end):
+        while start < end:
+            yield start
+            start += 1
+    def neg(start, end):
+        while start > end:
+            yield start
+            start -= 1
+    return pos(start, end) if start < end else neg(start, end)
+
 def evaluate(frame, expression):
     "Evaluate an expression"
     ins, *args = expression
@@ -146,6 +157,14 @@ def evaluate(frame, expression):
         case ["Range", arg]:
             arg = express(frame, arg)
             return tuple(range(arg))
+        case ["dRange", start, end]:
+            start = express(frame, start)
+            end = express(frame, end)
+            return tuple(my_range(start, end))
+        case ["dRawRange", start, end]:
+            start = express(frame, start)
+            end = express(frame, end)
+            return my_range(start, end)
         case ["RawRange", arg]:
             arg = express(frame, arg)
             return range(arg)
@@ -318,8 +337,15 @@ def exprs_runtime(frame, args):
             res.append(text)
         elif c.startswith("'") and c.endswith("'"):
             text = c[1:-1]
-            for c, cc in flatten_dict(frame[-1]).items():
+            d = flatten_dict(frame[-1]).items()
+            for _, cc in filter(lambda x:not x[0].startswith("_") and isinstance(x[1], str), d):
+                if (m:=len(cc)) > varproc.meta["justify_len"]:
+                    varproc.meta["justify_len"] = m
+            for c, cc in d:
                 text = text.replace(f"${{{c}}}", str(cc))
+                text = text.replace(f"${{{c}:rjust}}", str(cc).rjust(varproc.meta["justify_len"]))
+                text = text.replace(f"${{{c}:ljust}}", str(cc).ljust(varproc.meta["justify_len"]))
+                text = text.replace(f"${{{c}:cjust}}", str(cc).center(varproc.meta["justify_len"]))
             res.append(text)
         elif c.startswith('<') and c.endswith('>'):
             res.append(c)
@@ -329,7 +355,7 @@ def exprs_runtime(frame, args):
     return res
 
 sep = " ,"
-special_sep = "()+/*[]<>"
+special_sep = "()+/-*[]<>"
 
 def group(text):
     for c, cc in CHARS.items():

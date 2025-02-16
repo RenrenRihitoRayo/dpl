@@ -23,6 +23,7 @@ debug = {
     "show_scope_updates":0,
     "show_value_updates":0,
     "show_imports":0,
+    "warn_no_return":0,
     "log_events":0,
     "debug_output_file":"debug_log.txt",
     "track_time":0,
@@ -51,6 +52,7 @@ meta = {
         "_set_only_when_defined":1
     },
     "dependencies":dependencies,
+    "justify_len":5,
     "_set_only_when_defined":1
 }
 

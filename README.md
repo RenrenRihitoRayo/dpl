@@ -1,3 +1,11 @@
+# 1.4.5 Added new for loop syntax
+
+```
+for index, value in :list
+    io:println '${index:rjust}: {value}'
+end
+```
+
 # 1.4.5 Minor changes
 
 `import*` is now deprecated.
@@ -6,8 +14,8 @@ standard library modules are in "std".
 This is to facilitate order and to avoid
 conflicts with future packages.
 
-`dpl package install <user> <repo> <branch>`,
-`dpl package installto: <path_dest> <user> <repo> <branch>`
+`dpl package install `<user> <repo> <branch>`,
+`dpl package installto: <path_dest> `<user> <repo> <branch>`
 and
 `dpl package remove <package_name>`
 has been added.

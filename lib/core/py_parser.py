@@ -256,7 +256,7 @@ def process(code, name="__main__"):
             while p < len(res):
                 line = pos, file, ins, args = res[p]
                 if ins in {"for", "loop", "while", "thread"} and p+1 < len(res) and res[p+1][2] in {"end", "stop", "skip"}:
-                    if warnings and info.WARNINGS: print(f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}")
+                    if warnings and info.WARNINGS: error.warn(f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}")
                     temp = get_block(res, p)
                     if temp:
                         p, _ = temp
@@ -264,7 +264,7 @@ def process(code, name="__main__"):
                         return []
                     warn_num += 1
                 elif ins in {"if", "if_else"} and p+1 < len(res) and res[p+1][2] == "end":
-                    if warnings and info.WARNINGS: print(f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}")
+                    if warnings and info.WARNINGS: error.warn(f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}")
                     temp = get_block(res, p)
                     if temp:
                         p, _ = temp
@@ -273,8 +273,8 @@ def process(code, name="__main__"):
                     warn_num += 1
                 elif ins in {"fn"} and p+1 < len(res) and res[p+1][2] in {"end", "return"}:
                     if len(args) == 0:
-                        print(f"Error: Malformed function definition!\nLine {pos}\nIn file {file!r}")
-                    if warnings and info.WARNINGS: print(f"Warning: Function {line[3][0]!r} is empty!\nLine {pos}\nIn file {file!r}")
+                        error.warn(f"Error: Malformed function definition!\nLine {pos}\nIn file {file!r}")
+                    if warnings and info.WARNINGS: error.warn(f"Warning: Function {line[3][0]!r} is empty!\nLine {pos}\nIn file {file!r}")
                     temp = get_block(res, p)
                     if temp:
                         p, _ = temp
@@ -335,7 +335,25 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
                 p, body = temp
             if body:
                 for i in iter:
-                    varproc.rset(frame[-1], name, i)
+                    frame[-1][name] = i
+                    err = run(body, frame)
+                    if err:
+                        if err == error.STOP_RESULT:
+                            break
+                        elif err == error.SKIP_RESULT:
+                            continue
+                        return err
+        elif ins == "for" and argc == 4 and args[2] == "in":
+            pos_name, name, _, iter = args
+            temp = get_block(code, p)
+            if temp is None:
+                break
+            else:
+                p, body = temp
+            if body:
+                for posv, i in enumerate(iter):
+                    frame[-1][name] = i
+                    frame[-1][pos_name] = posv
                     err = run(body, frame)
                     if err:
                         if err == error.STOP_RESULT:
@@ -669,8 +687,12 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
                 elif isinstance(res, int) and res:
                     return res
                 elif isinstance(res, str):
-                    if res == "break":
+                    if res == "err":
                         break
+                    elif res == "stop":
+                        return error.STOP_RESULT
+                    elif res == "skip":
+                        return error.SKIP_RESULT
                     elif res.startswith("err:"):
                         _, ecode, message = res.split(":", 2)
                         error.error(pos, file, message)
@@ -703,15 +725,20 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
                     res = ext_s.call(temp, frame, varproc.meta["internal"]["main_path"], pa, args[0])
                 else:
                     res = ext_s.call(temp, frame, varproc.meta["internal"]["main_path"], args)
+                if res is None and info.WARNINGS and varproc.is_debug_enabled("warn_no_return"):
+                    error.warn("Function doesnt return anything. To reduce overhead please dont use pycatch.\nLine {pos}\nFile {file}")
                 if isinstance(res, tuple):
-                    if res is not None:
-                        for name, value in zip(rets, res):
-                            varproc.rset(frame[-1], name, value)
+                    for name, value in zip(rets, res):
+                        varproc.rset(frame[-1], name, value)
                 elif isinstance(res, int) and res:
                     return res
                 elif isinstance(res, str):
-                    if res == "break":
+                    if res == "err":
                         break
+                    elif res == "stop":
+                        return error.STOP_RESULT
+                    elif res == "skip":
+                        return error.SKIP_RESULT
                     elif res.startswith("err:"):
                         _, ecode, message = res.split(":", 2)
                         error.error(pos, file, message)
