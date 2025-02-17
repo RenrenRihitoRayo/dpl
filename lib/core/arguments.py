@@ -338,14 +338,8 @@ def exprs_runtime(frame, args):
         elif c.startswith("'") and c.endswith("'"):
             text = c[1:-1]
             d = flatten_dict(frame[-1]).items()
-            for _, cc in filter(lambda x:not x[0].startswith("_") and isinstance(x[1], str), d):
-                if (m:=len(cc)) > varproc.meta["justify_len"]:
-                    varproc.meta["justify_len"] = m
             for c, cc in d:
                 text = text.replace(f"${{{c}}}", str(cc))
-                text = text.replace(f"${{{c}:rjust}}", str(cc).rjust(varproc.meta["justify_len"]))
-                text = text.replace(f"${{{c}:ljust}}", str(cc).ljust(varproc.meta["justify_len"]))
-                text = text.replace(f"${{{c}:cjust}}", str(cc).center(varproc.meta["justify_len"]))
             res.append(text)
         elif c.startswith('<') and c.endswith('>'):
             res.append(c)
