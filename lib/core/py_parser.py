@@ -468,8 +468,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
             varproc.rset(frame[-1], args[0], args[1], meta=False)
         elif ins == "del" and argc == 1:
             varproc.rpop(frame[-1], args[0])
-            consts = varproc.rget(frame[-1], "[const]", default=None)
-            name = args[0] if "." not in args[0] else args[0].rsplit(".", 1)[-1]
+            consts = frame[-1].get("_const")
             if consts and name in consts:
                 consts.remove(name)
         elif ins == "expect" and argc == 1:

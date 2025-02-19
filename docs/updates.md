@@ -1,14 +1,23 @@
-# 1.4.5 Rewriting
+# 1.4.5 Rewriting the codebase
 
 Some of the instruction implementations
 have been rewritten for performance.
 The benchmarks will be here soon.
 
+Any contributions to the codebase is
+very much appreciated.
+
+Before making a merge/pull request please
+send the zip at `darrenchasepapa@gmail.com`.
+I dont trust github to provide the changes.
+
+Your credits will be added here.
+
 # 1.4.5 Added new for loop syntax
 
 ```
 for index, value in :list
-    io:println '${index:rjust}: {value}'
+    io:println '${index}: {value}'
 end
 ```
 
