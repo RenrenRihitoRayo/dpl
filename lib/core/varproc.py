@@ -173,7 +173,7 @@ def rset(dct, full_name, value, sep=".", meta=True):
             if dct.get("_set_only_when_defined") and full_name not in dct:
                 error.warn(f"Tried to set {full_name!r} but scope was set to set only when defined.")
                 return
-            if meta and "[const]" in dct and isinstance((temp:=dct.get("[const]")), list) and full_name in temp:
+            if meta and isinstance(temp:=dct.get("_const"), list) and full_name in temp:
                 return 1
             if meta and full_name in dct and "[update_mapping]" in (temp:=dct):
                 temp[temp["[update_mapping]"].get(full_name, full_name)] = value
@@ -199,7 +199,7 @@ def rset(dct, full_name, value, sep=".", meta=True):
                 error.warn(f"Tried to set {full_name!r} but scope was set to set only when defined.")
                 return
             with W_LOCK:
-                if meta and "[const]" in node and isinstance((temp:=node.get("[const]")), list) and name in temp:
+                if meta and isinstance(temp:=dct.get("_const"), list) and name in temp:
                     return 1
                 if meta and name in node and "[update_mapping]" in (temp:=node):
                     temp[temp["[update_mapping]"].get(name, name)] = value

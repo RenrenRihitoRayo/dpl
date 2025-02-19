@@ -270,17 +270,6 @@ def exprs_runtime(frame, args):
         c = args[p]
         if not isinstance(c, str):
             res.append(c)
-        elif c.startswith("!\""):
-            args[p] = c[1:]
-            c = ""
-            put.clear()
-            while p < len(args) and ((not c.endswith("\"")) if isinstance(c, str) else True):
-                c = args[p]; put.append(c); p += 1
-            p -= 1
-            text = " ".join(map(str, put))
-            for c, r in CHARS.items():
-                text = text.replace(c, r)
-            res.append(text.replace("\\[quote]", "\""))
         elif c.startswith("("):
             args[p] = c[1:]
             c = ""
@@ -349,11 +338,9 @@ def exprs_runtime(frame, args):
     return res
 
 sep = " ,"
-special_sep = "()+/-*[]<>"
+special_sep = "()+/-*[]<>?"
 
 def group(text):
-    for c, cc in CHARS.items():
-        text = text.replace(c, cc)
     res = []
     str_tmp = []
     id_tmp = []
@@ -368,7 +355,22 @@ def group(text):
     for i in text:
         if str_tmp:
             if this:
-                str_tmp.append(i)
+                if i == "n":
+                    str_tmp.append("\n")
+                elif i == "r":
+                    str_tmp.append("\r")
+                elif i == "t":
+                    str_tmp.append("\t")
+                elif i == "b":
+                    str_tmp.append("\b")
+                elif i == "f":
+                    str_tmp.append("\f")
+                elif i == "a":
+                    str_tmp.append("\a")
+                elif i == "v":
+                    str_tmp.append("\v")
+                else:
+                    str_tmp.append(i)
                 this = False
                 continue
             if i == "\\":

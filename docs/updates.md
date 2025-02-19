@@ -1,3 +1,9 @@
+# 1.4.5 Rewriting
+
+Some of the instruction implementations
+have been rewritten for performance.
+The benchmarks will be here soon.
+
 # 1.4.5 Added new for loop syntax
 
 ```
@@ -8,7 +14,7 @@ end
 
 # 1.4.5 Minor changes
 
-`import*` is now deprecated.
+`import*` is now removed.
 The new directory structure in which all
 standard library modules are in "std".
 This is to facilitate order and to avoid

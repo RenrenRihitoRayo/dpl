@@ -9,15 +9,19 @@ import traceback
 import threading
 import pickle
 from copy import deepcopy as copy
-from . import arguments as argproc
-from . import info
-from . import state
-from . import error
-from . import utils
-from . import varproc
-from . import objects
-from . import constants
-from . import extension_support as ext_s
+try:
+    from . import arguments as argproc
+    from . import info
+    from . import state
+    from . import error
+    from . import utils
+    from . import varproc
+    from . import objects
+    from . import constants
+    from . import extension_support as ext_s
+except ImportError:
+    print(f"Please do not run it from here.")
+    sys.exit(1)
 
 IS_STILL_RUNNING = threading.Event()
 
@@ -271,7 +275,7 @@ def process(code, name="__main__"):
                     else:
                         return []
                     warn_num += 1
-                elif ins in {"fn"} and p+1 < len(res) and res[p+1][2] in {"end", "return"}:
+                elif ins in {"fn", "method", "body"} and p+1 < len(res) and res[p+1][2] in {"end", "return"}:
                     if len(args) == 0:
                         error.warn(f"Error: Malformed function definition!\nLine {pos}\nIn file {file!r}")
                     if warnings and info.WARNINGS: error.warn(f"Warning: Function {line[3][0]!r} is empty!\nLine {pos}\nIn file {file!r}")
@@ -448,18 +452,18 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
                     return err
         elif ins == "set" and argc == 2:
             if (t:=varproc.rset(frame[-1], args[0], args[1])):
-                error.error(pos, file, f"Tried to set a constant variable!\nPlease use fset instead!")
+                error.error(pos, file, f"Tried to set a constant variable!\nPlease use fset instead!\nLine {pos}\nFile {file}")
                 return error.NAME_ERROR
         elif ins == "const" and argc == 2:
             name = args[0]
             if varproc.rset(frame[-1], name, args[1]):
-                error.error(pos, file, "Tried to set a constant variable!\nPlease use fset instead!")
+                error.error(pos, file, "Tried to set a constant variable!\nPlease use fset instead!\nLine {pos}\nFile {file}")
                 return error.RUNTIME_ERROR
-            consts = varproc.rget(frame[-1], "[const]", default=None)
+            consts = frame[-1].get("_const")
             if consts:
                 consts.append(name)
             else:
-                varproc.rset(frame[-1], "[const]", [name], meta=False)
+                frame[-1]["_const"] = [name]
         elif ins == "fset" and argc == 2:
             varproc.rset(frame[-1], args[0], args[1], meta=False)
         elif ins == "del" and argc == 1:
@@ -841,5 +845,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
     error.error(pos, file, "Error was raised!")
     return error.SYNTAX_ERROR
 
+# to avoid circular imports
 ext_s.register_run(run)
 ext_s.register_process(process)
