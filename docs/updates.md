@@ -1,3 +1,12 @@
+# 1.4.5 New features
+
+Added the elipsis constant `...`
+which will be used as empty statements
+or empty expressions.
+
+Implemented and rewrote some of the logic for
+the optimizer.
+
 # 1.4.5 Rewriting the codebase
 
 Some of the instruction implementations

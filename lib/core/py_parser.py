@@ -149,7 +149,7 @@ def process(code, name="__main__"):
     warnings = True
     define_func = False
     for lpos, line in filter(lambda x: (
-        True if x[1] and not x[1].startswith("#") else False
+        True if x[1] and not x[1].startswith("#") and not x[1].startswith("...") else False
     ),enumerate(map(str.strip, code.split("\n")), 1)):
         if line.startswith("&"):
             ins, *args = line[1:].lstrip().split()
@@ -267,13 +267,19 @@ def process(code, name="__main__"):
                     else:
                         return []
                     warn_num += 1
-                elif ins in {"if", "if_else"} and p+1 < len(res) and res[p+1][2] == "end":
+                elif ins in {"if", "if_else", "module"} and p+1 < len(res) and res[p+1][2] == "end":
                     if warnings and info.WARNINGS: error.warn(f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}")
                     temp = get_block(res, p)
                     if temp:
                         p, _ = temp
                     else:
                         return []
+                    if ins == "if_else":
+                        temp = get_block(res, p)
+                        if temp:
+                            p, _ = temp
+                        else:
+                            return []
                     warn_num += 1
                 elif ins in {"fn", "method", "body"} and p+1 < len(res) and res[p+1][2] in {"end", "return"}:
                     if len(args) == 0:

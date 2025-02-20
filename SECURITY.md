@@ -7,7 +7,7 @@ in support.
 
 | Version | Supported |
 |---------|-----------|
-| 1.4.3+  | ✅        |
+| 1.4.4+  | ✅        |
 
 # Near End-of-life Versions
 
@@ -18,6 +18,7 @@ The suggested window is at least a month before its end of support.
 | Version | End-of-life |
 |---------|-------------|
 |  1.4.3  |  Nov 2026   |
+|  1.4.4  |  Nov 2026   |
 
 # Unsupported Versions
 

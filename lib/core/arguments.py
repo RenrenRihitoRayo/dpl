@@ -103,6 +103,8 @@ def expr_preruntime(arg):
         return constants.none
     elif arg == "nil":
         return constants.nil
+    elif arg == "...":
+        return constants.elipsis
     elif arg == "[]":
         return []
     return arg
