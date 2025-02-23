@@ -1,4 +1,5 @@
 local="$(pwd)"
+chmod +x $local/../dpl.py
 
 if [ "$1" = "help" ]; then
     cat << 'EOF'
@@ -20,7 +21,7 @@ if [ "$1" = "remove" ]; then
     exit
 fi
 
-if [ $1 = "remove-ar" ]; then
+if [ "$1" = "remove-ar" ]; then
     rm "/bin/dpl"
     rm "/bin/dpl-run"
     exit
