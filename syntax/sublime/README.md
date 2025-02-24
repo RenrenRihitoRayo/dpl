@@ -4,9 +4,12 @@
 
 ### Step 1
 
-Goto `DPL.sublime-build` and replace
-the placeholder text such as [user]
-and others that might appear.
+In the `.sublime-build` file replace it with dpl.py instead.
+Make sure that dpl is accessible
+by adding it to the system paths.
+
+Example path `C:\resU\OneSh*ttyDrive\Desktop\dpl`
+not the file lath but the directory it is in.
 
 ### Step 2
 
