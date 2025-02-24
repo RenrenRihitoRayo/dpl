@@ -1,5 +1,5 @@
 # This is where future syntax files will go.
 
 Currently Supported Applications:
-* Sublime Text (sublime-build isnt available yet)
+* Sublime Text
 * Vim (todo)
