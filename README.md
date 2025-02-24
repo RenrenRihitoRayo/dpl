@@ -38,9 +38,8 @@ standard library modules are in "std".
 This is to facilitate order and to avoid
 conflicts with future packages.
 
-`dpl package install 
-<user> <repo> <branch>`,
-`dpl package installto: <path_dest> <user> <repo> <branch>`
+`dpl package install `<user> <repo> <branch>`,
+`dpl package installto: <path_dest> `<user> <repo> <branch>`
 and
 `dpl package remove <package_name>`
 has been added.
