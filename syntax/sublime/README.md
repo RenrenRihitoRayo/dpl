@@ -9,7 +9,7 @@ Make sure that dpl is accessible
 by adding it to the system paths.
 
 Example path `C:\resU\OneSh*ttyDrive\Desktop\dpl`
-not the file lath but the directory it is in.
+not the file path but the directory it is in.
 
 ### Step 2
 
