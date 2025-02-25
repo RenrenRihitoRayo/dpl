@@ -128,6 +128,8 @@ def handle_args():
                 exit(1)
         case ["docs", name]:
             docs.from_lib(name)
+        case ["docu", name]:
+            docs.from_local(name)
         case ["build", python_bin]:
             print(f"This will build a compiled parser for your system.\nThis does not necessarily mean that the parser will be faster!\nThis will build for {python_bin}\nCython does not like loading functions from exec, please be careful.")
             if input("Proceed? [y/N] ").strip().lower() in {"y", "yes"}:
@@ -314,6 +316,7 @@ dpl package installto: <path_to_dest> <user> <repo> <branch>
 dpl package remove <package_name>
     Delete that package.
 dpl docs doc_name.mmu
+dpl docu doc_name.mmu
 dpl -info
     Prints info.
 dpl -arg-test

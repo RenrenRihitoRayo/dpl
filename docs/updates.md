@@ -1,3 +1,8 @@
+# Added new command
+
+`dpl docs file.mmu` and
+`dpl docu file.mmu`
+
 # New underlying mechanisms
 
 `_meta.str_intern` has been added.
