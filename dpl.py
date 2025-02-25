@@ -153,7 +153,7 @@ def handle_args():
                     os.remove(i)
                 except:
                     print("Failed. Another process may be using it! Terminate it.")
-        case ["install", python_exec, *flags]:
+        case ["install", python_exec]:
             print(f"Installing requirements for `{sys.platform}`")
             tmp_dir = os.getcwd()
             if info.BINDIR:
@@ -180,8 +180,6 @@ def handle_args():
                                 print(f"Running: {line}")
                             if (err:=os.system(line)):
                                 print(f"Error code: {err}")
-                            continue
-                        else:
                             continue
                     with open(os.devnull, "w") as devnull:
                         print("Installing:", line)
@@ -296,7 +294,7 @@ dpl rc [file] args...
 dpl compile [file]
     Compiles the given DPL script.
     Outputs to [file].cdpl
-dpl install [python_exec] [flags: verbose]
+dpl install [python_exec]
     Installs runtime requirements.
     See the requirements.txt file.
 dpl build [python executable]
