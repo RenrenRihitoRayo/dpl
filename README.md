@@ -1,3 +1,7 @@
+# Deprecation!
+
+`import` statements are now nonexistent!
+
 # Added new command
 
 `dpl docs file.mmu` and

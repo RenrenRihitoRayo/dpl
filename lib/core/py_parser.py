@@ -529,12 +529,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
             else:
                 p, body = temp
             varproc.rset(self, name, objects.make_method(name, body, params, self))
-        elif ins == "import" and argc == 1:
-            if ext_s.py_import(frame, args[0], "_std"):
-                return error.IMPORT_ERROR
-        elif ins == "import" and argc == 2:
-            if ext_s.py_import(frame, args[0], args[1], loc=os.path.dirname(file)):
-                return error.IMPORT_ERROR
         elif ins == "START_TIME" and argc == 0:
             start_time = time.perf_counter()
         elif ins == "STOP_TIME" and argc == 0:
