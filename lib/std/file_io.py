@@ -1,4 +1,3 @@
-
 if __name__ != "__dpl__":
     raise Exception("This must be included by a DuProL script!")
 
@@ -7,6 +6,7 @@ if not dpl.info.VERSION.isLater((1, 4, None)):
 
 ext = dpl.extension(meta_name="io")
 
+
 @ext.add_func("open")
 def myOpen(_, local, file_name, mode="r"):
     try:
@@ -14,21 +14,24 @@ def myOpen(_, local, file_name, mode="r"):
             file = file_name
         else:
             file = modules.os.path.join(local, file_name)
-        return open(file),
+        return (open(file),)
     except Exception as e:
-        return e,
+        return (e,)
+
 
 @ext.add_func()
 def seek(_, __, file_object, position, whence=0):
     file_object.seek(position, whence)
 
+
 @ext.add_func()
 def read(_, __, file_object):
     try:
-        return file_object.read(),
+        return (file_object.read(),)
     except Exception as e:
         file_object.close()
-        return e,
+        return (e,)
+
 
 @ext.add_func()
 def write(_, __, file_object, content):
@@ -38,16 +41,20 @@ def write(_, __, file_object, content):
         file_object.close()
         return f"err:{dpl.error.PYTHON_ERROR}:{repr(e)}"
 
+
 @ext.add_func()
 def append(_, __, file_object, content):
     try:
-        if (mode:=file_object.mode) == "a":
+        if (mode := file_object.mode) == "a":
             file_object.append(content)
         else:
-            raise Exception(f"Invalid operation on a file! Expected the mode to be \"a\" but got \"{mode}\"")
+            raise Exception(
+                f'Invalid operation on a file! Expected the mode to be "a" but got "{mode}"'
+            )
     except Exception as e:
         file_object.close()
         return f"err:{dpl.error.PYTHON_ERROR}:{repr(e)}"
+
 
 @ext.add_func()
 def close(_, __, file_object):

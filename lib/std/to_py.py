@@ -6,17 +6,20 @@ if not dpl.info.VERSION.isLater((1, 4, None)):
 
 ext = dpl.extension(meta_name="to_py")
 
+
 @ext.add_func()
 def define(frame, __, body, name):
     def func(*args, **kwargs):
         dpl.varproc.nscope(frame)
-        frame[-1]['args'] = args
-        frame[-1]['kwargs'] = kwargs
+        frame[-1]["args"] = args
+        frame[-1]["kwargs"] = kwargs
         dpl.run_code(body, frame)
         res = dpl.varproc.rget(frame[-1], "_export", default=None)
         dpl.varproc.pscope(frame)
         return res
+
     dpl.varproc.rset(frame[-1], name, func)
+
 
 @ext.add_func()
 def to_py(frame, _, temp):
@@ -25,7 +28,9 @@ def to_py(frame, _, temp):
         if temp["defs"]:
             for name, value in modules.itertools.zip_longest(temp["args"], args):
                 if value is None:
-                    dpl.varproc.rset(frame[-1], name, temp["defs"].get(name, dpl.state.bstate("nil")))
+                    dpl.varproc.rset(
+                        frame[-1], name, temp["defs"].get(name, dpl.state.bstate("nil"))
+                    )
                 else:
                     dpl.varproc.rset(frame[-1], name, value)
         else:
@@ -41,7 +46,9 @@ def to_py(frame, _, temp):
         res = dpl.varproc.rget(frame[-1], "_export", default=None)
         dpl.varproc.pscope(frame)
         return res
-    return func,
+
+    return (func,)
+
 
 @ext.add_func()
 def call(_, __, func, *args, **kwargs):

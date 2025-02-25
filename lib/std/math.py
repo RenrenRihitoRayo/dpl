@@ -1,4 +1,3 @@
-
 if __name__ != "__dpl__":
     raise Exception("This must be included by a DuProL script!")
 
@@ -9,10 +8,11 @@ ext = dpl.extension("math")
 
 ext["memoize"] = {}
 
+
 @ext.add_method(from_func=True, process=True)
 @ext.add_func()
 def expr(frame, __, expression):
-    res = eval(expression, {"__builtins__":{}, **frame[-1]})
+    res = eval(expression, {"__builtins__": {}, **frame[-1]})
     if expression not in ext["memoize"]:
         ext["memoize"][expression] = res
-    return res,
+    return (res,)
