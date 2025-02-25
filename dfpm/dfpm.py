@@ -6,20 +6,31 @@ import zipfile
 import shutil
 import socket
 
+<<<<<<< HEAD
 
 def dl_repo(user_name, repo_name, branch="master", location="."):
     zip_url = (
         f"https://github.com/{user_name}/{repo_name}/archive/refs/heads/{branch}.zip"
     )
 
+=======
+def dl_repo(user_name, repo_name, branch="master", use_branch_name=True, location="."):
+    zip_url = f"https://github.com/{user_name}/{repo_name}/archive/refs/heads/{branch}.zip"
+    
+>>>>>>> origin
     try:
         print("Validating connection...")
         socket.create_connection(("8.8.8.8", 53), timeout=5)
     except Exception as e:
         print("Must be connected to the internet!")
         return
+<<<<<<< HEAD
 
     destination_dir = os.path.join(location, f"{repo_name}-{branch}")
+=======
+    
+    destination_dir = os.path.join(location, f"{repo_name}-{branch}" if use_branch_name else repo_name)
+>>>>>>> origin
     if os.path.exists(destination_dir):
         if os.path.isfile(destination_dir):
             print(

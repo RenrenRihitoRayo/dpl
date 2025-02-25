@@ -378,7 +378,10 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
     else:
         nframe = {}
     sys.stdout.flush()
-    frame = nframe if frame is None else frame
+    if frame is not None:
+        frame[0].update(nframe[0])
+    else:
+        frame = nframe
     varproc.rset(frame[-1], "_generator_process_communication", generator_pc)
     while p < len(code) and not IS_STILL_RUNNING.is_set():
         pos, file, ins, args = code[p]
