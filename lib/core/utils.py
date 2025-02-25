@@ -2,13 +2,16 @@
 # Now includes DSL Config Parser
 
 from . import arguments as argproc
+
 try:
     import hashlib
+
     has_hash = True
 except ImportError:
     hash_hash = False
 
-def flatten_dict(d, parent_key='', sep='.'):
+
+def flatten_dict(d, parent_key="", sep="."):
     items = {}
     for key, value in d.items():
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
@@ -17,6 +20,7 @@ def flatten_dict(d, parent_key='', sep='.'):
         else:
             items[new_key] = value
     return items
+
 
 def get_val(dct, full_name, default=0, sep="."):
     "Get a variable"
@@ -35,6 +39,7 @@ def get_val(dct, full_name, default=0, sep="."):
             return default
     return default
 
+
 def set_val(dct, full_name, value, sep="."):
     "Set a variable"
     if "." not in full_name:
@@ -50,11 +55,13 @@ def set_val(dct, full_name, value, sep="."):
         elif pos == last:
             node[name] = value
 
+
 def constant_hash(obj):
     "Constant hash function"
     assert has_hash, "hashlib is unavailable."
-    obj_representation = repr(obj).encode('utf-8')
+    obj_representation = repr(obj).encode("utf-8")
     return hashlib.sha256(obj_representation).hexdigest()
+
 
 def convert_sec(sec):
     "Convert seconds to appropriate units"
@@ -68,6 +75,7 @@ def convert_sec(sec):
         return sec * 1e9, "ns"
     else:
         return sec * 1e12, "ps"
+
 
 def convert_bytes(byte):
     "Convert bytes to appropriate units"
@@ -83,6 +91,7 @@ def convert_bytes(byte):
         return byte * 1e-12, "TB"
     else:
         return byte * 1e-15, "PB"
+
 
 def parse_config(code, format=None):
     name = None
@@ -113,13 +122,15 @@ def parse_config(code, format=None):
             else:
                 value = ""
             if op == "=":
-                set_val(data, (name+"." if name is not None else "")+ins, value)
+                set_val(data, (name + "." if name is not None else "") + ins, value)
             elif op == "append":
-                temp = get_val(data,  (name+"." if name is not None else "")+ins)
+                temp = get_val(data, (name + "." if name is not None else "") + ins)
                 if temp is not None:
                     temp.append(value)
                 else:
-                    set_val(data,  (name+"." if name is not None else "")+ins, [value])
+                    set_val(
+                        data, (name + "." if name is not None else "") + ins, [value]
+                    )
             else:
                 pass
     return data

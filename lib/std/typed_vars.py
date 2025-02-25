@@ -6,18 +6,20 @@ if not dpl.info.VERSION.isLater((1, 4, None)):
 
 type_vars = dpl.extension()
 
+
 def check(var, value):
     try:
         return True if isinstance(value, var["type"]) else False
     except:
         raise Exception("Type mismatch!")
 
+
 @type_vars.add_func()
 def defv(frame, _, name, value_type):
-    dpl.varproc.rset(frame[-1], name, {
-        "type":value_type,
-        "[meta_value]": value_type()
-    })
+    dpl.varproc.rset(
+        frame[-1], name, {"type": value_type, "[meta_value]": value_type()}
+    )
+
 
 @type_vars.add_func()
 def setv(frame, _, name, value):

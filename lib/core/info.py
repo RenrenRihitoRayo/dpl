@@ -12,47 +12,49 @@ ARGV = sys.argv
 ARGC = len(ARGV)
 
 INC_EXT = {
-    "fn", "method",
-    "for", "loop", "while",
-    "if", "if_else",
+    "fn",
+    "method",
+    "for",
+    "loop",
+    "while",
+    "if",
+    "if_else",
     "thread",
-    "ismain", "isntmain",
-    "expect", "expect-then",
+    "ismain",
+    "isntmain",
+    "expect",
+    "expect-then",
     "body",
-    "template", "from_template"
+    "template",
+    "from_template",
 }
 
-INC = {
-    "if-then":2,
-    "thread":1,
-    "expect-then":2
-}
+INC = {"if-then": 2, "thread": 1, "expect-then": 2}
 
-DEC = {
-    "end", "then", "else"
-}
+DEC = {"end", "then", "else"}
 
 CHARS = {
-    "\\\\":"\\[escape]",
-    "\\n":"\n",
-    "\\t":"\t",
-    "\\s":" ",
-    "\\v":"\v",
-    "\\f":"\f",
-    "\\r":"\r",
-    "\\a":"\a",
-    "\\0":"\0",
-    "\\[win_nl]":"\r\n",
-    "\\[posix_nl]":"\n",
-    "\\[null]":"\0",
-    "\\[alert]":"\a",
-    "\\[escape]":"\\",
+    "\\\\": "\\[escape]",
+    "\\n": "\n",
+    "\\t": "\t",
+    "\\s": " ",
+    "\\v": "\v",
+    "\\f": "\f",
+    "\\r": "\r",
+    "\\a": "\a",
+    "\\0": "\0",
+    "\\[win_nl]": "\r\n",
+    "\\[posix_nl]": "\n",
+    "\\[null]": "\0",
+    "\\[alert]": "\a",
+    "\\[escape]": "\\",
 }
 
 WARNINGS = True
 DEAD_CODE_OPT = True
 
 VERSION_TRIPLE = (1, 4, 4)
+
 
 def isCompat(version, VERSION=VERSION_TRIPLE):
     major, minor, patch = version
@@ -66,6 +68,7 @@ def isCompat(version, VERSION=VERSION_TRIPLE):
         return True
     else:
         return False
+
 
 def getDiff(version_triple, VERSION=VERSION_TRIPLE):
     major, minor, patch = version_triple
@@ -83,6 +86,7 @@ def getDiff(version_triple, VERSION=VERSION_TRIPLE):
         return "Script is outdated!"
     else:
         return 0
+
 
 def isLater(version_triple, VERSION=VERSION_TRIPLE):
     major, minor, patch = version_triple
@@ -103,19 +107,23 @@ def isLater(version_triple, VERSION=VERSION_TRIPLE):
     else:
         return False
 
+
 class Version:
     def __init__(self, major, minor, patch=None):
         self.ver = (major, minor, patch)
+
     def isCompat(self, version_triple):
         if isinstance(version_triple, tuple):
             return isCompat(version_triple, self.ver)
         elif isinstance(version_triple, (Version, VersionSpec)):
             return isCompat(version_triple.ver, self.ver)
+
     def isLater(self, version_triple):
         if isinstance(version_triple, tuple):
             return isLater(version_triple, self.ver)
         elif isinstance(version_triple, (Version, VersionSpec)):
             return isLater(version_triple.ver, self.ver)
+
     def getDiff(self, version_triple, VERSION=None):
         VERSION = VERSION
         major, minor, patch = version_triple
@@ -133,17 +141,20 @@ class Version:
             return "Script is outdated!"
         else:
             return 0
+
     def __repr__(self):
         if self.ver[2] is None:
-            return ".".join(map(str, self.ver[:2]))+".x"
+            return ".".join(map(str, self.ver[:2])) + ".x"
         return ".".join(map(str, self.ver))
+
 
 class VersionSpec(Version):
     def __init__(self, ver_str):
-        if not (ver:=tuple(filter(str.isdigit, ver_str.split('.')))):
+        if not (ver := tuple(filter(str.isdigit, ver_str.split(".")))):
             raise Exception(f"Invalid version format!")
-        ver = *map(int, ver),
+        ver = (*map(int, ver),)
         self.ver = ver + (0,) * (3 - len(ver))
+
 
 VERSION = Version(*VERSION_TRIPLE)
 
@@ -157,7 +168,7 @@ else:
     UNIX = True
 
 PYTHON_VER = sys.version
-PYTHON_RAW_VER = (temp:=sys.version_info).major, temp.minor, temp.micro
+PYTHON_RAW_VER = (temp := sys.version_info).major, temp.minor, temp.micro
 
 SYS_ARCH, EXE_FORM = platform.architecture()
 EXE_FORM = EXE_FORM or constants.none
@@ -166,14 +177,14 @@ SYS_MACH = platform.machine()
 SYS_INFO = platform.platform()
 SYS_MACH_INFO = platform.uname()
 
+
 def print_info():
     for name, value in globals().copy().items():
-        if name in {
-            "os", "sys", "print_info", "platform"
-        } or not name.isupper():
+        if name in {"os", "sys", "print_info", "platform"} or not name.isupper():
             continue
         if not name.startswith("__") and not name.startswith("__"):
             print(f"{name} = {value!r}")
+
 
 if __name__ == "__main__":
     print_info()

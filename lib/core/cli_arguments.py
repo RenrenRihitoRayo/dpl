@@ -1,5 +1,6 @@
 from copy import deepcopy as copy
 
+
 def flags(argv: list[str], remove_first=False) -> tuple:
     if remove_first:
         argv.pop(0)

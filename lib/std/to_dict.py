@@ -4,6 +4,7 @@ if __name__ != "__dpl__":
 if not dpl.info.VERSION.isLater((1, 4, None)):
     raise Exception("This is for version 1.4.x!")
 
+
 def _to_dict(obj):
     if isinstance(obj, (tuple, list, set, complex, float, int, str, dict)):
         return obj
@@ -19,8 +20,10 @@ def _to_dict(obj):
         return data
     return obj
 
+
 ext = dpl.extension(meta_name="to_dict")
+
 
 @ext.add_func()
 def to_dict(_, __, obj):
-    return _to_dict(obj),
+    return (_to_dict(obj),)
