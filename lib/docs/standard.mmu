@@ -1,0 +1,82 @@
+::author Author: Darren Chase Papa
+::about
+Documentation for the built-in functions.
+Written By:
+* Darren Chase Papa
+---
+
+%rem% Conventional Docu Pages are always multiline
+:title Hello World
+:author Darren Chase Papa
+
+^tag:Hello World!
+^txt:Writing your first program!
+
+Example code:
+-code-
+&use {std/text_io.py}
+io:println "Hello, world!"
+# This is a comment!
+-end-
+
+"&use" is a directive that tells the interpreter
+to search for that file in this case
+"std/text_io.py" which enables the user
+to print text.
+
+While "io:println" is a function in "text_io.py"
+that contains the code to actually print the
+text.
+
+The line "# This is a comment!" is ignored by the
+interpreter, this is to enable putting info in
+the code it self rather than a separate file.
+This will be true for every line that starts
+with a "#" (hash).
+
+Output:
+-code-
+Hello, world!
+-end-
+
+---
+:title DPL CLI
+:author Darren Chase Papa
+
+^tag:Using DPL through the terminal
+
+Commands:
++ind
+Interacting with files:
+* 'dpl run file.dpl ...' -> dpl-run
+* 'dpl rc file.cdpl ...' -> dpl-rc
+* 'dpl compile file.dpl' -> dpl-comp
+
+Installing packages:
+* 'dpl package install user repo branch?' -> dpl-pack-ins
+* 'dpl package installto: path user repo branch?' -> dpl-pack-ins2
+
+Others:
+* 'dpl repl' -> dpl-repl
+* 'dpl help' -> dpl-help
+=ind
+
+<tag:dpl-run
+
+Run a file.
+"dpl run path/to/file.dpl arg1 arg2 arg3 ... arg#"
+
+<tag:dpl-rc
+
+Run a compiled file.
+"dpl rc path/to/file.dpl arg1 arg2 arg3 ... arg#"
+
+<tag:dpl-comp
+
+Compile a file.
+Outputs [file_name].cdpl
+Example: "file.dpl" -> "file.cdpl"
+
+"dpl compile path/to/file.dpl"
+
+^tag:TODO: COMPLETE

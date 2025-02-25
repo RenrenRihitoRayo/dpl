@@ -1,3 +1,14 @@
+# Added new command
+
+`dpl docs file.mmu` and
+`dpl docu file.mmu`
+
+# New underlying mechanisms
+
+`_meta.str_intern` has been added.
+It will intern the string with `sys.intern`
+thus optimizing freaquently used strings.
+
 # 1.4.5 New features
 
 Added the elipsis constant `...`
