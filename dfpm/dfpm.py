@@ -6,7 +6,7 @@ import zipfile
 import shutil
 import socket
 
-def dl_repo(user_name, repo_name, branch="master", location="."):
+def dl_repo(user_name, repo_name, branch="master", use_branch_name=True, location="."):
     zip_url = f"https://github.com/{user_name}/{repo_name}/archive/refs/heads/{branch}.zip"
     
     try:
@@ -16,7 +16,7 @@ def dl_repo(user_name, repo_name, branch="master", location="."):
         print("Must be connected to the internet!")
         return
     
-    destination_dir = os.path.join(location, f"{repo_name}-{branch}")
+    destination_dir = os.path.join(location, f"{repo_name}-{branch}" if use_branch_name else repo_name)
     if os.path.exists(destination_dir):
         if os.path.isfile(destination_dir):
             print('Error: A file has the same name as the repo. Please rename the file.')

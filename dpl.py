@@ -200,6 +200,14 @@ def handle_args():
                     dfpm.dl_repo(user, repo, branch, location=ipath)
                 case ["installto:", ipath, user, repo]:
                     dfpm.dl_repo(user, repo, location=ipath)
+                case ["install", user, repo, branch, use]:
+                    dfpm.dl_repo(user, repo, branch, location=info.LIBDIR, use_branch_name=use=="true")
+                case ["install", user, repo, use]:
+                    dfpm.dl_repo(user, repo, location=info.LIBDIR, use_branch_name=use=="true")
+                case ["installto:", ipath, user, repo, branch, use]:
+                    dfpm.dl_repo(user, repo, branch, location=ipath, use_branch_name=use=="true")
+                case ["installto:", ipath, user, repo, use]:
+                    dfpm.dl_repo(user, repo, location=ipath, use_branch_name=use=="true")
                 case ["remove", pack_name]:
                     if not os.path.isdir(pack_path:=os.path.join(info.LIBDIR, pack_name)):
                         print("Package doesnt exist!")
@@ -305,10 +313,10 @@ dpl build-clean
     Removes the cythonized components.
 dpl repr ALSO JUST `dpl`
     Invokes the REPL
-dpl package install <user> <repo> <branch>
+dpl package install <user> <repo> <branch> <include_branch_name?>
     Install a package hosted on github.
     Default branch is 'master'
-dpl package installto: <path_to_dest> <user> <repo> <branch>
+dpl package installto: <path_to_dest> <user> <repo> <branch> <include_branch_name?>
     Install a package hosted on github.
     Default branch is 'master'
 dpl package remove <package_name>
