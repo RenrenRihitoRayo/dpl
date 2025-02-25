@@ -1,0 +1,27 @@
+
+# Future optimizations
+# - Insert contant values at compile time instead
+# - Detect whether a variable changes during its
+#   lifetime, thus checking if its constant or not
+START_TIME
+set test "test"
+_meta.str_intern "%test"
+loop 200000
+    pass %test
+end
+STOP_TIME
+LOG_TIME
+
+START_TIME
+loop 200000
+    pass test
+end
+STOP_TIME
+LOG_TIME
+
+START_TIME
+loop 200000
+    pass "test"
+end
+STOP_TIME
+LOG_TIME

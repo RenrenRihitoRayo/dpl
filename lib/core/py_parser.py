@@ -89,6 +89,8 @@ varproc.meta["threading"] = {
     "runtime_event":IS_STILL_RUNNING,
     "is_still_running":lambda _, __: IS_STILL_RUNNING.is_set()
 }
+
+varproc.meta['str_intern'] = lambda _, __, string: sys.intern(string)
     
 def get_block(code, current_p):
     "Get a code block"

@@ -210,9 +210,11 @@ def evaluate(frame, expression):
         case [op1, "caseless{<=}", *op2]:
             return constants.true if express(frame, op1).lower() <= bs_thing(frame, op2)[0].lower() else constants.false
         case [op1, "==", op2]:
-            return constants.true if express(frame, op1) == express(frame, op2) else constants.false
+            v1, v2 = express(frame, op1), express(frame, op2)
+            return constants.true if v1 is v2 or v1 == v2 else constants.false
         case [op1, "!=", op2]:
-            return constants.true if express(frame, op1) != express(frame, op2) else constants.false
+            v1, v2 = express(frame, op1), express(frame, op2)
+            return constants.true if v1 is v2 or v1 != v2 else constants.false
         case [op1, ">", op2]:
             return constants.true if express(frame, op1) > express(frame, op2) else constants.false
         case [op1, "<", op2]:

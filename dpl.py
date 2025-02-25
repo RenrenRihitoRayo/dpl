@@ -21,6 +21,7 @@ import lib.core.error as error
 import lib.core.cli_arguments as cli_args
 import lib.core.extension_support as ext_s
 from dfpm import dfpm
+from documenter import docs
 import cProfile
 
 try: # Try to use the .pyd or .so parser to get some kick
@@ -125,6 +126,8 @@ def handle_args():
                 print("Something went wrong:", file)
                 print("Error:", repr(e))
                 exit(1)
+        case ["docs", name]:
+            docs.from_lib(name)
         case ["build", python_bin]:
             print(f"This will build a compiled parser for your system.\nThis does not necessarily mean that the parser will be faster!\nThis will build for {python_bin}\nCython does not like loading functions from exec, please be careful.")
             if input("Proceed? [y/N] ").strip().lower() in {"y", "yes"}:
@@ -310,6 +313,7 @@ dpl package installto: <path_to_dest> <user> <repo> <branch>
     Default branch is 'master'
 dpl package remove <package_name>
     Delete that package.
+dpl docs doc_name.mmu
 dpl -info
     Prints info.
 dpl -arg-test
