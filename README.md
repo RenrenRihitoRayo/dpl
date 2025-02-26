@@ -1,6 +1,6 @@
 # 1.4.6
 
-Match statements!
+## Match statements!
 
 ```DuProL
 &use {std/text_io.py}
@@ -19,6 +19,37 @@ match :test
     # invalid code
     io:println :this
 end
+```
+
+## Bench Marks
+
+```DuProL
+for i in (Range 1000)
+pass "test"
+end
+```
+
+```
+Benchmark 1: 100
+  Time (mean ± σ):     679.3 ms ±  56.2 ms    [User: 575.1 ms, System: 103.0 ms]                                                    Range (min … max):   583.5 ms … 724.6 ms    10 runs            
+  Warning: Ignoring non-zero exit code.
+```
+
+For some reason it was exiting with a non zero
+exit code and I had to double check the source
+but it has no errors and was running fine.
+
+Keep in kind that this is heavily dependent
+on the platform and the hardware used!
+
+Specs:
+
+```
+Device:    Oppo A18
+OS:        Termux (Android 14)
+RAM:       4Gb
+Processor: Helio G85
+Python 3.12.9 (main, Feb  4 2025, 22:30:28) [Clang 18.0.3]
 ```
 
 # Deprecation!
