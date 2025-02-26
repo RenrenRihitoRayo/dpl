@@ -1,3 +1,26 @@
+# 1.4.6
+
+Match statements!
+
+```DuProL
+&use {std/text_io.py}
+
+set test "Hello"
+
+# New match statements!
+match :test
+    as this
+    case "Hello"
+        io:println :this
+    end
+    case "Hello world!"
+        io:println "Hello user!"
+    end
+    # invalid code
+    io:println :this
+end
+```
+
 # Deprecation!
 
 `import` statements are now nonexistent!
@@ -40,7 +63,7 @@ Your credits will be added here.
 
 # 1.4.5 Added new for loop syntax
 
-```
+```DuProL
 for index, value in :list
     io:println '${index}: {value}'
 end
