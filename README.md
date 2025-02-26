@@ -1,6 +1,7 @@
 # Deprecation!
 
 `import` statements are now nonexistent!
+As well as the `dpl install` command!
 
 # Added new command
 

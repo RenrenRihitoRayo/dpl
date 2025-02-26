@@ -1,12 +1,4 @@
-# This is a simple mark up langauge to install packages for DPL
-# ?os_name package_name # Will install package if the current system is os_name
-# !os_name command_here # Will run the command if the current system is os_name or if it is set to any
-
-?win32 windows-curses
-!linux echo "You have curses by default!"
-psutil
-requests
+# For pip
 dill
-
-# This will tell the small interpreter to halt
-end
+cProfile
+ncurses

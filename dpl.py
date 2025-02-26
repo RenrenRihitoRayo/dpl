@@ -191,66 +191,6 @@ def handle_args():
                     os.remove(i)
                 except:
                     print("Failed. Another process may be using it! Terminate it.")
-        case ["install", python_exec]:
-            print(f"Installing requirements for `{sys.platform}`")
-            tmp_dir = os.getcwd()
-            if info.BINDIR:
-                os.chdir(info.BINDIR)
-            with open("requirements.txt", "r") as f:
-                while (line := f.readline().strip()) != "end":
-                    if "#" in line:
-                        line = line[: line.index("#")].strip()
-                    if not line:
-                        continue
-                    if line.startswith("?"):
-                        if "verbose" in varproc.flags:
-                            print(
-                                f"Conditional install [for {(temp:=line[1:line.index(' ')])}{' (match)' if temp == sys.platform or temp == 'any' else ' (mismatch)'}]: {line[len(sys.platform)+2:]}"
-                            )
-                        if (
-                            line[1:].startswith(sys.platform)
-                            or line[1 : line.index(" ")] == "any"
-                        ):
-                            line = line[len(sys.platform) + 1 :].strip()
-                        else:
-                            continue
-                    elif line.startswith("!"):
-                        if "verbose" in varproc.flags:
-                            print(
-                                f"Conditional command [for {(temp:=line[1:line.index(' ')])}{' (match)' if temp == sys.platform or temp == 'any' else ' (mismatch)'}]: {line[len(sys.platform)+2:]}"
-                            )
-                        if (
-                            line[1:].startswith(sys.platform)
-                            or line[1 : line.index(" ")] == "any"
-                        ):
-                            line = line[len(sys.platform) + 2 :].strip()
-                            if "verbose" in varproc.flags:
-                                print(f"Running: {line}")
-                            if err := os.system(line):
-                                print(f"Error code: {err}")
-                            continue
-                    with open(os.devnull, "w") as devnull:
-                        print("Installing:", line)
-                        try:
-                            if subprocess.run(
-                                [
-                                    python_exec,
-                                    "-m",
-                                    "pip",
-                                    "install",
-                                    "--ignore-installed",
-                                    line,
-                                ],
-                                stdout=devnull,
-                                stderr=devnull,
-                            ).returncode:
-                                print(f"Error while installing: {line}")
-                        except Exception as e:
-                            print(
-                                f"Failed to install [{line}]: {repr(e)}\nPlease check the usage of `dpl.py install`"
-                            )
-            print("Done!")
-            os.chdir(tmp_dir)
         case ["package", *args]:
             match args:
                 case ["install", user, repo]:
@@ -387,9 +327,6 @@ dpl rc [file] args...
 dpl compile [file]
     Compiles the given DPL script.
     Outputs to [file].cdpl
-dpl install [python_exec]
-    Installs runtime requirements.
-    See the requirements.txt file.
 dpl build [python executable]
     Builds the parser and cythonizes it.
     The interpreter chooses which to run automatically.
