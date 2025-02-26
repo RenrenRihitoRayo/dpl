@@ -12,6 +12,8 @@ ARGV = sys.argv
 ARGC = len(ARGV)
 
 INC_EXT = {
+    "match",
+    "case",
     "fn",
     "method",
     "for",

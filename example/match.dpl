@@ -1,0 +1,16 @@
+&use {std/text_io.py}
+
+set test "Hello"
+
+# New match statements!
+match :test
+    as this
+    case "Hello"
+        io:println :this
+    end
+    case "Hello world!"
+        io:println "Hello user!"
+    end
+    # invalid code
+    io:println :this
+end

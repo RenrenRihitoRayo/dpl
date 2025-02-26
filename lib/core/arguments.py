@@ -7,8 +7,51 @@ from . import error
 from . import varproc
 from .info import *
 
+run_code = None # to be set by py_parser
+
+def get_block(code, current_p):
+    "Get a code block"
+    pos, file, _, _ = code[current_p]
+    p = current_p + 1
+    k = 1
+    res = []
+    while p < len(code):
+        _, _, ins, _ = code[p]
+        if ins in INC_EXT:
+            k += 1
+        elif ins in INC:
+            k -= INC[ins]
+        elif ins in DEC:
+            k -= 1
+        if k == 0:
+            break
+        else:
+            res.append(code[p])
+        p += 1
+    else:
+        print(f"Error in line {pos} file {file!r}\nCause: Block wasnt closed!")
+        return None
+    return p, res
+
 # Functions in utils that ciuldnt be imported
 
+def parse_match(frame, body, value):
+    values = {}
+    name = None
+    for p, [pos, file, ins, args] in enumerate(body):
+        if ins == "as":
+            name = process_args(frame, args)[0]
+        elif ins == "case":
+            if (v:=process_args(frame, args))[0] == value:
+                temp = get_block(body, p)
+                if temp is None:
+                    error.error(pos, file, "Expected a case block!")
+                    return error.SYNTAX_ERROR
+                if name:
+                    frame[-1][name] = value
+                return run_code(temp[1], frame=frame)
+        else:
+            error.error(pos, file, "Only 'as' and 'case' statements are allowed!")
 
 def flatten_dict(d, parent_key="", sep=".", seen=None):
     if seen is None:
@@ -517,10 +560,12 @@ def group(text):
 def exprs_preruntime(args):
     return [*map(expr_preruntime, args)]
 
-
 def express(frame, e):
     return expr_runtime(frame, expr_preruntime(e))
 
-
 def bs_thing(frame, e):
+    "Will be removed in the future.\nUse process_args"
+    return exprs_runtime(frame, exprs_preruntime(group(" ".join(map(str, e)))))
+
+def process_args(frame, e):
     return exprs_runtime(frame, exprs_preruntime(group(" ".join(map(str, e)))))
