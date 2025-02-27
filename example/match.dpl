@@ -1,16 +1,24 @@
 &use {std/text_io.py}
 
-set test "Hello"
+io:input "Name: " name
 
-# New match statements!
-match :test
-    as this
-    case "Hello"
-        io:println :this
+initDataFile list logged_in "logged_in.pkl"
+
+match :name
+    with "admin"
+        io:println "Logged in as admin"
+        ...
     end
-    case "Hello world!"
-        io:println "Hello user!"
+    as user
+    case (:name in :loged_in)
+        io:println 'Welcome ${user}'
     end
-    # invalid code
-    io:println :this
+    default
+        io:println 'User ${user} is not logged in!'
+        io:input "Register? [y] " reg
+        if (:reg == "y")
+            io:input "Name: " name
+            pass (Append :logged_in :name)
+        end
+    end
 end
