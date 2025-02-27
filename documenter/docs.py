@@ -1,9 +1,10 @@
-from os import name as os_name, system as cmd, path as os_path, get_terminal_size
+from os import name as os_name, system as cmd, path as os_path
+from shutil import get_terminal_size
 from sys import argv
 
 
 def batch_string(s, size):
-    return [s[i : i + size] for i in range(0, len(s), size)]
+    return [s[i: i + size] for i in range(0, len(s), size)]
 
 
 local_path = os_path.join(os_path.dirname(__file__), "..", "lib", "docs")

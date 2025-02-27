@@ -1,16 +1,16 @@
 &use {std/text_io.py}
 
-set test "Hello"
+io:input "Name: " name
 
-# New match statements!
-match :test
-    as this
-    case "Hello"
-        io:println :this
+set loged_in [Jharred David Noah]
+
+match :name
+    with "admin"
+        io:println "Logged in as admin"
+        ...
     end
-    case "Hello world!"
-        io:println "Hello user!"
+    as user
+    case (:name in :loged_in)
+        io:println 'Welcome ${user}'
     end
-    # invalid code
-    io:println :this
 end

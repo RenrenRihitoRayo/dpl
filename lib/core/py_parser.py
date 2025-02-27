@@ -184,7 +184,7 @@ def process(code, name="__main__"):
             argc = len(args)
             if ins == "include" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.join(info.LIBDIR, args[0][1:-1])
+                    file = info.get_path_with_lib(args[0][1:-1])
                 elif args[0].startswith('"') and args[0].endswith('"'):
                     file = os.path.join(os.path.dirname(name), args[0][1:-1])
                     if name != "__main__":
@@ -200,7 +200,7 @@ def process(code, name="__main__"):
                 name = str(args[0])
             elif ins == "includec" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.join(info.LIBDIR, args[0][1:-1])
+                    file = info.get_path_with_lib(args[0][1:-1])
                 elif args[0].startswith('"') and args[0].endswith('"'):
                     file = os.path.join(os.path.dirname(name), args[0][1:-1])
                     if name != "__main__":
@@ -216,7 +216,7 @@ def process(code, name="__main__"):
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "extend" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.join(info.LIBDIR, args[0][1:-1])
+                    file = info.get_path_with_lib(args[0][1:-1])
                 elif args[0].startswith('"') and args[0].endswith('"'):
                     file = os.path.join(os.path.dirname(name), args[0][1:-1])
                     if name != "__main__":
@@ -232,7 +232,7 @@ def process(code, name="__main__"):
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "use" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.join(info.LIBDIR, (ofile := args[0][1:-1]))
+                    file = info.get_path_with_lib(ofile:=args[0][1:-1])
                     search_path = "_std"
                 elif args[0].startswith('"') and args[0].endswith('"'):
                     file = os.path.join(os.path.dirname(name), (ofile := args[0][1:-1]))
@@ -304,7 +304,7 @@ def process(code, name="__main__"):
                         return []
                     warn_num += 1
                 elif (
-                    ins in {"if", "if_else", "module"}
+                    ins in {"if", "module"}
                     and p + 1 < len(res)
                     and res[p + 1][2] == "end"
                 ):
@@ -317,12 +317,22 @@ def process(code, name="__main__"):
                         p, _ = temp
                     else:
                         return []
-                    if ins == "if_else":
-                        temp = get_block(res, p)
-                        if temp:
-                            p, _ = temp
-                        else:
-                            return []
+                    warn_num += 1
+                elif ins in {"case", "match", "with", "default"} and p + 1 < len(res) and res[p + 1][2] in {"end", "return"}:
+                    if ins != "default" and len(args) == 0:
+                        error.warn(
+                            f"Error: Malformed {ins!r} statement/sub-statements!\nLine {pos}\nIn file {file!r}"
+                        )
+                        return error.PREPROCESSING_ERROR
+                    if warnings and info.WARNINGS:
+                        error.warn(
+                            f"Warning: {ins!r} statement/sub-statements is empty!\nLine {pos}\nIn file {file!r}"
+                        )
+                    temp = get_block(res, p)
+                    if temp:
+                        p, _ = temp
+                    else:
+                        return []
                     warn_num += 1
                 elif (
                     ins in {"fn", "method", "body"}
@@ -333,6 +343,7 @@ def process(code, name="__main__"):
                         error.warn(
                             f"Error: Malformed function definition!\nLine {pos}\nIn file {file!r}"
                         )
+                        return error.PREPROCESSING_ERROR
                     if warnings and info.WARNINGS:
                         error.warn(
                             f"Warning: Function {line[3][0]!r} is empty!\nLine {pos}\nIn file {file!r}"
@@ -357,21 +368,26 @@ def process(code, name="__main__"):
                 p += 1
             if warnings and info.WARNINGS and warn_num:
                 print(f"Warning Info: {warn_num:,} Total warnings.")
+        # Try to catch syntax errors earlier
+        np = 0
         for p, [pos, file, ins, args] in enumerate(nres):
             if ins in info.INC_EXT:
                 temp = get_block(nres, p, True)
                 if not temp:
                     error.error(pos, file, f"{ins!r} statement is unclosed!")
-                    return error.SYNTAX_ERROR
-            elif ins == "match":
+                    return error.PREPROCESSING_ERROR
+            if ins == "match":
                 temp = get_block(nres, p, True)
-                if not temp:
-                    error.error(pos, file, "Match statement is unclosed!")
-                    return error.SYNTAX_ERROR
                 for [pos, file, ins, _] in temp[1]:
-                    if ins not in {"case", "as"}:
-                        error.error(pos, file, f"Only 'as' and 'case' statements are allowed here!\nInstruction: {ins}")
-                        return error.SYNTAX_ERROR
+                    if ins in {"as", "end"}:
+                        ...
+                    elif ins in {"with", "case", "default"}:
+                        _, body = get_block(nres, p)
+                        np = pos+len(body)
+                    elif pos > np:
+                        error.error(pos, file, f"Only 'case', 'with', 'default' and 'as' statements are allowed in match blocks!\nGot: {ins}")
+                        return error.PREPROCESSING_ERROR
+                np = 0
         return {
             "code": nres if dead_code and info.DEAD_CODE_OPT else res,
             "frame": nframe or None,
@@ -530,26 +546,10 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
                 break
             else:
                 p, body = temp
-            argproc.parse_match(frame, body, args[0])
-        elif ins == "if_else" and argc == 1:
-            temp = get_block(code, p)
-            if temp is None:
-                break
-            else:
-                p, true = temp
-            temp = get_block(code, p)
-            if temp is None:
-                break
-            else:
-                p, false = temp
-            if args[0]:
-                err = run(true, frame=frame)
-                if err:
-                    return err
-            else:
-                err = run(false, frame=frame)
-                if err:
-                    return err
+            if (err := argproc.parse_match(frame, body, args[0])) > 0:
+                return err
+        elif ins == "fallthrough" and argc == 0:
+            return error.FALLTHROUGH
         elif ins == "set" and argc == 2:
             if t := varproc.rset(frame[-1], args[0], args[1]):
                 error.error(

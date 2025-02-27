@@ -1,6 +1,10 @@
 # Used to handle arguments and expressions
 # NOT FOR THE CLI
 
+from ast import parse
+from platform import processor
+
+from requests.models import parse_header_links
 from . import state
 from . import constants
 from . import error
@@ -33,25 +37,61 @@ def get_block(code, current_p):
         return None
     return p, res
 
-# Functions in utils that ciuldnt be imported
+# Functions in utils that couldnt be imported
 
 def parse_match(frame, body, value):
     values = {}
     name = None
+    np = 0
+    ft = False
     for p, [pos, file, ins, args] in enumerate(body):
         if ins == "as":
-            name = process_args(frame, args)[0]
+            varproc.rset(frame[-1], process_args(frame, args)[0], value)
+        elif ft == True and ins in {"case", "with"}:
+            ft = False
+            temp = get_block(body, p)
+            if temp is None:
+                error.error(pos, file, "Expected a case block!")
+                return error.SYNTAX_ERROR
+            if name:
+                frame[-1][name] = value
+            res = run_code(temp[1], frame=frame)
+            if res != error.FALLTHROUGH:
+                return res
+            ft = True
         elif ins == "case":
-            if (v:=process_args(frame, args))[0] == value:
+            if (v := process_args(frame, args))[0]:
                 temp = get_block(body, p)
                 if temp is None:
                     error.error(pos, file, "Expected a case block!")
                     return error.SYNTAX_ERROR
                 if name:
                     frame[-1][name] = value
-                return run_code(temp[1], frame=frame)
-        else:
-            error.error(pos, file, "Only 'as' and 'case' statements are allowed!")
+                res = run_code(temp[1], frame=frame)
+                if res != error.FALLTHROUGH:
+                    return res
+                ft = True
+        elif ins == "with":
+            if (v := process_args(frame, args))[0] == value:
+                temp = get_block(body, p)
+                if temp is None:
+                    error.error(pos, file, "Expected a case block!")
+                    return error.SYNTAX_ERROR
+                if name:
+                    frame[-1][name] = value
+                res = run_code(temp[1], frame=frame)
+                if res != error.FALLTHROUGH:
+                    return res
+                ft = True
+        elif ins == "default":
+            temp = get_block(body, p)
+            if temp is None:
+                error.error(pos, file, "Expected a case block!")
+                return error.SYNTAX_ERROR
+            if name:
+                frame[-1][name] = value
+            res = run_code(temp[1], frame=frame)
+            return res
 
 def flatten_dict(d, parent_key="", sep=".", seen=None):
     if seen is None:
@@ -118,7 +158,7 @@ def is_float(arg):
 
 
 def is_id(arg):
-    return arg.replace(".", "").replace("_", "").isalnum()
+    return arg.replace(".", "").replace("_", "a").isalnum()
 
 
 def is_sid(arg):
@@ -276,43 +316,6 @@ def evaluate(frame, expression):
             return express(frame, op1) % express(frame, op2)
         case [op1, "^", op2]:
             return express(frame, op1) ** express(frame, op2)
-        case [op1, "caseless{==}", *op2]:
-            express(frame, op2)[0].lower()
-            return (
-                constants.true
-                if express(frame, op1).lower() == bs_thing(frame, op2)[0].lower()
-                else constants.false
-            )
-        case [op1, "caseless{!=}", *op2]:
-            return (
-                constants.true
-                if express(frame, op1).lower() != bs_thing(frame, op2)[0].lower()
-                else constants.false
-            )
-        case [op1, "caseless{>}", *op2]:
-            return (
-                constants.true
-                if express(frame, op1).lower() > bs_thing(frame, op2)[0].lower()
-                else constants.false
-            )
-        case [op1, "caseless{<}", *op2]:
-            return (
-                constants.true
-                if express(frame, op1).lower() < bs_thing(frame, op2)[0].lower()
-                else constants.false
-            )
-        case [op1, "caseless{>=}", *op2]:
-            return (
-                constants.true
-                if express(frame, op1).lower() >= bs_thing(frame, op2)[0].lower()
-                else constants.false
-            )
-        case [op1, "caseless{<=}", *op2]:
-            return (
-                constants.true
-                if express(frame, op1).lower() <= bs_thing(frame, op2)[0].lower()
-                else constants.false
-            )
         case [op1, "==", op2]:
             v1, v2 = express(frame, op1), express(frame, op2)
             return constants.true if v1 is v2 or v1 == v2 else constants.false
