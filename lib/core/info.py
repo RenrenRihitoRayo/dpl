@@ -4,9 +4,17 @@
 # THIS FILE SHOULD NOT IMPORT DPL MODULES AS A CIRCULAR IMPORT WILL HAPPEN
 # ALMOST EVERY FILE IN lib.core IMPORTS THIS
 
-import os, sys
+import os
+import sys
 import platform
-from . import constants
+try:
+    from . import constants
+except ImportError:
+    class constants:
+        nil = 0
+        true = 1
+        false = 0
+        none = None
 
 ARGV = sys.argv
 ARGC = len(ARGV)
@@ -29,9 +37,11 @@ INC_EXT = {
     "body",
     "template",
     "from_template",
+    "with",
+    "default"
 }
 
-INC = {"if-then": 2, "thread": 1, "expect-then": 2}
+INC = {"thread": 1, "expect-then": 2}
 
 DEC = {"end", "then", "else"}
 
@@ -178,6 +188,14 @@ SYS_PROC = platform.processor() or constants.none
 SYS_MACH = platform.machine()
 SYS_INFO = platform.platform()
 SYS_MACH_INFO = platform.uname()
+
+
+def get_path_with_lib(path):
+    return os.path.join(LIBDIR, path)
+
+
+def get_path_with_cwd(path):
+    return os.path.join(os.getcwd(), path)
 
 
 def print_info():

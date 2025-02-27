@@ -7,6 +7,7 @@ from . import constants
 from . import info
 from . import state
 from . import error
+from . import data_files
 
 # lock
 W_LOCK = threading.Lock()
@@ -140,7 +141,7 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=True):
     node = dct
     while path:
         pos, name = path.pop()
-        if pos != last and name in node and isinstance(node[name], dict):
+        if pos != last and name in node and isinstance(node[name], (dict, data_files.DataFileDict)):
             node = node[name]
         elif pos == last and name in node:
             if is_debug_enabled("show_value_updates"):
@@ -165,7 +166,7 @@ def rpop(dct, full_name, default=constants.nil, sep="."):
     node = dct
     while path:
         pos, name = path.pop()
-        if pos != last and name in node and isinstance(node[name], dict):
+        if pos != last and name in node and isinstance(node[name], (dict, data_files.DataFileDict)):
             node = node[name]
         elif pos == last and name in node:
             if is_debug_enabled("show_value_updates"):
@@ -200,7 +201,7 @@ def rset(dct, full_name, value, sep=".", meta=True):
             if (
                 meta
                 and full_name in dct
-                and isinstance((temp := dct[full_name]), dict)
+                and isinstance((temp := dct[full_name]), (dict, data_files.DataFileDict))
                 and "[meta_value]" in temp
             ):
                 dct[full_name]["[meta_value]"] = value
@@ -216,7 +217,7 @@ def rset(dct, full_name, value, sep=".", meta=True):
     node = dct
     while path:
         pos, name = path.pop()
-        if pos != last and name in node and isinstance(node[name], dict):
+        if pos != last and name in node and isinstance(node[name], (dict, data_files.DataFileDict)):
             node = node[name]
         elif pos == last:
             if node.get("_set_only_when_defined") and name not in node:
@@ -237,7 +238,7 @@ def rset(dct, full_name, value, sep=".", meta=True):
                 if (
                     meta
                     and name in node
-                    and isinstance((temp := node[name]), dict)
+                    and isinstance((temp := node[name]), (dict, data_files.DataFileDict))
                     and "[meta_value]" in temp
                 ):
                     node[name]["[meta_value]"] = value

@@ -7,7 +7,7 @@ scope: source.dpl
 contexts:
   main:
 
-    - match: '^\s*\b((:?proto-)?body|expect-then|wait_for_threads|then|if-then|if|loops|expect|module|thread|import|while|return|loop|for|end|pass|fn|method|stop|skip|else)\b'
+    - match: '^\s*\b((:?proto-)?body|expect-then|wait_for_threads|then|match|case|with|fallthrough|default|if|loops|expect|module|thread|import|while|return|loop|for|end|pass|fn|method|stop|skip|else)\b'
       scope: keyword.control.dpl
 
     - match: '^\s*?#' # this is intentional as comments can only stay on separate lines
@@ -17,10 +17,13 @@ contexts:
     - match: '^\s*\b(cmd|help|del|const|fset|new|cmd|set|object|exit|pycatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
       scope: support.function
 
-    - match: '\b(len-of|range|to-int|sum|raw_range|to-float|to-str|index)\b'
+    - match: '\b(Sum|Range|RawRange|dRawRange|dRange|Index|ToFloat|ToStr|ToInt|Append|Pop)\b'
+      scope: constant.numeric
+
+    - match: '\b(in|as)\b'
       scope: keyword.operator.dpl
 
-    - match: '&(include|enable|disable)'
+    - match: '&(include|enable|disable|as)'
       scope: keyword.operator.dpl
 
     - match: "=="
@@ -53,6 +56,13 @@ contexts:
       scope: punctuation.definition.string.start.dpl
       push: double_quoted_string
 
+    - match: "'"
+      scope: punctuation.definition.string.start.dpl
+      push: single_quoted_string
+
+    - match: '\{[^}]+\}'
+      scope: string.quoted.double
+
     - match: '(\%|:)[^\s\(\)\[\]]+'
       scope: keyword.operator.dpl
 
@@ -69,6 +79,18 @@ contexts:
     - match: '\\.'
       scope: constant.character.escape.dpl
     - match: '"'
+      scope: punctuation.definition.string.end.dpl
+      pop: true
+
+  single_quoted_string:
+    - meta_scope: string.quoted.double.dpl
+    - match: '\\\[.*?\]'
+      scope: constant.character.escape.dpl
+    - match: '\\.'
+      scope: constant.character.escape.dpl
+    - match: '\$\{(.*)\}'
+      scope: keyword.operator.dpl
+    - match: "'"
       scope: punctuation.definition.string.end.dpl
       pop: true
 

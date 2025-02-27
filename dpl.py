@@ -4,13 +4,6 @@
 # We use match statements for te CLI
 # To keep it lightweight, we dont need speed here.
 
-import os
-import sys
-
-# DANGEROUS
-sys.setrecursionlimit(10**6)
-sys.set_int_max_str_digits(10**6)
-
 import subprocess
 import shutil
 import time
@@ -30,6 +23,13 @@ except Exception as e:  # fallback to normal python impl if it fails
     import lib.core.py_parser as parser
 import lib.core.varproc as varproc
 import lib.core.utils as utils
+
+import os
+import sys
+
+# DANGEROUS
+sys.setrecursionlimit(10**6)
+sys.set_int_max_str_digits(10**6)
 
 try:
     import dill as pickle
@@ -62,6 +62,7 @@ def rec(this, ind=0):
 
 
 def ez_run(code, process=True, file="???", profile=False):
+    "Run a DPL script in an easier way, hence ez_run"
     if process:
         code = parser.process(code)
     if profile:
