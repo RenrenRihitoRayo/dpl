@@ -20,6 +20,7 @@ try:
     from . import objects
     from . import constants
     from . import extension_support as ext_s
+    from . import data_files
 except ImportError:
     print(f"Please do not run it from here.")
     sys.exit(1)
@@ -530,6 +531,12 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING, generator_pc=None):
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
             return error.SKIP_RESULT
+        elif ins == "initDataFile" and argc == 3 and args[0] in {"dict", "list"}:
+            frame[-1][args[1]] = data_files.DataFileDict(args[2]) if args[0] == "dict" else  data_files.DataFileList(args[2])
+        elif ins == "closeDataFile" and argc == 1:
+            args[0].close()
+        elif ins == "clearDataFile" and argc == 1:
+            args[0].clear()
         elif ins == "if" and argc == 1:
             temp = get_block(code, p)
             if temp is None:

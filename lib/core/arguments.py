@@ -161,24 +161,12 @@ def is_id(arg):
     return arg.replace(".", "").replace("_", "a").isalnum()
 
 
-def is_sid(arg):
-    return arg.startswith("name{") and arg.endswith("}")
-
-
 def is_var(arg):
     return arg.startswith("%") and is_id(arg[1:])
 
 
 def is_fvar(arg):
     return arg.startswith(":") and is_id(arg[1:])
-
-
-def is_svar(arg):
-    return arg.startswith("%{") and arg.endswith("}")
-
-
-def is_sfvar(arg):
-    return arg.startswith(":{") and arg.endswith("}")
 
 
 def expr_preruntime(arg):
@@ -225,19 +213,6 @@ def expr_runtime(frame, arg):
             default=varproc.rget(frame[0], arg[1:], meta=False),
             meta=False,
         )
-    elif is_svar(arg):
-        return varproc.rget(
-            frame[-1], arg[2:-1], default=varproc.rget(frame[0], arg[2:-1])
-        )
-    elif is_sfvar(arg):
-        return varproc.rget(
-            frame[-1],
-            arg[2:-1],
-            default=varproc.rget(frame[0], arg[2:-1], meta=False),
-            meta=False,
-        )
-    elif is_sid(arg):
-        return arg[5:-1]
     else:
         return expr_preruntime(arg)
 
@@ -393,8 +368,9 @@ def evaluate(frame, expression):
             return constants.true if isinstance(value, vtype) else constants.false
         case ["Append", lst, item]:
             (lst := expr_runtime(frame, lst)).append(express(frame, item))
+            print(lst)
             return lst
-        case ["Pop", list(lst)]:
+        case ["Pop", lst]:
             return lst.pop() if lst else state.bstate("nil")
         case _:
             return state.bstate("nil")
@@ -410,7 +386,7 @@ def exprs_runtime(frame, args):
         c = args[p]
         if not isinstance(c, str):
             res.append(c)
-        elif c.startswith("("):
+        elif c == "(":
             args[p] = c[1:]
             c = ""
             k = 1
@@ -420,9 +396,9 @@ def exprs_runtime(frame, args):
                 put.append(str(c))
                 p += 1
                 if isinstance(c, str):
-                    if c.startswith("("):
+                    if c == "(":
                         k += 1
-                    elif c.endswith(")"):
+                    elif c == ")":
                         k -= 1
             p -= 1
             put[-1] = put[-1][:-1]
@@ -485,7 +461,7 @@ def exprs_runtime(frame, args):
 
 
 sep = " ,"
-special_sep = "()+/-*[]<>?"
+special_sep = "()+/-*[]<>"
 
 
 def group(text):

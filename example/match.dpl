@@ -2,7 +2,7 @@
 
 io:input "Name: " name
 
-set loged_in [Jharred David Noah]
+initDataFile list logged_in "logged_in.pkl"
 
 match :name
     with "admin"
@@ -12,5 +12,13 @@ match :name
     as user
     case (:name in :loged_in)
         io:println 'Welcome ${user}'
+    end
+    default
+        io:println 'User ${user} is not logged in!'
+        io:input "Register? [y] " reg
+        if (:reg == "y")
+            io:input "Name: " name
+            pass (Append :logged_in :name)
+        end
     end
 end
