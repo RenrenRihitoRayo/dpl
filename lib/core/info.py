@@ -62,6 +62,9 @@ CHARS = {
     "\\[escape]": "\\",
 }
 
+OPEN_P = "[("
+CLOSE_P = ")]"
+
 WARNINGS = True
 DEAD_CODE_OPT = True
 

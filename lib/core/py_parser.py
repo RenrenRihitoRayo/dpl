@@ -181,7 +181,7 @@ def process(code, name="__main__"):
     ):
         if line.startswith("&"):
             ins, *args = line[1:].lstrip().split()
-            args = argproc.bs_thing(nframe, args)
+            args = argproc.process_args(nframe, args)
             argc = len(args)
             if ins == "include" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
@@ -289,7 +289,7 @@ def process(code, name="__main__"):
         else:
             if " " in line:
                 ins, arg = line.strip().split(maxsplit=1)
-                args = argproc.exprs_preruntime(argproc.group(arg))
+                args = argproc.nest_args(argproc.exprs_preruntime(argproc.group(arg)))
             else:
                 ins = line
                 args = []
@@ -425,17 +425,17 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     else:
         frame = nframe
     while p < len(code) and not IS_STILL_RUNNING.is_set():
-        pos, file, ins, args = code[p]
+        pos, file, ins, oargs = code[p]
         if ins not in {  # Lazy evaluation
-            "while",
+            "while"
         }:
             try:
-                args = argproc.exprs_runtime(frame, args)
+                args = argproc.process_args(frame, oargs)
             except Exception as e:
                 error.error(
                     pos,
                     file,
-                    f"Something went wrong when arguments were processed:\n{traceback.format_exc()}\n> {args!r}",
+                    f"Something went wrong when arguments were processed:\n{traceback.format_exc()}\n> {oargs!r}",
                 )
                 return error.PYTHON_ERROR
         if varproc.is_debug_enabled("show_instructions"):

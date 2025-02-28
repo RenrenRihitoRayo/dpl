@@ -1,3 +1,8 @@
-&use:luaj {hello.lua}
+&use {std/text_io.py}
 
-lua_hello:hi
+START_TIME
+for _ in (RawRange 1_000_000)
+    ...
+end
+STOP_TIME
+LOG_TIME

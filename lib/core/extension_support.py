@@ -135,7 +135,6 @@ def require(path):
 
 class dpl:
     require = require
-    luaj_require = luaj_require
     utils = utils
     varproc = varproc
     arguments = argproc
@@ -299,7 +298,7 @@ def py_import_string(
 def call(func, frame, file, args, kwargs={}):
     if varproc.is_debug_enabled("track_time"):
         start = time.time()
-    ret = func(frame, file, *args, **kwargs)
+    ret = func(frame, file, *args)
     if varproc.is_debug_enabled("track_time"):
         delta = time.time() - start
         if delta > varproc.get_debug("time_threshold"):

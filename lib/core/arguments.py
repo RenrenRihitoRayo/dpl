@@ -1,8 +1,9 @@
 # Used to handle arguments and expressions
 # NOT FOR THE CLI
 
-from ast import parse
+from ast import expr, parse
 from platform import processor
+from sys import flags
 
 from requests.models import parse_header_links
 from . import state
@@ -12,6 +13,28 @@ from . import varproc
 from .info import *
 
 run_code = None # to be set by py_parser
+
+
+def nest_args(tokens):
+    stack = [[]]
+    for token in tokens:
+        if not isinstance(token, str):
+            stack[-1].append(token)
+            continue
+        if token in OPEN_P:
+            new_list = []
+            stack[-1].append(new_list)
+            stack.append(new_list)
+        elif token in CLOSE_P:
+            if len(stack) == 1:
+                raise ValueError("Mismatched parentheses")
+            stack.pop()
+        else:
+            stack[-1].append(token)
+    if len(stack) > 1:
+        raise ValueError("Mismatched parentheses")
+    return stack[0]
+
 
 def get_block(code, current_p):
     "Get a code block"
@@ -115,21 +138,12 @@ def flatten_dict(d, parent_key="", sep=".", seen=None):
     return items
 
 
-# Use to make the argument handler to handle
-# char literals
-class char:
-    def __init__(self, value):
-        self.val = value
-
-    def __repr__(self):
-        return self.val
-
-
 methods = {}
 
 
 # Need I explain?
 def is_int(arg):
+    arg = arg.replace("_", "")
     return arg.replace("-", "").replace(",", "").isdigit()
 
 
@@ -154,6 +168,7 @@ def is_bin(arg):
 
 
 def is_float(arg):
+    arg = arg.replace("_", "")
     return arg.replace("-", "").replace(",", "").replace(".", "").isdigit()
 
 
@@ -191,15 +206,19 @@ def expr_preruntime(arg):
         return constants.nil
     elif arg == "...":
         return constants.elipsis
-    elif arg == "[]":
+    elif arg == "!dict":
+        return {}
+    elif arg == "!list":
         return []
+    elif arg == "!tuple": # really?
+        return tuple()
     return arg
 
 
 def expr_runtime(frame, arg):
     "Process an argument at runtime"
-    if isinstance(arg, char):
-        return arg.val
+    if isinstance(arg, list):
+        return evaluate(frame, arg)
     elif not isinstance(arg, str):
         return arg
     if is_id(arg):
@@ -213,6 +232,13 @@ def expr_runtime(frame, arg):
             default=varproc.rget(frame[0], arg[1:], meta=False),
             meta=False,
         )
+    elif arg.startswith('"') and arg.endswith('"'):
+        return arg[1:-1]
+    elif arg.startswith("'") and arg.endswith("'"):
+        text = arg[1:-1]
+        for name, value in flatten_dict(frame[-1]).items():
+            text = text.replace(f"${{{name}}}", str(value))
+        return text
     else:
         return expr_preruntime(arg)
 
@@ -245,219 +271,75 @@ def my_range(start, end):
 
 def evaluate(frame, expression):
     "Evaluate an expression"
-    ins, *args = expression
-    if ins in methods:
-        if methods[ins][0]:
-            args = bs_thing(frame, args)
-        return methods[ins][1](frame, *args)
-    match (expression):
-        case ["Range", arg]:
-            arg = express(frame, arg)
-            return tuple(range(arg))
-        case ["dRange", start, end]:
-            start = express(frame, start)
-            end = express(frame, end)
-            return tuple(my_range(start, end))
-        case ["dRawRange", start, end]:
-            start = express(frame, start)
-            end = express(frame, end)
-            return my_range(start, end)
-        case ["RawRange", arg]:
-            arg = express(frame, arg)
-            return range(arg)
-        case ["Sum", *items]:
-            items = exprs_runtime(frame, items)
-            start_t = type(items[0])
-            start = start_t()
-            for i in items:
-                try:
-                    start += i
-                except:
-                    start += start_t(i)
-            return start
-        case ["Index", lst, index]:
-            return express(frame, lst)[express(frame, index)]
-        case [op1, "+", op2]:
-            return express(frame, op1) + express(frame, op2)
-        case [op1, "..", op2]:
-            return str(express(frame, op1)) + str(express(frame, op2))
-        case [op1, "-", op2]:
-            return express(frame, op1) - express(frame, op2)
-        case [op1, "*", op2]:
-            return express(frame, op1) * express(frame, op2)
-        case [op1, "/", op2]:
-            return express(frame, op1) / express(frame, op2)
-        case [op1, "%", op2]:
-            return express(frame, op1) % express(frame, op2)
-        case [op1, "^", op2]:
-            return express(frame, op1) ** express(frame, op2)
-        case [op1, "==", op2]:
-            v1, v2 = express(frame, op1), express(frame, op2)
-            return constants.true if v1 is v2 or v1 == v2 else constants.false
-        case [op1, "!=", op2]:
-            v1, v2 = express(frame, op1), express(frame, op2)
-            return constants.true if v1 is v2 or v1 != v2 else constants.false
-        case [op1, ">", op2]:
-            return (
-                constants.true
-                if express(frame, op1) > express(frame, op2)
-                else constants.false
-            )
-        case [op1, "<", op2]:
-            return (
-                constants.true
-                if express(frame, op1) < express(frame, op2)
-                else constants.false
-            )
-        case [op1, ">", "=", op2]:
-            return (
-                constants.true
-                if express(frame, op1) >= express(frame, op2)
-                else constants.false
-            )
-        case [op1, "<", "=", op2]:
-            return (
-                constants.true
-                if express(frame, op1) <= express(frame, op2)
-                else constants.false
-            )
-        case ["not", op1]:
-            return constants.true if not express(frame, op1) else constants.false
-        case [op1, "or", op2]:
-            return (
-                constants.true
-                if express(frame, op1) or express(frame, op2)
-                else constants.false
-            )
-        case [op1, "and", op2]:
-            return (
-                constants.true
-                if express(frame, op1) and express(frame, op2)
-                else constants.false
-            )
-        case [*op1, "in", op2]:
-            return (
-                constants.true
-                if bs_thing(frame, op1)[0] in express(frame, op2)
-                else constants.false
-            )
-        case ["LenOf", op1]:
-            value = express(frame, op1)
-            if hasattr(value, "__len__"):
-                return len(value)
-            else:
-                return state.bstate("nil")
-        case ["ToInt", op1]:
-            value = express(frame, op1)
-            try:
-                return int(value)
-            except:
-                return state.bstate("nil")
-        case ["ToFloat", op1]:
-            value = express(frame, op1)
-            try:
-                return int(value)
-            except:
-                return state.bstate("nil")
-        case ["ToStr", op1]:
-            value = express(frame, op1)
-            return str(value)
-        case ["IsType", op1, t]:
-            value = express(frame, op1)
-            vtype = express(frame, t)
-            return constants.true if isinstance(value, vtype) else constants.false
-        case ["Append", lst, item]:
-            (lst := expr_runtime(frame, lst)).append(express(frame, item))
-            print(lst)
+    match (process_args(frame, expression)):
+        # operations
+        case [val1, "+", val2]:
+            return val1 + val2
+        case [val1, "-", val2]:
+            return val1 - val2
+        case [val1, "*", val2]:
+            return val1 * val2
+        case [val1, "/", val2]:
+            return val1 / val2
+        # conditionals
+        case [val1, "=", "=", val2]:
+            return val1 == val2
+        case [val1, "!", "=", val2]:
+            return val1 != val2
+        case [val1, "and", val2]:
+            return val1 and val2
+        case [val1, "or", val2]:
+            return val1 or val2
+        case ["not", val2]:
+            return not val2
+        case [val1, ">", "=", val2]:
+            return val1 >= val2
+        case [val1, "<", "=", val2]:
+            return val1 <= val2
+        case [val1, "<", val2]:
+            return val1 < val2
+        case [val1, ">", val2]:
+            return val1 > val2
+        case ["?list", *lst]:
             return lst
-        case ["Pop", lst]:
-            return lst.pop() if lst else state.bstate("nil")
+        case ["?tuple", *lst]:
+            return tuple(lst)
+        case ["?dict", *lst]:
+            return dict(lst)
+        case [val1, "/", "/", val2]:
+            return val1 // val2
+        case [val1, "mod", val2]:
+            return val1 % val2
+        case [val1, "^", val2]:
+            return val1 ** val2
+        case ["RawRange", num]:
+            return range(num)
+        case ["Range", num]:
+            return tuple(range(num))
+        case ["dRange", num]:
+            return tuple(my_range(0, num))
+        case ["dRawRange", num]:
+            return my_range(0, num)
+        case ["dRange", num, end]:
+            return tuple(my_range(num, end))
+        case ["dRawRange", num, end]:
+            return my_range(num, end)
+        case [obj, index]:
+            if isinstance(obj, (tuple, list, str)) and index >= len(obj):
+                return constants.nil
+            elif isinstance(obj, dict) and index not in obj:
+                return constants.nil
+            else:
+                return obj[index]
+        case [ins, *args]:
+            if ins in methods:
+                if methods[ins][0]:
+                    args = process_args(frame, args)
+                return methods[ins][1](frame, *args)
+            else:
+                return constants.nil
         case _:
-            return state.bstate("nil")
-
-
-def exprs_runtime(frame, args):
-    "Process arguments at runtime"
-    args = list(args)
-    put = []
-    res = []
-    p = 0
-    while p < len(args):
-        c = args[p]
-        if not isinstance(c, str):
-            res.append(c)
-        elif c == "(":
-            args[p] = c[1:]
-            c = ""
-            k = 1
-            put.clear()
-            while p < len(args) and k:
-                c = args[p]
-                put.append(str(c))
-                p += 1
-                if isinstance(c, str):
-                    if c == "(":
-                        k += 1
-                    elif c == ")":
-                        k -= 1
-            p -= 1
-            put[-1] = put[-1][:-1]
-            while "" in put:
-                put.remove("")
-            res.append(evaluate(frame, put))
-        elif c.startswith("["):
-            args[p] = c[1:]
-            c = ""
-            put.clear()
-            k = 1
-            while p < len(args) and k:
-                c = args[p]
-                put.append(str(c))
-                p += 1
-                if isinstance(c, str):
-                    if c.startswith("["):
-                        k += 1
-                    elif c.endswith("]"):
-                        k -= 1
-            p -= 1
-            put[-1] = put[-1][:-1]
-            while "" in put:
-                put.remove("")
-            res.append([*bs_thing(frame, put)])
-        elif c.startswith("!["):
-            args[p] = c[2:]
-            c = ""
-            put.clear()
-            k = 1
-            while p < len(args) and k:
-                c = args[p]
-                put.append(str(c))
-                p += 1
-                if isinstance(c, str):
-                    if c.startswith("["):
-                        k += 1
-                    elif c.endswith("]"):
-                        k -= 1
-            p -= 1
-            put[-1] = put[-1][:-1]
-            while "" in put:
-                put.remove("")
-            res.append((*bs_thing(frame, put),))
-        elif c.startswith('"') and c.endswith('"'):
-            text = c[1:-1]
-            res.append(text)
-        elif c.startswith("'") and c.endswith("'"):
-            text = c[1:-1]
-            d = flatten_dict(frame[-1]).items()
-            for c, cc in d:
-                text = text.replace(f"${{{c}}}", str(cc))
-            res.append(text)
-        elif c.startswith("<") and c.endswith(">"):
-            res.append(c)
-        else:
-            res.append(expr_runtime(frame, c))
-        p += 1
-    return res
+            return constants.nil
 
 
 sep = " ,"
@@ -497,11 +379,8 @@ def group(text):
                 this = True
             elif i == quotes[str_type]:
                 text = "".join(str_tmp) + quotes[str_type]
-                if rq:
-                    text = f'"{text}"'
                 res.append(text)
                 str_tmp.clear()
-                rq = False
             else:
                 str_tmp.append(i)
             continue
@@ -514,8 +393,6 @@ def group(text):
                 res.append("".join(id_tmp))
                 id_tmp.clear()
             res.append(i)
-        elif i == "!":
-            rq = True
         elif i in "\"{'":
             if id_tmp:
                 res.append("".join(id_tmp))
@@ -539,12 +416,6 @@ def group(text):
 def exprs_preruntime(args):
     return [*map(expr_preruntime, args)]
 
-def express(frame, e):
-    return expr_runtime(frame, expr_preruntime(e))
-
-def bs_thing(frame, e):
-    "Will be removed in the future.\nUse process_args"
-    return exprs_runtime(frame, exprs_preruntime(group(" ".join(map(str, e)))))
 
 def process_args(frame, e):
-    return exprs_runtime(frame, exprs_preruntime(group(" ".join(map(str, e)))))
+    return list(map(lambda x: expr_runtime(frame, x), e))
