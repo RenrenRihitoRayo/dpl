@@ -2,3 +2,4 @@ dill
 cProfile
 ncurses
 requests
+tupa

@@ -13,7 +13,7 @@ from . import data_files
 W_LOCK = threading.Lock()
 WS_LOCK = threading.Lock()
 
-dependencies = {"dpl": set(), "python": {}}
+dependencies = {"dpl": set(), "python": {}, "lua": {}}
 
 # debug options
 debug = {

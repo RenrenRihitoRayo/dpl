@@ -157,7 +157,7 @@ class Version:
     def __repr__(self):
         if self.ver[2] is None:
             return ".".join(map(str, self.ver[:2])) + ".x"
-        return ".".join(map(str, self.ver))
+        return "v"+".".join(map(str, self.ver))
 
 
 class VersionSpec(Version):

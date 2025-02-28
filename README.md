@@ -1,5 +1,40 @@
 # 1.4.6
 
+## Lua JIT!
+
+DPL can now interact with Lua through
+Lua JIT or "luaj" internally.
+
+You can use lua modules by using the new
+`&use:luaj` directive.
+
+### Example DPL/Lua Module
+
+```Lua
+
+if type(api) == "nil" then
+    -- Make sure only DPL can use this
+    error("DPL Module!")
+end
+
+ext = api.dpl.pycall(
+    api.dpl.extension,
+    null,
+    {
+        name = "scoped_name", -- takes precedence over meta_name
+        meta_name = "mangled_name"
+    }
+)
+
+ext = ext:add_func("func_name")
+(function(frame, locdir, ...)
+    -- do stuff here
+    return api.type.tuple({})
+end)
+
+
+```
+
 ## Match statements!
 
 ```DuProL

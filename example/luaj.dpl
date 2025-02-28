@@ -1,0 +1,3 @@
+&use:luaj {hello.lua}
+
+lua_hello:hi
