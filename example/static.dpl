@@ -1,7 +1,9 @@
 &use {std/text_io.py}
 
+# This is evaluated at preruntime
+set this [?list 90 90 90 90]
 
-START_TIME
-pass [?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]]
-STOP_TIME
-LOG_TIME
+# This is evaluated at runtime
+pass [:this@append "append this string"]
+
+io:println :this

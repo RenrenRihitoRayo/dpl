@@ -168,10 +168,13 @@ def has(attrs, dct):
     return True if False not in map(lambda x: x in dct, attrs) else False
 
 
-def process(code, name="__main__"):
+def process(fcode, name="__main__"):
     "Preprocess a file"
     res = []
     nframe = varproc.new_frame()
+    nframe[-1].update({
+        "__file__":name
+    })
     dead_code = True
     warnings = True
     define_func = False
@@ -184,7 +187,7 @@ def process(code, name="__main__"):
             if x[1] and not x[1].startswith("#") and not x[1].startswith("...")
             else False
         ),
-        enumerate(map(str.strip, code.split("\n")), 1),
+        enumerate(map(str.strip, fcode.split("\n")), 1),
     ):
         if multiline:
             if line.endswith("--"):
@@ -276,6 +279,28 @@ def process(code, name="__main__"):
                 if err := info.VERSION.getDiff(args[0]):
                     error.pre_error(lpos, name, f"{name!r}:{lpos}: {err}")
                     return error.COMPAT_ERROR
+            elif ins == "embed" and argc == 3 and args[1] == "as":
+                if args[0] == name:
+                    nframe[-1][args[2]] = fcode
+                    continue
+                file = os.path.join(os.path.dirname(name), args[0])
+                if os.path.isfile(file):
+                    with open(file) as f:
+                        nframe[-1][args[2]] = f.read()
+                else:
+                    print("File not found:", file)
+                    return error.PREPROCESSING_ERROR
+            elif ins == "embed_binary" and argc == 3 and args[1] == "as":
+                if args[0] == name:
+                    nframe[-1][args[2]] = bytes(fcode)
+                    continue
+                file = os.path.join(os.path.dirname(name), args[0])
+                if os.path.isfile(file):
+                    with open(file, "rb") as f:
+                        nframe[-1][args[2]] = f.read()
+                else:
+                    print("File not found:", file)
+                    return error.PREPROCESSING_ERROR
             elif ins == "dead_code_disable" and argc == 0:
                 dead_code = False
             elif ins == "dead_code_enable" and argc == 0:
@@ -752,7 +777,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 ...
             else:
                 if (
-                    "_safe_call" in framge[-1]
+                    "_safe_call" in frame[-1]
                     and frame[-1]["_safe_call"] == constants.true
                 ):
                     args = (0, args)
@@ -777,7 +802,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 ...
             else:
                 if (
-                    "_safe_call" in framge[-1]
+                    "_safe_call" in frame[-1]
                     and frame[-1]["_safe_call"] == constants.true
                 ):
                     args = (0, args)

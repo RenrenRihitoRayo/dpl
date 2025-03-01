@@ -1,0 +1,6 @@
+&use {std/text_io.py}
+&embed "test.txt" as my_file
+&embed :__file__ as this_file
+
+io:println :my_file
+io:println :this_file

@@ -7,11 +7,11 @@ fn fib n
     set a 1
     set b 0
     set c 0
-    while (:n> -1)
-        set c (:a+:b)
+    while [:n> -1]
+        set c [:a+:b]
         set a :b
         set b :c
-        set n (:n - 1)
+        set n [:n - 1]
     end
     return :a
 end
@@ -22,11 +22,11 @@ fn fib_py n
     set a 1
     set b 0
     set c 0
-    while (:n> -1)
-        set c (math.expr "a+b")
+    while [:n> -1]
+        set c [math.expr "a+b"]
         set a :b
         set b :c
-        set n (math.expr "n-1")
+        set n [math.expr "n-1"]
     end
     return :a
 end

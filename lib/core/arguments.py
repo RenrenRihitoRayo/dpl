@@ -334,6 +334,11 @@ def evaluate(frame, expression):
             return dict(lst)
         case ["?string", item]:
             return str(item)
+        case ["?bytes", item]:
+            try:
+                return bytes(item)
+            except:
+                return constants.nil
         case ["?int", item]:
             try:
                 return int(item)
@@ -381,7 +386,7 @@ def evaluate(frame, expression):
                 return 0
         case ["@", ins, *args] if ins in methods:
             return methods[ins](frame, *args)
-        case [obj, "-", method, *args] if hasattr(
+        case [obj, "@", method, *args] if hasattr(
             obj, method
         ):  # direct python method calling
             getattr(obj, method)(*args)

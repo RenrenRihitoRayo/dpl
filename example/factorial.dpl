@@ -4,19 +4,19 @@
 &use {std/text_io.py}
 
 fn memoize_fact n
-    if (:n <= 1)
+    if [:n <= 1]
         return 1
     end
-    mcatch [f] _global.memoize_fact (:n - 1)
-    return (:n * :f)
+    mcatch [f] _global.memoize_fact [:n - 1]
+    return [:n * :f]
 end
 
 fn fact n
-    if (:n <= 1)
+    if [:n <= 1]
         return 1
     end
     catch [f] _global.fact (:n - 1)
-    freturn (:n * :f)
+    freturn [:n * :f]
 end
 
 io:println "Factorial Program\n"

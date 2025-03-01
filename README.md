@@ -4,6 +4,9 @@
 
 ```DuProL
 
+# Embed a file.
+&embed "test.txt" as text_txt
+
 -- Multiline comments!
 new expressions
 ... [...]
@@ -15,6 +18,17 @@ set list [?list item1 item2]
 pass [:list 0]
 ## Indexing strings
 pass ["oh" -1] # grab last character
+
+fn dangerous_func
+    raise :_meta.err.RUNTIME_ERROR "Oh no!"
+end
+
+# Call it safely
+safe dangerous_func
+# Or if youre expecting a return value
+scatch [?list error values] dangerous_func
+io:println :error :values
+
 
 ```
 
