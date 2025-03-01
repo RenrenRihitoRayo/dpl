@@ -71,7 +71,7 @@ class extension:
 
         return wrap
 
-    def add_method(self, name=None, process=True, from_func=False):
+    def add_method(self, name=None, from_func=False):
         "Add a method."
 
         def wrap(func):
@@ -84,10 +84,8 @@ class extension:
                     if not self.meta_name
                     else f"{self.meta_name}:{name}"
                 )
-            ] = process, (
-                func
-                if not from_func
-                else lambda *args: func(args[0], None, *args[1:])[0]
+            ] = (
+                func if not from_func else lambda *args: func(args[0], None, *args[1:])
             )
             return func
 
@@ -103,11 +101,11 @@ class extension:
     @property
     def methods(self):
         return self.__meth
-    
+
     @property
     def items(self):
         return self.data
-    
+
     def __repr__(self):
         return f"Extension<{self.name or self.meta_name}>"
 
@@ -141,6 +139,7 @@ class dpl:
     info = info
     error = error
     state = state
+    register_error = error.register_error
     restricted = restricted
     state_nil = state.bstate("nil")
     state_none = state.bstate("none")
@@ -150,14 +149,15 @@ class dpl:
     objects = objects
     falsy = (state_nil, state_none, state_false, None, False)
     truthy = (state_true, True)
+
     def pycall(func, args, table):
         return func(*(args or []), **table)
 
 
-def luaj_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"]):
-    lua = lupa.LuaRuntime(
-        unpack_returned_tuples=True
-    )
+def luaj_import(
+    frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"]
+):
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join(
@@ -174,15 +174,13 @@ def luaj_import(frame, file, search_path=None, loc=varproc.meta["internal"]["mai
     with open(file, "r") as f:
         try:
             lua.globals()["__dpl__"] = info.VERSION
-            lua.globals()["package"]["path"] = info.LIBDIR+os.sep+"?.lua;" + lua.globals()["package"]["path"]
+            lua.globals()["package"]["path"] = (
+                info.LIBDIR + os.sep + "?.lua;" + lua.globals()["package"]["path"]
+            )
             lua.globals()["api"] = {
-                "dpl":dpl,
-                "modules":modules,
-                "types":{
-                    "tuple":tuple,
-                    "set":set,
-                    "list":list
-                }
+                "dpl": dpl,
+                "modules": modules,
+                "types": {"tuple": tuple, "set": set, "list": list},
             }
             lua.execute(f.read(), file)
         except (SystemExit, KeyboardInterrupt):

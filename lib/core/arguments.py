@@ -10,9 +10,10 @@ from . import state
 from . import constants
 from . import error
 from . import varproc
+from io import TextIOWrapper
 from .info import *
 
-run_code = None # to be set by py_parser
+run_code = None  # to be set by py_parser
 
 
 def nest_args(tokens):
@@ -60,7 +61,9 @@ def get_block(code, current_p):
         return None
     return p, res
 
+
 # Functions in utils that couldnt be imported
+
 
 def parse_match(frame, body, value):
     values = {}
@@ -115,6 +118,7 @@ def parse_match(frame, body, value):
                 frame[-1][name] = value
             res = run_code(temp[1], frame=frame)
             return res
+
 
 def flatten_dict(d, parent_key="", sep=".", seen=None):
     if seen is None:
@@ -206,11 +210,7 @@ def expr_preruntime(arg):
         return constants.nil
     elif arg == "...":
         return constants.elipsis
-    elif arg == "!dict":
-        return {}
-    elif arg == "!list":
-        return []
-    elif arg == "!tuple": # really?
+    elif arg == "!tuple":  # really?
         return tuple()
     return arg
 
@@ -232,6 +232,10 @@ def expr_runtime(frame, arg):
             default=varproc.rget(frame[0], arg[1:], meta=False),
             meta=False,
         )
+    elif arg == "!dict":
+        return {}
+    elif arg == "!list":
+        return []
     elif arg.startswith('"') and arg.endswith('"'):
         return arg[1:-1]
     elif arg.startswith("'") and arg.endswith("'"):
@@ -267,6 +271,28 @@ def my_range(start, end):
             start -= 1
 
     return pos(start, end) if start < end else neg(start, end)
+
+
+def is_static(code):
+    for i in code:
+        if isinstance(i, list):
+            if not is_static(i):
+                return False
+        elif not isinstance(i, str):
+            continue
+        elif is_var(i) or is_fvar(i):
+            return False
+        elif is_id(i):
+            return False
+    return True
+
+
+def to_static(code):
+    for pos, i in enumerate(code):
+        if isinstance(i, list):
+            if is_static(i):
+                code[pos] = evaluate(None, i)
+    return code
 
 
 def evaluate(frame, expression):
@@ -306,12 +332,36 @@ def evaluate(frame, expression):
             return tuple(lst)
         case ["?dict", *lst]:
             return dict(lst)
+        case ["?string", item]:
+            return str(item)
+        case ["?int", item]:
+            try:
+                return int(item)
+            except:
+                return constants.nil
+        case ["?float", item]:
+            try:
+                return float(item)
+            except:
+                return constants.nil
+        case ["nil?", value]:
+            return value == constants.nil
+        case ["none?", value]:
+            return value == constants.none
+        case ["Type", item]:
+            return getattr(type(item), "__name__", constants.nil)
+        case ["Sum", *args]:
+            t = type(args[0])
+            start = args[0]
+            for i in args[1:]:
+                start += t(i)
+            return start
         case [val1, "/", "/", val2]:
             return val1 // val2
         case [val1, "mod", val2]:
             return val1 % val2
         case [val1, "^", val2]:
-            return val1 ** val2
+            return val1**val2
         case ["RawRange", num]:
             return range(num)
         case ["Range", num]:
@@ -324,6 +374,17 @@ def evaluate(frame, expression):
             return tuple(my_range(num, end))
         case ["dRawRange", num, end]:
             return my_range(num, end)
+        case ["LenOf", item]:
+            try:
+                return len(item)
+            except:
+                return 0
+        case ["@", ins, *args] if ins in methods:
+            return methods[ins](frame, *args)
+        case [obj, "-", method, *args] if hasattr(
+            obj, method
+        ):  # direct python method calling
+            getattr(obj, method)(*args)
         case [obj, index]:
             if isinstance(obj, (tuple, list, str)) and index >= len(obj):
                 return constants.nil
@@ -331,19 +392,11 @@ def evaluate(frame, expression):
                 return constants.nil
             else:
                 return obj[index]
-        case [ins, *args]:
-            if ins in methods:
-                if methods[ins][0]:
-                    args = process_args(frame, args)
-                return methods[ins][1](frame, *args)
-            else:
-                return constants.nil
-        case _:
-            return constants.nil
+    return expression
 
 
 sep = " ,"
-special_sep = "()+/-*[]<>"
+special_sep = "@()+/*[]<>"
 
 
 def group(text):

@@ -1,5 +1,19 @@
 # 1.4.6
 
+## New Syntax!
+
+```DuProL
+
+-- Multiline comments!
+new expressions
+... [...]
+--
+
+# Lists
+set list [!list item1 item2]
+## Indexing a list
+```
+
 ## Lua JIT!
 
 DPL can now interact with Lua through

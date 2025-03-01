@@ -158,6 +158,17 @@ def handle_args():
                 print("Something went wrong:", file)
                 print("Error:", repr(e))
                 exit(1)
+        case ["dump-comp", file]:
+            if not os.path.isfile(file):
+                print("Invalid file path:", file)
+                exit(1)
+            try:
+                with open(file, "r") as in_file:
+                    print(parser.process(in_file.read()))
+            except Exception as e:
+                print("Something went wrong:", file)
+                print("Error:", repr(e))
+                exit(1)
         case ["docs", name]:
             docs.from_lib(name)
         case ["docu", name]:

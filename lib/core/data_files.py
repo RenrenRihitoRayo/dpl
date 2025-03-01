@@ -1,6 +1,7 @@
 import os
 import dill
 
+
 class DataFileDict:
     def __init__(self, filename):
         self.filename = filename
@@ -58,6 +59,7 @@ class DataFileDict:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
 
 class DataFileList:
     def __init__(self, filename):

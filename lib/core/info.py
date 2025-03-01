@@ -7,14 +7,17 @@
 import os
 import sys
 import platform
+
 try:
     from . import constants
 except ImportError:
+
     class constants:
         nil = 0
         true = 1
         false = 0
         none = None
+
 
 ARGV = sys.argv
 ARGC = len(ARGV)
@@ -23,8 +26,10 @@ INC_EXT = {
     "match",
     "case",
     "fn",
+    "module",
     "method",
     "for",
+    "pub",
     "loop",
     "while",
     "if",
@@ -38,12 +43,12 @@ INC_EXT = {
     "template",
     "from_template",
     "with",
-    "default"
+    "default",
 }
 
 INC = {"thread": 1, "expect-then": 2}
 
-DEC = {"end", "then", "else"}
+DEC = {"end", "then"}
 
 CHARS = {
     "\\\\": "\\[escape]",
@@ -160,7 +165,7 @@ class Version:
     def __repr__(self):
         if self.ver[2] is None:
             return ".".join(map(str, self.ver[:2])) + ".x"
-        return "v"+".".join(map(str, self.ver))
+        return "v" + ".".join(map(str, self.ver))
 
 
 class VersionSpec(Version):

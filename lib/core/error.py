@@ -10,7 +10,6 @@ ERRORS = (
     "RUNTIME_ERROR",
     "PYTHON_ERROR",
     "PANIC_ERROR",
-    "ASSERT_ERROR",
     "IMPORT_ERROR",
     "THREAD_ERROR",
     "TYPE_ERROR",
@@ -18,12 +17,24 @@ ERRORS = (
     "COMPAT_ERROR",
 )
 
+META_ERR = varproc.meta["err"] = {"builtins": ERRORS, "defined_errors": list(ERRORS)}
 
-META_ERR = varproc.meta["err"] = {"defined_errors": ERRORS}
+
+def register_error(name, value=None):
+    if name in META_ERR:
+        return META_ERR[name]
+    META_ERR["defined_errors"].append(name)
+    META_ERR[name] = (
+        err_id := len(META_ERR["defined_errors"]) if value is None else value
+    )
+    META_ERR[err_id] = name
+    return err_id
+
 
 for pos, name in enumerate(ERRORS, 1):
     globals()[name] = pos
     META_ERR[name] = pos
+    META_ERR[pos] = name
 
 STOP_RESULT = -1
 SKIP_RESULT = -2
@@ -79,6 +90,9 @@ def error(pos, file, cause=None):
         my_print(f"Cause:\n{cause}")
 
 
+og_error = error  # Use this to always call an error even when silent
+
+
 def info(text, show_date=True):
     if show_date:
         my_print(f"   [INFO] {datetime.datetime.now()}: {text}")
@@ -105,3 +119,13 @@ def pre_warn(text, show_date=True):
         my_print(f"[WARNING PRE] {datetime.datetime.now()}: {text}")
     else:
         my_print(f"[WARNING PRE]: {text}")
+
+
+def silent():
+    global error
+    error = lambda *x, **y: ...
+
+
+def active():
+    global error
+    error = og_error

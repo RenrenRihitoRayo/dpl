@@ -112,6 +112,7 @@ varproc.meta["threading"] = {
 
 varproc.meta["str_intern"] = lambda _, __, string: sys.intern(string)
 
+
 def get_block(code, current_p, supress=False):
     "Get a code block"
     pos, file, _, _ = code[current_p]
@@ -137,6 +138,7 @@ def get_block(code, current_p, supress=False):
         return None
     return p, res
 
+
 def get_cust(code, current_p, INC, INC_EXT, DEC):
     "Get a code block"
     pos, file, _, _ = code[current_p]
@@ -161,8 +163,10 @@ def get_cust(code, current_p, INC, INC_EXT, DEC):
         return None
     return p, res
 
+
 def has(attrs, dct):
     return True if False not in map(lambda x: x in dct, attrs) else False
+
 
 def process(code, name="__main__"):
     "Preprocess a file"
@@ -171,6 +175,9 @@ def process(code, name="__main__"):
     dead_code = True
     warnings = True
     define_func = False
+    multiline = False
+    last_comment = 0
+    offset = 0
     for lpos, line in filter(
         lambda x: (
             True
@@ -179,17 +186,25 @@ def process(code, name="__main__"):
         ),
         enumerate(map(str.strip, code.split("\n")), 1),
     ):
-        if line.startswith("&"):
+        if multiline:
+            if line.endswith("--"):
+                multiline = False
+            continue
+        elif line.startswith("--") and line.endswith("--"):
+            continue
+        elif line.startswith("--"):
+            last_comment = lpos
+            multiline = True
+        elif line.startswith("&"):
             ins, *args = line[1:].lstrip().split()
             args = argproc.process_args(nframe, args)
             argc = len(args)
             if ins == "include" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = info.get_path_with_lib(args[0][1:-1])
-                elif args[0].startswith('"') and args[0].endswith('"'):
-                    file = os.path.join(os.path.dirname(name), args[0][1:-1])
+                else:
                     if name != "__main__":
-                        file = os.path.join(os.path.dirname(name), file)
+                        file = os.path.join(os.path.dirname(name), args[0])
                 if not os.path.isfile(file):
                     print("File not found:", file)
                     break
@@ -202,12 +217,9 @@ def process(code, name="__main__"):
             elif ins == "includec" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = info.get_path_with_lib(args[0][1:-1])
-                elif args[0].startswith('"') and args[0].endswith('"'):
-                    file = os.path.join(os.path.dirname(name), args[0][1:-1])
-                    if name != "__main__":
-                        file = os.path.join(os.path.dirname(name), file)
                 else:
-                    assert False, "This is not reachable!"
+                    if name != "__main__":
+                        file = os.path.join(os.path.dirname(name), args[0])
                 if not os.path.isfile(file):
                     print("File not found:", file)
                     break
@@ -218,12 +230,9 @@ def process(code, name="__main__"):
             elif ins == "extend" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = info.get_path_with_lib(args[0][1:-1])
-                elif args[0].startswith('"') and args[0].endswith('"'):
-                    file = os.path.join(os.path.dirname(name), args[0][1:-1])
-                    if name != "__main__":
-                        file = os.path.join(os.path.dirname(name), file)
                 else:
-                    assert False, "This is not reachable!"
+                    if name != "__main__":
+                        file = os.path.join(os.path.dirname(name), args[0])
                 if not os.path.isfile(file):
                     print("File not found:", file)
                     break
@@ -233,15 +242,13 @@ def process(code, name="__main__"):
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "use" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = info.get_path_with_lib(ofile:=args[0][1:-1])
+                    file = info.get_path_with_lib(ofile := args[0][1:-1])
                     search_path = "_std"
-                elif args[0].startswith('"') and args[0].endswith('"'):
-                    file = os.path.join(os.path.dirname(name), (ofile := args[0][1:-1]))
+                else:
+                    file = os.path.join(os.path.dirname(name), (ofile := args[0]))
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), file)
                     search_path = "_loc"
-                else:
-                    assert False, "This is not reachable!"
                 if not os.path.isfile(file):
                     print("File not found:", file)
                     break
@@ -250,21 +257,21 @@ def process(code, name="__main__"):
                     return error.PREPROCESSING_ERROR
             elif ins == "use:luaj" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = info.get_path_with_lib(ofile:=args[0][1:-1])
+                    file = info.get_path_with_lib(ofile := args[0][1:-1])
                     search_path = "_std"
-                elif args[0].startswith('"') and args[0].endswith('"'):
-                    file = os.path.join(os.path.dirname(name), (ofile := args[0][1:-1]))
-                    if name != "__main__":
-                        file = os.path.join(os.path.dirname(name), file)
-                    search_path = "_loc"
                 else:
-                    assert False, "This is not reachable!"
+                    if name != "__main__":
+                        file = os.path.join(os.path.dirname(name), args[0])
+                    search_path = "_loc"
                 if not os.path.isfile(file):
                     print("File not found:", file)
                     break
                 if ext_s.luaj_import(nframe, file, search_path, loc="."):
                     print(f"Something wrong happened...")
                     return error.PREPROCESSING_ERROR
+            elif ins == "file" and argc == 1:
+                name = args[0]
+                offset = lpos
             elif ins == "version" and argc == 1:
                 if err := info.VERSION.getDiff(args[0]):
                     error.pre_error(lpos, name, f"{name!r}:{lpos}: {err}")
@@ -293,8 +300,18 @@ def process(code, name="__main__"):
             else:
                 ins = line
                 args = []
-            res.append((lpos, name, ins, args))
+            args = argproc.to_static(
+                args
+            )  # If there are static parts in the arguments run them before runtime.
+            res.append((lpos - offset, name, ins, args))
     else:
+        if multiline:
+            error.pre_error(
+                last_comment,
+                name,
+                f"{name!r}:{last_comment}: Unclosed multiline comment!",
+            )
+            return error.PREPROCESSING_ERROR
         if dead_code and info.DEAD_CODE_OPT:
             p = 0
             warn_num = 0
@@ -317,7 +334,7 @@ def process(code, name="__main__"):
                         return []
                     warn_num += 1
                 elif (
-                    ins in {"if", "module"}
+                    ins in {"if", "module", "body"}
                     and p + 1 < len(res)
                     and res[p + 1][2] == "end"
                 ):
@@ -331,7 +348,11 @@ def process(code, name="__main__"):
                     else:
                         return []
                     warn_num += 1
-                elif ins in {"case", "match", "with", "default"} and p + 1 < len(res) and res[p + 1][2] in {"end", "return"}:
+                elif (
+                    ins in {"case", "match", "with", "default"}
+                    and p + 1 < len(res)
+                    and res[p + 1][2] in {"end", "return"}
+                ):
                     if ins != "default" and len(args) == 0:
                         error.warn(
                             f"Error: Malformed {ins!r} statement/sub-statements!\nLine {pos}\nIn file {file!r}"
@@ -348,10 +369,14 @@ def process(code, name="__main__"):
                         return []
                     warn_num += 1
                 elif (
-                    ins in {"fn", "method", "body"}
+                    ins in {"fn", "method"}
                     and p + 1 < len(res)
                     and res[p + 1][2] in {"end", "return"}
                 ):
+                    if res[p + 1][2] == "return" and len(res[p + 1][3]) != 0:
+                        nres.append(line)
+                        p += 1
+                        continue
                     if len(args) == 0:
                         error.warn(
                             f"Error: Malformed function definition!\nLine {pos}\nIn file {file!r}"
@@ -396,9 +421,13 @@ def process(code, name="__main__"):
                         ...
                     elif ins in {"with", "case", "default"}:
                         _, body = get_block(nres, p)
-                        np = pos+len(body)
+                        np = pos + len(body)
                     elif pos > np:
-                        error.error(pos, file, f"Only 'case', 'with', 'default' and 'as' statements are allowed in match blocks!\nGot: {ins}")
+                        error.error(
+                            pos,
+                            file,
+                            f"Only 'case', 'with', 'default' and 'as' statements are allowed in match blocks!\nGot: {ins}",
+                        )
                         return error.PREPROCESSING_ERROR
                 np = 0
         return {
@@ -406,6 +435,7 @@ def process(code, name="__main__"):
             "frame": nframe or None,
         }
     return error.PREPROCESSING_ERROR
+
 
 def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     "Run code generated by 'process'"
@@ -426,9 +456,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         frame = nframe
     while p < len(code) and not IS_STILL_RUNNING.is_set():
         pos, file, ins, oargs = code[p]
-        if ins not in {  # Lazy evaluation
-            "while"
-        }:
+        if ins not in {"while"}:  # Lazy evaluation
             try:
                 args = argproc.process_args(frame, oargs)
             except Exception as e:
@@ -449,6 +477,21 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             else:
                 p, body = temp
             varproc.rset(frame[-1], name, objects.make_function(name, body, params))
+        elif ins == "pub" and argc >= 2 and args[0] == "fn":
+            _, name, *params = args
+            temp = get_block(code, p)
+            if temp is None:
+                break
+            else:
+                p, body = temp
+            varproc.rset(
+                frame[-1], "_export." + name, objects.make_function(name, body, params)
+            )
+            varproc.rset(frame[-1], name, objects.make_function(name, body, params))
+        elif ins == "export" and argc == 3 and args[0] == "set":
+            _, name, value = args
+            varproc.rset(frame[-1], "_export." + name, value)
+            varproc.rset(frame[-1], name, value)
         elif ins == "for" and argc == 3 and args[1] == "in":
             name, _, iter = args
             temp = get_block(code, p)
@@ -545,7 +588,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "skip" and argc == 0:
             return error.SKIP_RESULT
         elif ins == "initDataFile" and argc == 3 and args[0] in {"dict", "list"}:
-            frame[-1][args[1]] = data_files.DataFileDict(args[2]) if args[0] == "dict" else  data_files.DataFileList(args[2])
+            frame[-1][args[1]] = (
+                data_files.DataFileDict(args[2])
+                if args[0] == "dict"
+                else data_files.DataFileList(args[2])
+            )
         elif ins == "closeDataFile" and argc == 1:
             args[0].close()
         elif ins == "clearDataFile" and argc == 1:
@@ -613,12 +660,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             else:
                 err = (err_name, err)
             varproc.rset(frame[-1], vname, err)
-        elif ins == "raise" and argc == 1 and isinstance(args[0], int):
-            return args[0]
         elif ins == "module" and argc == 1:
             name = args[0]
             temp = [frame[-1]]
             varproc.nscope(temp)
+            temp[-1]["_export"] = {}
             btemp = get_block(code, p)
             if btemp == None:
                 break
@@ -627,7 +673,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             err = run(body, temp)
             if err:
                 return err
-            varproc.rset(frame[-1], name, temp[1])
+            varproc.rset(frame[-1], name, temp[1]["_export"])
             del temp
         elif ins == "object" and argc == 1:
             varproc.rset(frame[-1], args[0], objects.make_object(args[0]))
@@ -705,6 +751,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if not (temp := varproc.rget(frame[-1], "_returns")) != state.bstate("nil"):
                 ...
             else:
+                if (
+                    "_safe_call" in framge[-1]
+                    and frame[-1]["_safe_call"] == constants.true
+                ):
+                    args = (0, args)
                 for name, value in zip(temp, args):
                     varproc.rset(frame[-1], f"_nonlocal.{name}", value)
                 if (tmp := frame[-1].get("_memoize")) not in constants.constants_false:
@@ -725,6 +776,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if not (temp := varproc.rget(frame[-1], "_returns")) != state.bstate("nil"):
                 ...
             else:
+                if (
+                    "_safe_call" in framge[-1]
+                    and frame[-1]["_safe_call"] == constants.true
+                ):
+                    args = (0, args)
                 for name, value in zip(temp, args):
                     varproc.rset(frame[-1], f"_nonlocal.{name}", value)
             return error.STOP_RESULT
@@ -782,6 +838,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if err > 0:
                 return err
             varproc.pscope(frame)
+        elif ins == "DEFINE_ERROR" and 0 < argc < 3:
+            error.register_error(*args)
         elif ins == "mcatch" and argc >= 2:  # catch return value of a function
             rets, func_name, *args = args
             mem_args = tuple(
@@ -830,6 +888,88 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             err = run(temp["body"], frame)
             if err > 0:
                 return err
+            varproc.pscope(frame)
+        elif ins == "smcatch" and argc >= 2:  # safe catch return value of a function
+            rets, func_name, *args = args
+            mem_args = tuple(
+                map(
+                    lambda x: (
+                        x
+                        if isinstance(x, (str, int, float, tuple, complex))
+                        else f"{type(x)}:{id(x)}"
+                    ),
+                    args,
+                )
+            )
+            if (
+                (temp := varproc.rget(frame[-1], func_name)) == state.bstate("nil")
+                and isinstance(temp, dict)
+                and mem_args in temp
+            ):
+                error.error(pos, file, f"Invalid function {func_name!r}!")
+                break
+            if mem_args in temp["memoize"]:
+                for name, value in zip(rets, temp["memoize"][mem_args]):
+                    varproc.rset(frame[-1], name, value)
+                p += 1
+                continue
+            varproc.nscope(frame)
+            if temp["defs"]:
+                for name, value in itertools.zip_longest(temp["args"], args):
+                    if value is None:
+                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
+                    else:
+                        frame[-1][name] = value
+            else:
+                if len(args) != len(temp["args"]):
+                    error.error(
+                        pos,
+                        file,
+                        f"Function {func_name!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.",
+                    )
+                    break
+                for name, value in itertools.zip_longest(temp["args"], args):
+                    varproc.rset(frame[-1], name, value)
+            if temp["self"] != constants.nil:
+                frame[-1]["self"] = temp["self"]
+            frame[-1]["_returns"] = rets
+            frame[-1]["_safe_call"] = constants.true
+            frame[-1]["_memoize"] = (temp["memoize"], mem_args)
+            error.silent()
+            run(temp["body"], frame)
+            error.active()
+            varproc.pscope(frame)
+        elif ins == "scatch" and argc >= 2:  # catch return value of a function
+            rets, func_name, *args = args
+            if (temp := varproc.rget(frame[-1], func_name)) == state.bstate(
+                "nil"
+            ) or not isinstance(temp, dict):
+                error.error(pos, file, f"Invalid function {func_name!r}!")
+                break
+            varproc.nscope(frame)
+            if temp["defs"]:
+                for name, value in itertools.zip_longest(temp["args"], args):
+                    if value is None:
+                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
+                    else:
+                        frame[-1][name] = value
+            else:
+                if len(args) != len(temp["args"]):
+                    error.error(
+                        pos,
+                        file,
+                        f"Function {func_name!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.",
+                    )
+                    break
+                for name, value in itertools.zip_longest(temp["args"], args):
+                    varproc.rset(frame[-1], name, value)
+            if temp["self"] != constants.nil:
+                frame[-1]["self"] = temp["self"]
+            frame[-1]["_returns"] = rets
+            frame[-1]["_safe_call"] = constants.true
+            error.silent()
+            err = run(temp["body"], frame)
+            error.active()
             varproc.pscope(frame)
         elif ins == "body" and argc >= 1:  # give a code block to a python function
             name, *args = args
@@ -880,17 +1020,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 return error.PYTHON_ERROR
         elif ins == "pause" and argc == 0:
             input()
-        elif ins == "raise" and argc in (0, 1, 2):
-            if argc == 0:
-                return error.RUNTIME_ERROR
-            elif argc == 1:
-                return args[0]
-            elif argc == 2:
-                error.error(file, pos, args[1])
-                return args[0]
-            else:
-                error.error(file, pos, "Invalid raise statement!")
-                break
         elif ins == "pycatch" and argc >= 2:  # catch return value of a python function
             rets, name, *args = args
             if (temp := varproc.rget(frame[-1], name)) == state.bstate(
@@ -993,6 +1122,62 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 for pos, _, vname, vitem in body:
                     (dct[vname],) = argproc.bs_thing(frame, vitem)
             varproc.rset(frame[-1], args[1], dct)
+        elif ins == "raise" and isinstance(args[0], int) and argc == 2:
+            error.error(pos, file, args[1])
+            if (
+                (temp := frame[-1].get("_returns"))
+                and "_safe_call" in frame[-1]
+                and frame[-1]["_safe_call"] == constants.true
+            ):
+                args = (args[0], constants.nil)
+                for name, value in zip(temp, args):
+                    varproc.rset(frame[-1], f"_nonlocal.{name}", value)
+            return args[0]
+        elif ins == "raise" and argc == 1 and isinstance(args[0], int):
+            error.error(pos, file, "Raised an error.")
+            if (
+                (temp := frame[-1].get("_returns"))
+                and "_safe_call" in frame[-1]
+                and frame[-1]["_safe_call"] == constants.true
+            ):
+                args = (args[0], constants.nil)
+                for name, value in zip(temp, args):
+                    varproc.rset(frame[-1], f"_nonlocal.{name}", value)
+            return args[0]
+        elif (
+            ins == "safe"
+            and (
+                temp := varproc.rget(
+                    frame[-1], args[0], default=varproc.rget(frame[0], args[0])
+                )
+            )
+            != state.bstate("nil")
+            and isinstance(temp, dict)
+            and has(dpl_func_attr, temp)
+        ):  # Call a function
+            varproc.nscope(frame)
+            if temp["defs"]:
+                for name, value in itertools.zip_longest(temp["args"], args[1:]):
+                    if value is None:
+                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
+                    else:
+                        frame[-1][name] = value
+            else:
+                if len(args) - 1 != len(temp["args"]):
+                    error.error(
+                        pos,
+                        file,
+                        f"Function {func_name!r} has a parameter mismatch!\nGot {'more' if len(args) > len(temp['args']) else 'less'} than expected.",
+                    )
+                    break
+                for name, value in itertools.zip_longest(temp["args"], args[1:]):
+                    varproc.rset(frame[-1], name, value)
+            if temp["self"] != constants.nil:
+                frame[-1]["self"] = temp["self"]
+            error.silent()
+            run(temp["body"], frame)
+            error.active()
+            varproc.pscope(frame)
         elif (
             (temp := varproc.rget(frame[-1], ins, default=varproc.rget(frame[0], ins)))
             != state.bstate("nil")
@@ -1069,6 +1254,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         return 0
     error.error(pos, file, "Error was raised!")
     return error.SYNTAX_ERROR
+
 
 # to avoid circular imports
 ext_s.register_run(run)

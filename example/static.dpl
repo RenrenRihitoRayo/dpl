@@ -1,0 +1,7 @@
+&use {std/text_io.py}
+
+
+START_TIME
+pass [?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]][?list [?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90][?list 90 90 90]]
+STOP_TIME
+LOG_TIME

@@ -4,7 +4,7 @@ from sys import argv
 
 
 def batch_string(s, size):
-    return [s[i: i + size] for i in range(0, len(s), size)]
+    return [s[i : i + size] for i in range(0, len(s), size)]
 
 
 local_path = os_path.join(os_path.dirname(__file__), "..", "lib", "docs")

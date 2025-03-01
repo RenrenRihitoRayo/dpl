@@ -1,4 +1,3 @@
-
 if __name__ != "__dpl__":
     raise Exception
 
@@ -6,6 +5,7 @@ if not dpl.info.VERSION.isLater((1, 4, None)):
     raise Exception("This is for version 1.4.x!")
 
 ext = dpl.extension(meta_name="dicts")
+
 
 @ext.add_func()
 def make_dict(frame, file, body, dname):
@@ -19,6 +19,7 @@ def make_dict(frame, file, body, dname):
         else:
             return dpl.error.SYNTAX_ERROR
     dpl.varproc.rset(frame[-1], dname, data)
+
 
 @ext.add_func()
 def init_dict(frame, _, dname):

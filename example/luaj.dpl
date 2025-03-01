@@ -1,8 +1,15 @@
 &use {std/text_io.py}
+&use {std/to_py.py}
+&use:luaj {std-lua/iter_utils.lua}
 
-START_TIME
-for _ in (RawRange 1_000_000)
-    ...
+body to_py:define func
+    set _export [[:args 0] // 10]
 end
-STOP_TIME
-LOG_TIME
+
+set list [?list]
+pass [:list-append 90]
+pass [:list-extend [?list 180 270]]
+io:println :list
+pass [iter_utils:map :func :list]
+io:println :list
+
