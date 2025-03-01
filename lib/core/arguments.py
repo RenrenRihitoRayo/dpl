@@ -318,6 +318,8 @@ def evaluate(frame, expression):
             return val1 or val2
         case ["not", val2]:
             return not val2
+        case ["!", val2]:
+            return not val2
         case [val1, ">", "=", val2]:
             return val1 >= val2
         case [val1, "<", "=", val2]:
@@ -361,6 +363,8 @@ def evaluate(frame, expression):
             for i in args[1:]:
                 start += t(i)
             return start
+        case [val1, "in", val2]:
+            return val1 in val2
         case [val1, "/", "/", val2]:
             return val1 // val2
         case [val1, "mod", val2]:
