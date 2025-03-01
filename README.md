@@ -10,8 +10,12 @@ new expressions
 --
 
 # Lists
-set list [!list item1 item2]
+set list [?list item1 item2]
 ## Indexing a list
+pass [:list 0]
+## Indexing strings
+pass ["oh" -1] # grab last character
+
 ```
 
 ## Lua JIT!
