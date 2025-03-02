@@ -8,7 +8,7 @@ ext = dpl.extension(meta_name="dicts")
 
 
 @ext.add_func()
-def make_dict(frame, file, body, dname):
+def define(frame, file, body, dname):
     data = {}
     for [pos, file, ins, args] in body:
         if ins == "set":

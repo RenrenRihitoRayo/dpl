@@ -405,7 +405,7 @@ def evaluate(frame, expression):
 
 
 sep = " ,"
-special_sep = "@()+/*[]<>"
+special_sep = "@()+/*[]<>="
 
 
 def group(text):

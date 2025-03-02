@@ -40,16 +40,11 @@ except ModuleNotFoundError:
 
     has_dill = False
 
-ERRORS = {
-    getattr(error, name): name
-    for name in filter(lambda x: x.endswith("ERROR"), dir(error))
-}
-
 
 def rec(this, ind=0):
     if not isinstance(this, (tuple, list)):
         print(
-            f"{'  '*ind}Error Name: {ERRORS.get(this, f'ERROR NAME NOT FOUND <{this}>')}"
+            f"{'  '*ind}Error Name: {error.ERRORS_DICT.get(this, f'ERROR NAME NOT FOUND <{this}>')}"
         )
     else:
         for pos, i in enumerate(this):
@@ -57,7 +52,7 @@ def rec(this, ind=0):
                 rec(i, ind + 1)
             else:
                 print(
-                    f"{'  '*ind}Error Name {'(original)' if pos == 0 else '(other)'}: {ERRORS.get(i, f'ERROR NAME NOT FOUND <{i}>')}"
+                    f"{'  '*ind}Error Name {'(original)' if pos == 0 else '(other)'}: {error.ERRORS_DICT.get(i, f'ERROR NAME NOT FOUND <{i}>')}"
                 )
 
 

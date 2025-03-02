@@ -193,7 +193,7 @@ def process(fcode, name="__main__"):
             if line.endswith("--"):
                 multiline = False
             continue
-        elif line.startswith("--") and line.endswith("--"):
+        elif len(line) >= 4 and line.startswith("--") and line.endswith("--"):
             continue
         elif line.startswith("--"):
             last_comment = lpos

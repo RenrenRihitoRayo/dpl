@@ -28,6 +28,7 @@ def register_error(name, value=None):
         err_id := len(META_ERR["defined_errors"]) if value is None else value
     )
     META_ERR[err_id] = name
+    ERRORS_DICT[err_id] = name
     return err_id
 
 
