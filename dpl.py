@@ -284,6 +284,8 @@ def handle_args():
                 f"DPL REPL for DPL {varproc.meta['internal']['version']}\nPython {info.PYTHON_VER}{(chr(10)+start_text) if start_text else ''}"
             )
             START_FILE = os.path.join(info.BINDIR, "start_script.dpl")
+            frame[-1]["_meta"]["internal"]["main_file"] = "dpl-instance"
+            frame[-1]["_meta"]["internal"]["main_path"] = "."
             if os.path.isfile(START_FILE):
                 try:
                     with open(START_FILE, "r") as f:
@@ -342,7 +344,7 @@ def handle_args():
                             print("something went wrong while running start up script!")
                     continue
                 try:
-                    if err := parser.run(parser.process(act), frame=frame):
+                    if err := parser.run(parser.process(act, "./repr.dpl-instance"), frame=frame):
                         rec(err)
                 except Exception as e:
                     print(f"Python Exception was raised while running:\n{repr(e)}")

@@ -204,7 +204,7 @@ def process(fcode, name="__main__"):
             argc = len(args)
             if ins == "include" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = info.get_path_with_lib(args[0][1:-1])
+                    file = os.path.abspath(info.get_path_with_lib(args[0][1:-1]))
                 else:
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
@@ -219,7 +219,7 @@ def process(fcode, name="__main__"):
                 name = str(args[0])
             elif ins == "includec" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = info.get_path_with_lib(args[0][1:-1])
+                    file = os.path.abspath(info.get_path_with_lib(args[0][1:-1]))
                 else:
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
@@ -232,7 +232,7 @@ def process(fcode, name="__main__"):
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "extend" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = info.get_path_with_lib(args[0][1:-1])
+                    file = os.path.abspath(info.get_path_with_lib(args[0][1:-1]))
                 else:
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
@@ -245,7 +245,7 @@ def process(fcode, name="__main__"):
                 varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "use" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = info.get_path_with_lib(ofile := args[0][1:-1])
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                     search_path = "_std"
                 else:
                     file = os.path.join(os.path.dirname(name), (ofile := args[0]))
@@ -255,12 +255,12 @@ def process(fcode, name="__main__"):
                 if not os.path.isfile(file):
                     print("File not found:", file)
                     break
-                if ext_s.py_import(nframe, file, search_path, loc="."):
+                if ext_s.py_import(nframe, file, search_path, loc=os.path.dirname(name)):
                     print(f"Something wrong happened...")
                     return error.PREPROCESSING_ERROR
             elif ins == "use:luaj" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = info.get_path_with_lib(ofile := args[0][1:-1])
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                     search_path = "_std"
                 else:
                     if name != "__main__":
