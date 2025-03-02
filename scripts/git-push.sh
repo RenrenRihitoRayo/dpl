@@ -14,8 +14,8 @@ git commit -m "$2"
 git push origin $1 --force
 
 echo "[git-push.sh]: Updating master..."
-git merge origin $1
 git checkout master
+git merge origin $1
 git add .
 git commit -m "Automatic merge from $1"
 git push origin master --force
