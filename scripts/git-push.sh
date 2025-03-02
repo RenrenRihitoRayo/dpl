@@ -16,3 +16,4 @@ git add .
 git commit -m "Automatic merge from $1"
 git push origin master --force
 git checkout $1
+echo "[git-push.sh]: Done!"
