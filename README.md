@@ -77,11 +77,14 @@ set test "Hello"
 # New match statements!
 match :test
     as this
-    case "Hello"
+    with "Hello"
         io:println :this
     end
-    case "Hello world!"
+    with "Hello world!"
         io:println "Hello user!"
+    end
+    case [[Type :this] == "int"]
+        io:println "Wait a number?"
     end
     # invalid code
     io:println :this

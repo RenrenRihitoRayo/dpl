@@ -3,6 +3,9 @@
 if [[ "$#" -ne 2 ]]; then
     echo ": git-push.sh [branch] [message]"
     exit 1
+elif [[ "$1" == "help" ]]; then
+    echo ": git-push.sh [branch] [message]"
+    exit 0
 fi
 
 echo "[git-push.sh]: Pushing $1..."

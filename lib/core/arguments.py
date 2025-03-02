@@ -66,7 +66,6 @@ def get_block(code, current_p):
 
 
 def parse_match(frame, body, value):
-    values = {}
     name = None
     np = 0
     ft = False
