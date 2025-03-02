@@ -33,23 +33,47 @@ INC_EXT = {
     "loop",
     "while",
     "if",
-    "if_else",
     "thread",
-    "ismain",
-    "isntmain",
-    "expect",
-    "expect-then",
     "body",
     "template",
     "from_template",
     "with",
-    "default",
-    "sys"
+    "default"
 }
 
-INC = {"thread": 1, "expect-then": 2}
+INC = {"thread": 1}
 
 DEC = {"end", "then"}
+
+KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
+    'set',
+    'const',
+    'fset',
+    'cmd',
+    'exit',
+    'fallthrough',
+    'skip',
+    'stop',
+    'raise',
+    'true', 'false', 'nil', 'none', '...',
+    '!list', '!tuple', '!dict',
+    '?str', '?int', '?float', '?list', '?tuple',
+    '?dict',
+    'dict',
+    'export',
+    'in', 'as',
+    'LenOf', 'Type', 'Range', 'RawRange', 'dRange',
+    'dRawRange', 'mod', 'nil?', 'none?', 'Sum', '?bytes',
+    'not', 'and', 'or', 'wait_for_threads'
+]
+
+SUGGEST = KEYWORDS+[
+    'pub fn',
+    'export set',
+    '&use {std/',
+    '&use:luaj {std-lua/',
+]
+SUGGEST.remove("pub")
 
 CHARS = {
     "\\\\": "\\[escape]",

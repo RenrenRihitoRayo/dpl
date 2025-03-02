@@ -672,20 +672,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             consts = frame[-1].get("_const")
             if consts and name in consts:
                 consts.remove(name)
-        elif ins == "expect" and argc == 1:
-            vname = args[0]
-            temp = get_block(code, p)
-            if temp is None:
-                break
-            else:
-                p, body = temp
-            err = run(body, frame)
-            err_name = error.ERRORS_DICT.get(err, err)
-            if isinstance(err_name, int):
-                ...
-            else:
-                err = (err_name, err)
-            varproc.rset(frame[-1], vname, err)
         elif ins == "module" and argc == 1:
             name = args[0]
             temp = [frame[-1]]

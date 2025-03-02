@@ -3,3 +3,4 @@ cProfile
 ncurses
 requests
 tupa
+prompt_toolkit

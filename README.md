@@ -1,5 +1,10 @@
 # 1.4.6
 
+## 1.4.6 REPL
+
+The REPL now supports code suggestions!
+Or at least auto completion.
+
 ## New Syntax!
 
 ```DuProL

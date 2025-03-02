@@ -11,14 +11,25 @@ except ImportError:
     hash_hash = False
 
 
-def flatten_dict(d, parent_key="", sep="."):
+def flatten_dict(d, parent_key="", sep=".", seen=None):
+    if seen is None:
+        seen = set()
     items = {}
+    dict_id = id(d)
+    if dict_id in seen:
+        return d
+    seen.add(dict_id)
     for key, value in d.items():
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
         if isinstance(value, dict):
-            items.update(flatten_dict(value, new_key, sep=sep))
+            items.update(flatten_dict(value, new_key, sep, seen))
+        elif isinstance(value, list):
+            items[f"{new_key}"] = value
+            for i, item in enumerate(value):
+                items[f"{new_key}[{i}]"] = item
         else:
             items[new_key] = value
+    seen.remove(dict_id)
     return items
 
 

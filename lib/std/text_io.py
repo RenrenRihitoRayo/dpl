@@ -83,12 +83,6 @@ def myInput(frame, __, prompt=None, name=None):
 
 
 @ext.add_func()
-def test(_, __, test):
-
-    print(helper.has_repr(test))
-
-
-@ext.add_func()
 def setOutputFile(_, __, file):
 
     ext.items["output"] = file

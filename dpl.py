@@ -13,10 +13,11 @@ import lib.core.utils as utils
 import lib.core.error as error
 import lib.core.cli_arguments as cli_args
 import lib.core.extension_support as ext_s
+import lib.core.get_dependencies as get_dep
 from dfpm import dfpm
 from documenter import docs
 import cProfile
-
+    
 try:  # Try to use the .pyd or .so parser to get some kick
     import lib.core.parser as parser
 except Exception as e:  # fallback to normal python impl if it fails
@@ -261,11 +262,19 @@ def handle_args():
                         res.append(line[2:])
             print("\n".join(res))
         case ["repr"] | []:
+            from prompt_toolkit import prompt
+            from prompt_toolkit.completion import WordCompleter
             if os.path.isfile(os.path.join(info.BINDIR, "start_prompt.txt")):
                 start_text = open(os.path.join(info.BINDIR, "start_prompt.txt")).read()
             else:
                 start_text = ""
             frame = varproc.new_frame()
+            acc = []
+            if not "-disable-auto-complete" in flags:
+                for f in frame:
+                    acc.extend(utils.flatten_dict(f).keys())
+                    acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
+                    acc.extend(map(lambda x:"%"+x, utils.flatten_dict(f).keys()))
             if "import-all" in varproc.flags:
                 if "verbose" in varproc.flags:
                     print("Importing all standard modules...")
@@ -294,7 +303,7 @@ def handle_args():
                     print("something went wrong while running start up script!")
             while True:
                 try:
-                    act = input(PROMPT_CTL["ps1"]).strip()
+                    act = prompt(PROMPT_CTL["ps1"], completer=WordCompleter(acc+info.SUGGEST, WORD=True)).strip()
                 except KeyboardInterrupt:
                     exit()
                 if (
@@ -346,8 +355,16 @@ def handle_args():
                 try:
                     if err := parser.run(parser.process(act, "./repr.dpl-instance"), frame=frame):
                         rec(err)
+                    if not "-disable-auto-complete" in flags:
+                        acc = []
+                        for f in frame:
+                            acc.extend(utils.flatten_dict(f).keys())
+                            acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
+                            acc.extend(map(lambda x:"%"+x, utils.flatten_dict(f).keys()))
                 except Exception as e:
                     print(f"Python Exception was raised while running:\n{repr(e)}")
+        case ["deps"]:
+            get_dep.analyze(__file__)
         case ["help"]:
             print(
                 f"""Help for DPL [v{varproc.meta['internal']['version']}]
@@ -381,6 +398,9 @@ dpl dump-comp file
     Dump the compile data of the file (unpickled)
 dpl get-docs file
     Get the doc comments.
+dpl deps
+    Lists the dependencies for DPL. (not accurate)
+    Only recognizes "import x" and not "from y import x"
 dpl -info
     Prints info.
 dpl -arg-test
@@ -391,6 +411,8 @@ dpl -arg-test
     Profiles the code using 'time.perf_counter' for inaccurate but fast execution.
 dpl -cprofile ...
     Profiles the code using cProfile for more accurate but slower execution.
+dpl -disable-auto-complete ...
+    Disable the auto complete.
 """
             )
         case _:
