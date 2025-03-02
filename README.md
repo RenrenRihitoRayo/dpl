@@ -6,6 +6,8 @@
 
 # Embed a file.
 &embed "test.txt" as text_txt
+# As a byte array
+&embed_binary "test.bin" as text_bin
 
 -- Multiline comments!
 new expressions

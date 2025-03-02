@@ -237,6 +237,29 @@ def handle_args():
                 case _:
                     print("Invalid command!")
                     return
+        case ["get-docs", file]:
+            if not os.path.isfile(file):
+                print("Invalid file path:", file)
+                exit(1)
+            res = []
+            get = False
+            with open(file) as file:
+                for line_pos, oline in enumerate(file, 1):
+                    line = oline.strip()
+                    if get:
+                        if line == "--":
+                            get = False
+                        else:
+                            if not oline.startswith('  '):
+                                print(f"{file.name} [line {line_pos}]: Expected a 2-space indent!")
+                                exit(1)
+                            res.append(oline.rstrip()[2:])
+                        continue
+                    if line == "--doc":
+                        get = True
+                    elif line.startswith("#:"):
+                        res.append(line[2:])
+            print("\n".join(res))
         case ["repr"] | []:
             if os.path.isfile(os.path.join(info.BINDIR, "start_prompt.txt")):
                 start_text = open(os.path.join(info.BINDIR, "start_prompt.txt")).read()
@@ -352,6 +375,10 @@ dpl package remove <package_name>
     Delete that package.
 dpl docs doc_name.mmu
 dpl docu doc_name.mmu
+dpl dump-comp file
+    Dump the compile data of the file (unpickled)
+dpl get-docs file
+    Get the doc comments.
 dpl -info
     Prints info.
 dpl -arg-test
