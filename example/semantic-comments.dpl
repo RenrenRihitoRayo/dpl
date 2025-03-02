@@ -4,7 +4,7 @@
 # have at least a 2-space indent.
 --doc
   This will get extracted by the interpreter
-  when get-docs is ran. 
+  when get-docs is ran.
 --
 
 # Below is a single line semantic comment.

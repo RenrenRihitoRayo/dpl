@@ -5,6 +5,7 @@ if type(api) == "nil" then
 end
 
 ext = api.dpl.pycall(api.dpl.extension, nil, {meta_name="iter_utils"})
+--                  python_func,      *args, **kwargs
 
 map = ext:add_func("map")
 (function(frame, locdir, func, list)

@@ -1,5 +1,11 @@
-local="$(pwd)"
-chmod +x $local/../dpl.py
+local_dir="$(pwd)"
+
+dpl_file="$(pwd)/dpl.py"
+
+echo "$dpl_file run \"\$@\"" > dpl-run.sh
+echo "$dpl_file \"\$@\"" > dpl.sh
+
+chmod +x $local_dir/dpl.py
 
 if [ "$1" = "help" ]; then
     cat << 'EOF'
@@ -35,7 +41,7 @@ if [ "$1" = "abs_root" ]; then
     chmod +x ./dpl-run.sh
     # link file - dpl.sh
     echo "dpl.sh: Making a symbolic link..."
-    ln -sf $local/dpl.sh "/bin/dpl"
+    ln -sf $local_dir/dpl.sh "/bin/dpl"
 
     echo "Checking link: dpl"
     if command -v dpl >/dev/null 2>&1; then
@@ -47,7 +53,7 @@ if [ "$1" = "abs_root" ]; then
     
     # link file - dpl-run.sh
     echo "dpl-run.sh: Making a symbolic link..."
-    ln -sf $local/dpl-run.sh "/bin/dpl-run"
+    ln -sf $local_dir/dpl-run.sh "/bin/dpl-run"
 
     echo "Checking link: dpl-run"
     if command -v dpl-run >/dev/null 2>&1; then
@@ -68,7 +74,7 @@ else
     chmod +x ./dpl-run.sh
     # link file - dpl.sh
     echo "dpl.sh: Making a symbolic link..."
-    ln -sf $local/dpl.sh "$ROOT/bin/dpl"
+    ln -sf $local_dir/dpl.sh "$ROOT/bin/dpl"
 
     echo "Checking link: dpl"
     if command -v dpl >/dev/null 2>&1; then
@@ -80,7 +86,7 @@ else
     
     # link file - dpl-run.sh
     echo "dpl-run.sh: Making a symbolic link..."
-    ln -sf $local/dpl-run.sh "$ROOT/bin/dpl-run"
+    ln -sf $local_dir/dpl-run.sh "$ROOT/bin/dpl-run"
 
     echo "Checking link: dpl-run"
     if command -v dpl-run >/dev/null 2>&1; then
