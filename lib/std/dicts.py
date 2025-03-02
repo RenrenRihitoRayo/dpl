@@ -12,7 +12,7 @@ def define(frame, file, body, dname):
     data = {}
     for [pos, file, ins, args] in body:
         if ins == "set":
-            name, eq, value = dpl.arguments.process_args(frame[0], args)
+            name, eq, value = dpl.arguments.process_args(frame, args)
             if eq != "=":
                 return f"err:{dpl.error.SYNTAX_ERROR}:Syntax Error!"
             data[name] = value

@@ -3,6 +3,8 @@
 # I tried it, it still failed :)
 
 
+from ast import Constant, arg
+from typing import Any
 import lupa
 import types
 import itertools
@@ -18,6 +20,9 @@ from . import error
 from . import state
 from . import restricted
 from . import objects
+from . import constants
+from . import py_argument_handler
+arguments_handler = py_argument_handler.arguments_handler
 
 
 def register_run(func):
@@ -143,6 +148,7 @@ class dpl:
     restricted = restricted
     state_nil = state.bstate("nil")
     state_none = state.bstate("none")
+    constants = constants
     state_true = 1
     state_false = 0
     extension = extension
@@ -293,10 +299,18 @@ def py_import_string(
     argproc.methods.update(meths)
 
 
-def call(func, frame, file, args, kwargs={}):
+def call(func, frame, file, args):
     if varproc.is_debug_enabled("track_time"):
         start = time.time()
-    ret = func(frame, file, *args)
+    if args and isinstance(args[0], arguments_handler):
+        if args[0].args:
+            args[0].args.insert(0, file)
+            args[0].args.insert(0, frame)
+        else:
+            args[0].args = [frame, file]
+        ret = args[0].call(func)
+    else:
+        ret = func(frame, file, *args)
     if varproc.is_debug_enabled("track_time"):
         delta = time.time() - start
         if delta > varproc.get_debug("time_threshold"):
@@ -307,10 +321,19 @@ def call(func, frame, file, args, kwargs={}):
     return ret
 
 
-def call_w_body(func, frame, file, body, args, kwargs={}):
+def call_w_body(func, frame, file, body, args):
     if varproc.is_debug_enabled("track_time"):
         start = time.time()
-    ret = func(frame, file, body, *args, **kwargs)
+    if args and isinstance(args[0], arguments_handler):
+        if args[0].args:
+            args[0].args.insert(0, body)
+            args[0].args.insert(0, file)
+            args[0].args.insert(0, frame)
+        else:
+            args[0].args = [frame, file, body]
+        ret = args[0].call(func)
+    else:
+        ret = func(frame, file, body, *args)
     if varproc.is_debug_enabled("track_time"):
         delta = time.time() - start
         if delta > varproc.get_debug("time_threshold"):

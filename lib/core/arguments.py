@@ -12,6 +12,7 @@ from . import error
 from . import varproc
 from io import TextIOWrapper
 from .info import *
+from . import py_argument_handler as pah
 
 run_code = None  # to be set by py_parser
 
@@ -350,6 +351,11 @@ def evaluate(frame, expression):
                 return float(item)
             except:
                 return constants.nil
+        case ["dict", *args]:
+            temp = {}
+            for i in args:
+                temp.update(i)
+            return temp
         case ["nil?", value]:
             return value == constants.nil
         case ["none?", value]:
@@ -393,6 +399,12 @@ def evaluate(frame, expression):
             obj, method
         ):  # direct python method calling
             getattr(obj, method)(*args)
+        case ["?args", *args]:
+            temp = pah.arguments_handler(None, None)
+            temp.parse(args)
+            return temp
+        case [name, "=", value]:
+            return {name: value}
         case [obj, index]:
             if isinstance(obj, (tuple, list, str)) and index >= len(obj):
                 return constants.nil

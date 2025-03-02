@@ -88,6 +88,7 @@ varproc.meta["internal"]["os"] = {
     "information": info.SYS_INFO,  # basically the tripple
     "processor": info.SYS_PROC,  # processor (intel and such)
     "threads": os.cpu_count(),  # physical thread count,
+    "os_name":info.SYS_OS_NAME.lower()
 }
 
 
@@ -691,7 +692,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             varproc.nscope(temp)
             temp[-1]["_export"] = {}
             btemp = get_block(code, p)
-            if btemp == None:
+            if btemp is None:
                 break
             else:
                 p, body = btemp

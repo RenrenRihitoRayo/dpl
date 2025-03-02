@@ -1,0 +1,16 @@
+&use {std/text_io.py}
+
+match :_meta.internal.os.os_name
+    with windows
+        io:println "Hello windows user.\nI know theyre listening!"
+    end
+    with linux
+        io:println "Either your a dev or you dont have a life..."
+    end
+    with macos
+        io:println "Nope."
+    end
+    default
+        io:println "What in tar-nation is this thing?"
+    end
+end

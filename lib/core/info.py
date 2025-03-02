@@ -44,6 +44,7 @@ INC_EXT = {
     "from_template",
     "with",
     "default",
+    "sys"
 }
 
 INC = {"thread": 1, "expect-then": 2}
@@ -196,6 +197,7 @@ SYS_PROC = platform.processor() or constants.none
 SYS_MACH = platform.machine()
 SYS_INFO = platform.platform()
 SYS_MACH_INFO = platform.uname()
+SYS_OS_NAME = SYS_MACH_INFO.system
 
 
 def get_path_with_lib(path):
