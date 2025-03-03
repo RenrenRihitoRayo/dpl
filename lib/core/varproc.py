@@ -17,6 +17,7 @@ dependencies = {"dpl": set(), "python": {}, "lua": {}}
 
 # debug options
 debug = {
+    "allow_automatic_global_name_resolution":1, # to get variables faster
     "show_instructions": 0,
     "show_scope_updates": 0,
     "show_value_updates": 0,
@@ -40,8 +41,8 @@ meta = {
     "inter_flags": flags,
     "internal": {
         "lib_path": info.LIBDIR,
-        "main_path": "__main__",
-        "main_file": constants.none,
+        "main_path": constants.none,
+        "main_file": "__main__",
         "version": info.VERSION,
         "raw_version": info.VERSION_TRIPLE,
         "pid": os.getpid(),

@@ -209,13 +209,36 @@ def process(fcode, name="__main__"):
                 else:
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
-                if not os.path.isfile(file):
-                    print("File not found:", file)
+                if not os.path.exists(file):
+                    print("Not found:", file, f"\nLine {lpos}\nFile {name}")
                     break
-                with open(file, "r") as f:
-                    res.extend(process(f.read(), name=file))
-                file = os.path.realpath(file)
-                varproc.meta["dependencies"]["dpl"].add(file)
+                if os.path.isdir(file):
+                    if not os.path.isfile(files:=os.path.join(file, "include-dpl.txt")):
+                        with open(files) as f:
+                            for line in f:
+                                line = line.strip()
+                                if line.startswith("#:"):
+                                    print("{name} [{lpos}] {line}:",line[2:]) # for messages like deprecation warnings
+                                    continue
+                                elif line.startswith("#?"):
+                                    print(line[2:]) # for messages like deprecation warnings
+                                    continue
+                                elif line.startswith("#") or not line:
+                                    continue
+                                with open(line, "r") as f:
+                                    if isinstance(err:=process(f.read(), name=line), int):
+                                        return err
+                                    res.extend(err["code"])
+                                    if not err["frame"] is None: nframe[0].update(err["frame"][0])
+                                varproc.meta["dependencies"]["dpl"].add(os.path.realpath(line))
+                else:
+                    with open(file, "r") as f:
+                        if isinstance(err:=process(f.read(), name=file), int):
+                            return err
+                        res.extend(err["code"])
+                        if not err["frame"] is None: nframe[0].update(err["frame"][0])
+                    file = os.path.realpath(file)
+                    varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "set_name" and argc == 1:
                 name = str(args[0])
             elif ins == "includec" and argc == 1:
@@ -224,13 +247,36 @@ def process(fcode, name="__main__"):
                 else:
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
-                if not os.path.isfile(file):
-                    print("File not found:", file)
+                if not os.path.exists(file):
+                    print("Not found:", file)
                     break
-                with open(file, "rb") as f:
-                    res.extend(pickle.loads(f.read()))
-                file = os.path.realpath(file)
-                varproc.meta["dependencies"]["dpl"].add(file)
+                if os.path.isdir(file):
+                    if not os.path.isfile(files:=os.path.join(file, "include-cdpl.txt")):
+                        with open(files) as f:
+                            for line in f:
+                                line = line.strip()
+                                if line.startswith("#:"):
+                                    print("{name} [{lpos}] {line}:",line[2:]) # for messages like deprecation warnings
+                                    continue
+                                elif line.startswith("#?"):
+                                    print(line[2:]) # for messages like deprecation warnings
+                                    continue
+                                elif line.startswith("#") or not line:
+                                    continue
+                                with open(line, "rb") as f:
+                                    if isinstance(err:=process(pickle.loads(f.read()), name=line), int):
+                                        return err
+                                    res.extend(err["code"])
+                                    if not err["frame"] is None: nframe[0].update(err["frame"][0])
+                                varproc.meta["dependencies"]["dpl"].add(os.path.realpath(line))
+                else:
+                    with open(file, "rb") as f:
+                        if isinstance(err:=process(pickle.loads(f.read()), name=file), int):
+                            return err
+                        res.extend(err["code"])
+                        if not err["frame"] is None: nframe[0].update(err["frame"][0])
+                    file = os.path.realpath(file)
+                    varproc.meta["dependencies"]["dpl"].add(file)
             elif ins == "extend" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.abspath(info.get_path_with_lib(args[0][1:-1]))
@@ -253,11 +299,8 @@ def process(fcode, name="__main__"):
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), file)
                     search_path = "_loc"
-                if not os.path.isfile(file):
-                    print("File not found:", file)
-                    break
                 if ext_s.py_import(nframe, file, search_path, loc=os.path.dirname(name)):
-                    print(f"Something wrong happened...")
+                    print(f"pytho: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
             elif ins == "use:luaj" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
@@ -267,11 +310,8 @@ def process(fcode, name="__main__"):
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
                     search_path = "_loc"
-                if not os.path.isfile(file):
-                    print("File not found:", file)
-                    break
                 if ext_s.luaj_import(nframe, file, search_path, loc="."):
-                    print(f"Something wrong happened...")
+                    print(f"luaj: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
             elif ins == "file" and argc == 1:
                 name = args[0]

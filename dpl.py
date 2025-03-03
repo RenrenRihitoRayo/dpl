@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # DPL CLI
-# We use match statements for te CLI
+# We use match statements for the CLI
 # To keep it lightweight, we dont need speed here.
 
 import subprocess
@@ -17,7 +17,10 @@ import lib.core.get_dependencies as get_dep
 from dfpm import dfpm
 from documenter import docs
 import cProfile
-    
+from re import compile as rcomp
+
+pattern = rcomp("[\.\:_\%\w\d\!\&]+")
+
 try:  # Try to use the .pyd or .so parser to get some kick
     import lib.core.parser as parser
 except Exception as e:  # fallback to normal python impl if it fails
@@ -34,11 +37,9 @@ sys.set_int_max_str_digits(10**6)
 
 try:
     import dill as pickle
-
     has_dill = True
 except ModuleNotFoundError:
     import pickle
-
     has_dill = False
 
 
@@ -262,6 +263,7 @@ def handle_args():
                         res.append(line[2:])
             print("\n".join(res))
         case ["repr"] | []:
+            from prompt_toolkit.history import InMemoryHistory
             from prompt_toolkit import prompt
             from prompt_toolkit.completion import WordCompleter
             if os.path.isfile(os.path.join(info.BINDIR, "start_prompt.txt")):
@@ -269,6 +271,7 @@ def handle_args():
             else:
                 start_text = ""
             frame = varproc.new_frame()
+            cmd_hist = InMemoryHistory()
             acc = []
             if not "-disable-auto-complete" in flags:
                 for f in frame:
@@ -293,8 +296,6 @@ def handle_args():
                 f"DPL REPL for DPL {varproc.meta['internal']['version']}\nPython {info.PYTHON_VER}{(chr(10)+start_text) if start_text else ''}"
             )
             START_FILE = os.path.join(info.BINDIR, "start_script.dpl")
-            frame[-1]["_meta"]["internal"]["main_file"] = "dpl-instance"
-            frame[-1]["_meta"]["internal"]["main_path"] = "."
             if os.path.isfile(START_FILE):
                 try:
                     with open(START_FILE, "r") as f:
@@ -303,7 +304,7 @@ def handle_args():
                     print("something went wrong while running start up script!")
             while True:
                 try:
-                    act = prompt(PROMPT_CTL["ps1"], completer=WordCompleter(acc+info.SUGGEST, WORD=True)).strip()
+                    act = prompt(PROMPT_CTL["ps1"], completer=WordCompleter(acc+info.SUGGEST, pattern=pattern), history=cmd_hist).strip()
                 except KeyboardInterrupt:
                     exit()
                 if (

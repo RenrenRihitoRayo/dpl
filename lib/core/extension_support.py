@@ -53,7 +53,6 @@ class extension:
         self.name = (
             name  # This is a scope name,              dpl defined name.func_name
         )
-        self.data = {}
         self.meta_name = meta_name  # while this is the mangled name, python defined "{meta_name}:{func_name}"
 
     def add_func(self, name=None):
@@ -109,7 +108,7 @@ class extension:
 
     @property
     def items(self):
-        return self.data
+        return self.__func
 
     def __repr__(self):
         return f"Extension<{self.name or self.meta_name}>"
@@ -175,6 +174,27 @@ def luaj_import(
         if not os.path.isfile(file):
             print("File not found:", file)
             return 1
+    if os.path.isdir(file):
+        if os.path.isfile(files:=os.path.join(file, "include-lua.txt")):
+            with open(files) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("#:"):
+                        print(f"{files} [N/A]:",line[2:]) # for messages like deprecation warnings
+                        continue
+                    elif line.startswith("#?"):
+                        print(line[2:]) # for messages like deprecation warnings
+                        continue
+                    elif line.startswith('#'):
+                        continue
+                    else:
+                        if luaj_import(frame, line, search_path=file, loc=loc):
+                            print(f"Something went wrong while importing {line!r}")
+                            return 1
+            return
+        else:
+            print("luaj: 'include.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
+            return 1
     if varproc.is_debug_enabled("show_imports"):
         error.info(f"Imported {file!r}")
     with open(file, "r") as f:
@@ -225,8 +245,29 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
                 ),
                 file,
             )
-        if not os.path.isfile(file):
-            print("File not found:", file)
+        if not os.path.exists(file):
+            print("Not found:", file)
+            return 1
+    if os.path.isdir(file):
+        if os.path.isfile(files:=os.path.join(file, "include-py.txt")):
+            with open(files) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("#:"):
+                        print(f"{files} [N/A]:",line[2:]) # for messages like deprecation warnings
+                        continue
+                    elif line.startswith("#?"):
+                        print(line[2:]) # for messages like deprecation warnings
+                        continue
+                    elif line.startswith('#'):
+                        continue
+                    else:
+                        if py_import(frame, line, search_path=file, loc=loc):
+                            print(f"Something went wrong while importing {line!r}")
+                            return 1
+            return
+        else:
+            print("python: 'include.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
             return 1
     if varproc.is_debug_enabled("show_imports"):
         error.info(f"Imported {file!r}")
@@ -259,44 +300,6 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
         varproc.dependencies["python"][search_path].add(file)
     else:
         varproc.dependencies["python"][search_path] = {file}
-
-
-def py_import_string(
-    frame, file_name, code, search_path=None, loc=varproc.meta["internal"]["main_path"]
-):
-    if not os.path.isabs(file_name):
-        if search_path is not None:
-            file = os.path.join(
-                {"@lib": varproc.meta["internal"]["lib_path"], "@loc": loc}.get(
-                    search_path, search_path
-                ),
-                file_file,
-            )
-        if not os.path.isfile(file_name):
-            print("File not found:", file_file)
-            return 1
-    if varproc.is_debug_enabled("show_imports"):
-        error.info(f"Imported {file_name!r}")
-    obj = compile(code, file_name, "exec")
-    try:
-        d = {"modules": modules, "dpl": dpl}
-        d["__name__"] = "__dpl__"
-        exec(obj, d)
-    except (SystemExit, KeyboardInterrupt):
-        raise
-    except:
-        error.error("[N/A]", file_name, traceback.format_exc())
-        return 1
-    funcs = {}
-    meths = {}
-    for name, ext in d.items():
-        if isinstance(ext, extension):
-            if ext.name in frame[-1]:
-                raise Exception(f"Name clashing! For name {ext.name!r}")
-            funcs.update(ext.functions)
-            meths.update(ext.methods)
-    frame[-1].update(funcs)
-    argproc.methods.update(meths)
 
 
 def call(func, frame, file, args):

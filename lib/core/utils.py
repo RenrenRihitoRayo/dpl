@@ -23,10 +23,8 @@ def flatten_dict(d, parent_key="", sep=".", seen=None):
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
         if isinstance(value, dict):
             items.update(flatten_dict(value, new_key, sep, seen))
-        elif isinstance(value, list):
-            items[f"{new_key}"] = value
-            for i, item in enumerate(value):
-                items[f"{new_key}[{i}]"] = item
+        elif not isinstance(key, str):
+            continue
         else:
             items[new_key] = value
     seen.remove(dict_id)
