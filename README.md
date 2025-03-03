@@ -1,5 +1,54 @@
 # 1.4.6
 
+## Variable Handling
+
+Auto resolution of names (being able to
+implicitly use global variables) can be
+disabled by setting `_meta.debug.allow_automatic_global_name_resolution`
+to `0` or any falsy value.
+
+```
+&use {std/text_io.py}
+
+set _meta.debug.allow_automatic_global_name_resolution 0
+set my_var "Global Variable"
+
+fn test
+    io:println :my_var
+    io:println :_global.my_var
+end
+test
+```
+
+## Added new functions
+
+The `exec` and `sexec` functions were added,
+these functions can run DPL code on runtime.
+```DuProL
+set code "&use {std/text_io.py}\nio:println \"Hello!\""
+exec :code "string" [?list !dict]
+```
+
+To not propagate the errors through the main
+program. Use `sexec`
+```DuProL
+set code "&use {std/text_io.py}\nio:println \"Hello!\""
+sexec err :code "string" [?list !dict]
+io:println :err
+```
+
+The `[?list !dict]` is the frame stack.
+In python its just `[{}]`.
+
+If you want to pass the current frame stack,
+use `:_frame_stack` which has the execution
+context of the main program.
+```DuProL
+&use {std/text_io.py}
+set code "&use {std/text_io.py}\nio:println \"Hello!\""
+exec :code "string" :_frame_stack
+```
+
 ## Another Update to the REPL
 
 Added more features to the completer,
@@ -401,7 +450,6 @@ Release Date: March 15, 2025
 Features:
 - :white_check_mark: Dead code optimization.
 - :white_check_mark: Profiling.
-- :x: Build system.
 - :stop_sign: Generators
 - :white_check_mark: Formatted strings.
 

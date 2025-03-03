@@ -63,6 +63,7 @@ def new_frame():
     t["_nonlocal"] = t
     t["_local"] = t
     values_stack = [t]
+    t["_frame_stack"] = values_stack
     return values_stack
 
 

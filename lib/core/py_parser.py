@@ -682,6 +682,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 p, body = temp
             if (err := argproc.parse_match(frame, body, args[0])) > 0:
                 return err
+        elif ins == "exec" and argc == 3:
+            if err:=run(process(args[0] ,name=args[1]), frame=args[2]):
+                return err
+        elif ins == "sexec" and argc == 4:
+            frame[-1][args[0]] = run(process(args[1], name=args[2]), frame=args[3])
         elif ins == "fallthrough" and argc == 0:
             return error.FALLTHROUGH
         elif ins == "set" and argc == 2:
