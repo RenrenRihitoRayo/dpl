@@ -315,7 +315,7 @@ def handle_args():
                 ):
                     while True:
                         try:
-                            aa = input(PROMPT_CTL["ps2"])
+                            aa = prompt(PROMPT_CTL["ps2"], completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist).strip()
                         except KeyboardInterrupt:
                             exit()
                         if not aa:
