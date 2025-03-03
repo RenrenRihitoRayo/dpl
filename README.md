@@ -45,7 +45,7 @@ use `:_frame_stack` which has the execution
 context of the main program.
 ```DuProL
 &use {std/text_io.py}
-set code "&use {std/text_io.py}\nio:println \"Hello!\""
+set code "io:println \"Hello!\""
 exec :code "string" :_frame_stack
 ```
 
