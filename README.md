@@ -82,9 +82,9 @@ You can have comments.
 ```
 # file1 does ...
 file1.py
-# file2 does ...
-file2.py
-# file3 needs to be manually included.
+# file2 needs to be manually included.
+# file3 does ...
+file3.py
 ```
 
 You can also print stuff out.
