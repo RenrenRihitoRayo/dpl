@@ -74,7 +74,7 @@ but not `file2.py` your include file should look like
 this:
 ```
 file1.py
-file2.py
+file3.py
 ```
 
 You can have comments.
