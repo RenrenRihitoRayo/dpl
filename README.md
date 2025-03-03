@@ -1,5 +1,28 @@
 # 1.4.6
 
+## Another Update to the REPL
+
+Added more features to the completer,
+it now suggests directives.
+
+```
+DPL REPL for DPL v1.4.6
+Python 3.11.4 (main, Sep 30 2023, 10:54:38) [GCC 11.4.0]
+>>> &use {
+           &use {std}
+           &use {std/array_utils.py}
+           &use {std/dicts.py}
+           &use {std/file_io.py}
+           &use {std/include-py.txt}
+           &use {std/text_io.py}
+           &use {std/types.py}
+           &use {std/strings.py}
+           &use {std/tests.py}
+           &use {std/to_py.py}
+           &use {std/to_dict.py}
+           &use {std/typed_vars.py}
+```
+
 ## 1.4.6 REPL
 
 The REPL now supports code suggestions!
