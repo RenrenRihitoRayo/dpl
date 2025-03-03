@@ -174,7 +174,8 @@ def process(fcode, name="__main__"):
     res = []
     nframe = varproc.new_frame()
     nframe[-1].update({
-        "__file__":name
+        "__file__":name,
+        "__path__":os.path.dirname(name) or constants.none
     })
     dead_code = True
     warnings = True

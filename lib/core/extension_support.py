@@ -181,12 +181,10 @@ def luaj_import(
                     line = line.strip()
                     if line.startswith("#:"):
                         print(f"{files} [N/A]:",line[2:]) # for messages like deprecation warnings
-                        continue
                     elif line.startswith("#?"):
                         print(line[2:]) # for messages like deprecation warnings
-                        continue
-                    elif line.startswith('#'):
-                        continue
+                    elif line.startswith('#') or not line:
+                        ...
                     else:
                         if luaj_import(frame, line, search_path=file, loc=loc):
                             print(f"Something went wrong while importing {line!r}")
@@ -251,16 +249,14 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
     if os.path.isdir(file):
         if os.path.isfile(files:=os.path.join(file, "include-py.txt")):
             with open(files) as f:
-                for line in f:
+                for line in f.readlines():
                     line = line.strip()
                     if line.startswith("#:"):
                         print(f"{files} [N/A]:",line[2:]) # for messages like deprecation warnings
-                        continue
                     elif line.startswith("#?"):
                         print(line[2:]) # for messages like deprecation warnings
-                        continue
-                    elif line.startswith('#'):
-                        continue
+                    elif line.startswith('#') or not line:
+                        ...
                     else:
                         if py_import(frame, line, search_path=file, loc=loc):
                             print(f"Something went wrong while importing {line!r}")

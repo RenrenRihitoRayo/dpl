@@ -67,14 +67,6 @@ KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
     'not', 'and', 'or', 'wait_for_threads'
 ]
 
-SUGGEST = KEYWORDS+[
-    'pub fn',
-    'export set',
-    '&use {std/',
-    '&use:luaj {std-lua/',
-]
-SUGGEST.remove("pub")
-
 CHARS = {
     "\\\\": "\\[escape]",
     "\\n": "\n",

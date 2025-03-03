@@ -17,9 +17,6 @@ import lib.core.get_dependencies as get_dep
 from dfpm import dfpm
 from documenter import docs
 import cProfile
-from re import compile as rcomp
-
-pattern = rcomp("[\.\:_\%\w\d\!\&]+")
 
 try:  # Try to use the .pyd or .so parser to get some kick
     import lib.core.parser as parser
@@ -27,6 +24,7 @@ except Exception as e:  # fallback to normal python impl if it fails
     import lib.core.py_parser as parser
 import lib.core.varproc as varproc
 import lib.core.utils as utils
+import lib.core.suggestions as suggest
 
 import os
 import sys
@@ -304,7 +302,7 @@ def handle_args():
                     print("something went wrong while running start up script!")
             while True:
                 try:
-                    act = prompt(PROMPT_CTL["ps1"], completer=WordCompleter(acc+info.SUGGEST, pattern=pattern), history=cmd_hist).strip()
+                    act = prompt(PROMPT_CTL["ps1"], completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist).strip()
                 except KeyboardInterrupt:
                     exit()
                 if (

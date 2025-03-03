@@ -55,32 +55,14 @@ meta = {
     "_set_only_when_defined": 1,
 }
 
-meta["internal"]["libs"] = {
-    "core_libs": tuple(
-        map(
-            lambda x: os.path.basename(x),
-            filter(
-                os.path.isfile,
-                (os.path.join(info.CORE_DIR, f) for f in os.listdir(info.CORE_DIR)),
-            ),
-        )
-    ),
-    "std_libs": tuple(
-        map(
-            lambda x: os.path.basename(x),
-            filter(
-                os.path.isfile,
-                (os.path.join(info.LIBDIR, f) for f in os.listdir(info.LIBDIR)),
-            ),
-        )
-    ),
-}
-
 
 def new_frame():
     "Generate a new scope frame"
-    values_stack = []
-    nscope(values_stack)
+    t = {"_meta": meta}
+    t["_global"] = t
+    t["_nonlocal"] = t
+    t["_local"] = t
+    values_stack = [t]
     return values_stack
 
 
@@ -101,20 +83,15 @@ def set_debug(name, value):
 
 def nscope(frame):
     "New scope"
-    t = {"_meta": meta, "_temp": {}}
+    t = {"_meta": meta}
     if frame:
         t["_global"] = frame[0]
         t["_nonlocal"] = frame[-1]
-        t["_local"] = t
-    else:
-        t["_global"] = t
-        t["_nonlocal"] = t
         t["_local"] = t
     with WS_LOCK:
         frame.append(t)
     if is_debug_enabled("show_scope_updates"):
         error.info(f"New scope created!")
-
 
 def pscope(frame):
     "Pop the current scope also discarding"
