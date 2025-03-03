@@ -28,6 +28,71 @@ Python 3.11.4 (main, Sep 30 2023, 10:54:38) [GCC 11.4.0]
 The REPL now supports code suggestions!
 Or at least auto completion.
 
+
+```
+DPL REPL for DPL v1.4.6
+Python 3.11.4 (main, Sep 30 2023, 10:54:38) [GCC 11.4.0]
+>>> &use {std}
+>>> io:
+        io:print
+        io:printf
+        io:println
+        io:rawprint
+        io:rawprintln
+        io:input
+        io:setOutputFile
+        io:rawoutput
+        io:flush
+        io:open
+        io:seek
+        io:read
+        io:write
+        io:append
+        io:close
+```
+
+## Using `&use`, `&use:luaj`, `&include` and `&includec` on directories
+
+Its pretty simple to setup.
+Just write a "include-[lang].txt" file.
+For example we\'ll use python.
+In that case we will write "include-py.txt".
+In that file we will list the files we want
+to export.
+
+The directory should look like this
+```
+example
+├── file1.py
+├── file2.py
+├── file3.py
+└── include-py.txt
+```
+
+If you want to only include `file1.py` and `file3.py`
+but not `file2.py` your include file should look like
+this:
+```
+file1.py
+file2.py
+```
+
+You can have comments.
+
+```
+# file1 does ...
+file1.py
+# file2 does ...
+file2.py
+# file3 needs to be manually included.
+```
+
+You can also print stuff out.
+```
+#:Print with meta data
+#?Print without meta data.
+```
+
 ## New Syntax!
 
 ```DuProL
