@@ -64,7 +64,8 @@ KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
     'in', 'as',
     'LenOf', 'Type', 'Range', 'RawRange', 'dRange',
     'dRawRange', 'mod', 'nil?', 'none?', 'Sum', '?bytes',
-    'not', 'and', 'or', 'wait_for_threads'
+    'not', 'and', 'or', 'wait_for_threads',
+    'exec', 'sexec'
 ]
 
 CHARS = {
