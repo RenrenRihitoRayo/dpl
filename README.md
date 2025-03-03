@@ -22,8 +22,7 @@ test
 
 ## Added new functions
 
-The `exec` and `sexec` functions were added,
-these functions can run DPL code on runtime.
+The `exec` and `sexec` functions were added, these functions can run DPL code on runtime.
 ```DuProL
 set code "&use {std/text_io.py}\nio:println \"Hello!\""
 exec :code "string" [?list !dict]
