@@ -47,24 +47,30 @@ class modules:
 class extension:
     "A class to help define methods and functions."
 
-    def __init__(self, name=None, meta_name=None):
+    def __init__(self, name=None, meta_name=None, alias=None):
         self.__func = {}  # functions
         self.__meth = {}  # methods
         self.name = (
-            name  # This is a scope name,              dpl defined name.func_name
+            name  # This is a scope name, dpl defined name.func_name
         )
         self.meta_name = meta_name  # while this is the mangled name, python defined "{meta_name}:{func_name}"
+        if not alias is None:
+            if self.name:
+                self.name = alias
+            elif self.meta_name:
+                self.meta_name = alias
+            else:
+                self.name = alias
 
     def add_func(self, name=None):
         "Add a function."
-
         def wrap(func):
             nonlocal name
             if func.__doc__ is None:
                 func.__doc__ = (
-                    f"Function {self.meta_name}:{name}"
+                    f"Function `{self.meta_name}:{name}`"
                     if self.meta_name
-                    else f"{self.name}.{name}"
+                    else f"Function {self.name}.{name}"
                 ) + ": Default doc string..."
             if name is None:
                 name = getattr(func, "__name__", None) or "_"
@@ -72,12 +78,10 @@ class extension:
                 func
             )
             return func
-
         return wrap
 
     def add_method(self, name=None, from_func=False):
         "Add a method."
-
         def wrap(func):
             nonlocal name
             if name is None:
@@ -92,7 +96,6 @@ class extension:
                 func if not from_func else lambda *args: func(args[0], None, *args[1:])
             )
             return func
-
         return wrap
 
     def get(self, name, default=None):
@@ -111,7 +114,7 @@ class extension:
         return self.__func
 
     def __repr__(self):
-        return f"Extension<{self.name or self.meta_name}>"
+        return f"Extension<{self.name or self.meta_name!r}>"
 
 
 def require(path):
@@ -179,6 +182,12 @@ def luaj_import(
             with open(files) as f:
                 for line in f:
                     line = line.strip()
+                    if "=>" in line:
+                        line, alias = line.split("=>")
+                        line = line.strip()
+                        alias = alias.strip()
+                    else:
+                        alias = None
                     if line.startswith("#:"):
                         print(f"{files} [N/A]:",line[2:]) # for messages like deprecation warnings
                     elif line.startswith("#?"):
@@ -234,7 +243,7 @@ def luaj_import(
         varproc.dependencies["lua"][search_path] = {file}
 
 
-def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"]):
+def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"], alias=None):
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join(
@@ -247,10 +256,19 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
             print("Not found:", file)
             return 1
     if os.path.isdir(file):
+        if alias:
+            frame[-1][alias] = {}
+            frame = [frame[-1][alias]]
         if os.path.isfile(files:=os.path.join(file, "include-py.txt")):
             with open(files) as f:
                 for line in f.readlines():
                     line = line.strip()
+                    if "=>" in line:
+                        line, alias = line.split("=>")
+                        line = line.strip()
+                        alias = alias.strip()
+                    else:
+                        alias = None
                     if line.startswith("#:"):
                         print(f"{files} [N/A]:",line[2:]) # for messages like deprecation warnings
                     elif line.startswith("#?"):
@@ -266,11 +284,11 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
             print("python: 'include.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
             return 1
     if varproc.is_debug_enabled("show_imports"):
-        error.info(f"Imported {file!r}")
+        error.info(f"Imported {file!r}" if not alias else f"Imported {file!r} as {alias}")
     with open(file, "r") as f:
         obj = compile(f.read(), file, "exec")
         try:
-            d = {"__name__": "__dpl__", "modules": modules, "dpl": dpl}
+            d = {"__name__": "__dpl__", "modules": modules, "dpl": dpl, "__alias__":alias}
             exec(obj, d)
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -283,7 +301,7 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
         if isinstance(ext, extension):
             if ext.name in frame[-1]:
                 raise Exception(f"Name clashing! For name {ext.name!r}")
-            if ext.name:
+            elif ext.name:
                 varproc.rset(frame[-1], ext.name, (temp := {}))
                 temp.update(ext.functions)
             else:

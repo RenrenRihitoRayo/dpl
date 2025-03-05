@@ -21,7 +21,7 @@ def _to_dict(obj):
     return obj
 
 
-ext = dpl.extension(meta_name="to_dict")
+ext = dpl.extension(meta_name="to_dict", alias=__alias__)
 
 
 @ext.add_func()

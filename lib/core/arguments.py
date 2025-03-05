@@ -120,6 +120,22 @@ def parse_match(frame, body, value):
             return res
 
 
+def parse_template(frame, temp_name, body):
+    data = {}
+    for p, [pos, file, ins, args] in enumerate(body):
+        args = process_args(frame, args)
+        argc = len(args)
+        if ins == "define" and argc == 3 and args[1] == "as":
+            name, _, type_ = args
+            data[name] = type_
+        if ins == "define" and argc == 5 and args[1] == "as" and args[3] == "=":
+            name, _, type_, _, value = args
+            data[name] = type_
+            data[f"value:{name}"] = value
+        else:
+            return 1
+    varproc.rset(frame[-1], temp_name, data)
+
 def flatten_dict(d, parent_key="", sep=".", seen=None):
     if seen is None:
         seen = set()

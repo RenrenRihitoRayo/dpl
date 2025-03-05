@@ -4,7 +4,7 @@ if __name__ != "__dpl__":
 if not dpl.info.VERSION.isLater((1, 4, None)):
     raise Exception("This is for version 1.4.x!")
 
-ext = dpl.extension(meta_name="tests")
+ext = dpl.extension(meta_name="tests", alias=__alias__)
 
 ext.items["ASSERT_ERROR"] =\
 dpl.register_error("ASSERT_ERROR")

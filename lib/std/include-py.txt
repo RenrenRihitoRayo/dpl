@@ -2,6 +2,9 @@
 # you can do "&use {std}"
 # rather than import all of this manually.
 
+# To import it as an alias do
+# file_path => alias_name
+
 array_utils.py
 typed_vars.py
 text_io.py

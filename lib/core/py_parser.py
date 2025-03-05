@@ -169,6 +169,37 @@ def has(attrs, dct):
     return True if False not in map(lambda x: x in dct, attrs) else False
 
 
+def pprint(d, l=0, seen=None):
+    if seen is None:
+        seen = set()
+    if id(d) in seen:
+        print("  "*l+"...")
+        return
+    seen.add(id(d))
+    if isinstance(d, list):
+        for i in d:
+            if isinstance(i, list):
+                print("  "*l+f"[")
+                pprint(i, l+1, seen)
+                print("  "*l+"]")
+            else:
+                print("  "*l+repr(i))
+        return
+    for name, value in d.items():
+        if name.startswith("_"):
+            ...
+        elif isinstance(value, dict):
+            print("  "*l+f"{name!r} => {{")
+            pprint(value, l+1, seen)
+            print("  "*l+"}")
+        elif isinstance(value, list):
+            print("  "*l+f"{name!r} => [")
+            pprint(value, l+1, seen)
+            print("  "*l+"]")
+        else:
+            print("  "*l+f"{name!r} = {value!r}")
+
+
 def process(fcode, name="__main__"):
     "Preprocess a file"
     res = []
@@ -303,6 +334,18 @@ def process(fcode, name="__main__"):
                 if ext_s.py_import(nframe, file, search_path, loc=os.path.dirname(name)):
                     print(f"pytho: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
+            elif ins == "use" and argc == 3 and args[1] == "as":
+                if args[0].startswith("{") and args[0].endswith("}"):
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
+                    search_path = "_std"
+                else:
+                    file = os.path.join(os.path.dirname(name), (ofile := args[0]))
+                    if name != "__main__":
+                        file = os.path.join(os.path.dirname(name), file)
+                    search_path = "_loc"
+                if ext_s.py_import(nframe, file, search_path, loc=os.path.dirname(name), alias=args[2]):
+                    print(f"pytho: Something wrong happened...\nLine {lpos}\nFile {name}")
+                    return error.PREPROCESSING_ERROR
             elif ins == "use:luaj" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
@@ -355,6 +398,8 @@ def process(fcode, name="__main__"):
                 define_func = False
             elif ins == "def_fn_enable" and argc == 0:
                 define_func = True
+            elif ins == "set" and argc == 2:
+                varproc.rset(nframe[-1], args[0], args[1])
             else:
                 error.pre_error(
                     lpos, name, f"{name!r}:{lpos}: Invalid directive {ins!r}"
@@ -533,9 +578,12 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     f"Something went wrong when arguments were processed:\n{traceback.format_exc()}\n> {oargs!r}",
                 )
                 return error.PYTHON_ERROR
+            argc = len(args)
+        else:
+            args = oargs
+        argc = len(args)
         if varproc.is_debug_enabled("show_instructions"):
             error.info(f"Executing: {code[p]}")
-        argc = len(args)
         if ins == "fn" and argc >= 1:
             name, *params = args
             temp = get_block(code, p)
@@ -609,6 +657,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         elif err == error.SKIP_RESULT:
                             continue
                         return err
+        elif ins == "dump_scope" and argc == 0:
+            pprint(frame[-1])
         elif ins == "loop" and argc == 1:
             temp = get_block(code, p)
             if temp is None:
@@ -624,7 +674,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         elif err == error.SKIP_RESULT:
                             continue
                         return err
-        elif ins == "while" and argc != 0:
+        elif ins == "while" and argc > 0:
             temp = get_block(code, p)
             if temp is None:
                 break
@@ -633,7 +683,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if body:
                 while not thread_event.is_set():
                     try:
-                        (res,) = argproc.exprs_runtime(frame, args)
+                        (res,) = argproc.process_args(frame, args)
                         if not res:
                             break
                     except Exception as e:
@@ -686,7 +736,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if err:=run(process(args[0] ,name=args[1]), frame=args[2]):
                 return err
         elif ins == "sexec" and argc == 4:
+            error.silent()
             frame[-1][args[0]] = run(process(args[1], name=args[2]), frame=args[3])
+            error.active()
         elif ins == "fallthrough" and argc == 0:
             return error.FALLTHROUGH
         elif ins == "set" and argc == 2:
@@ -1129,16 +1181,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 break
             else:
                 p, body = temp
-            dct = {}
-            for _, _, vname, vtype in body:
-                if not vtype:
-                    dct[vname] = state.bstate("types:any")
-                else:
-                    (dct[vname],) = argproc.bs_thing(frame, vtype)
-            varproc.rset(frame[-1], args[0], dct)
+            if argproc.parse_template(frame, args[0], body):
+                break
         elif ins == "from_template" and argc == 2:
             template = args[0]
-            tname = args[0]
+            tname = args[1]
             temp = get_block(code, p)
             if temp is None:
                 break
@@ -1147,38 +1194,35 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             dct = {}
             if template != constants.none:
                 for pos, _, vname, vitem in body:
+                    if vname not in template:
+                        error.error(
+                            pos, file, f"Attribute {vname!r} is not defined in template!"
+                        )
+                        return error.NAME_ERROR
                     if vname in dct:
                         error.error(
                             pos, file, f"Attribute {vname!r} is already defined!"
                         )
                         return error.NAME_ERROR
-                    if vitem == ["$name"]:
-                        value = args[1]
-                    else:
-                        (value,) = argproc.bs_thing(frame, vitem)
-                    if vname not in template:
-                        error.error(
-                            pos,
-                            file,
-                            f"Attribute {vname!r} is not in the defined template.",
-                        )
-                        return error.NAME_ERROR
-                    if template[vname] != state.bstate("types:any") and not isinstance(
-                        value, template[vname]
-                    ):
-                        error.error(
-                            pos,
-                            file,
-                            f"Attribute {vname!r} must be type {template[vname]!r}! Not {value!r} of {type(value)!r}",
-                        )
+                    value, = argproc.process_args(frame, vitem)
+                    if value == "$default":
+                        dct[vname] = template[f"value:{vname}"]
+                    elif template[vname] == constants.any:
+                        dct[vname] = value
+                    elif not isinstance(value, template[vname]):
+                        error.error(pos, file, f"Invalid type!\nItem {vname!r} should be type {template[vname]!r} but got {type(vitem)!r}")
                         return error.TYPE_ERROR
-                    dct[vname] = value
-                for i in template.keys():
+                    else:
+                        dct[vname] = value
+                for i, value in template.items():
+                    if not i.startswith("value:"):
+                        continue
+                    i = i.removeprefix('value:')
                     if i not in dct:
-                        dct[i] = constants.none
+                        dct[i] = value
             else:
                 for pos, _, vname, vitem in body:
-                    (dct[vname],) = argproc.bs_thing(frame, vitem)
+                    (dct[vname],) = argproc.process_args(frame, vitem)
             varproc.rset(frame[-1], args[1], dct)
         elif ins == "raise" and isinstance(args[0], int) and argc == 2:
             error.error(pos, file, args[1])

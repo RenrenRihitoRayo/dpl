@@ -10,7 +10,7 @@ helper = dpl.require(["dpl_helpers", "func_helper.py"])
 if helper is None:
     raise Exception("Helper func_helper.py doesnt exist!")
 
-ext = dpl.extension(meta_name="io")
+ext = dpl.extension(meta_name="io", alias=__alias__)
 ext.items["output"] = modules.sys.stdout
 
 

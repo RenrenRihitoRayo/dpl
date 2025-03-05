@@ -1,0 +1,17 @@
+&use {std/types.py} as pt
+&use {std/text_io.py} as tio
+
+template person
+    define name   as :pt.str = "default_name"
+    define age    as :pt.int = "default_age"
+    define height as [?tuple :pt.flt :tp.int] = 0
+    define data   as :pt.any = none
+end
+
+from_template :person Andrew
+    name "this"
+    height 1.0
+    data $default
+end
+
+tio:println :Andrew

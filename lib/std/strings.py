@@ -4,7 +4,7 @@ if __name__ != "__dpl__":
 if not dpl.info.VERSION.isLater((1, 4, None)):
     raise Exception("This is for version 1.4.x!")
 
-ext = dpl.extension("string")
+ext = dpl.extension("string", alias=__alias__)
 
 
 @ext.add_method(from_func=True)
