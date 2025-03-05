@@ -4,7 +4,7 @@ from . import varproc
 from . import info
 from re import compile as rcomp
 
-pattern = rcomp("[&\w\.\:_\%\!]+")
+pattern = rcomp(r"[&\w\.\:_\%\!]+")
 import os
 
 SUGGEST = info.KEYWORDS+[
