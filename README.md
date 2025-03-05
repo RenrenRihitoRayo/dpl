@@ -19,6 +19,16 @@ from_template :Person Andrew
 end
 
 io:println :Andrew
+
+# Inline template (not recommended as it is hard to read)
+
+from_template [dict [name=:types.str][age=:types.int][data=:types.dict]] Andrew
+    name $name
+    age 15
+    data [dict [this=what]]
+end
+
+io:println :Andrew
 ```
 
 ## Aliases when importing
