@@ -418,6 +418,8 @@ def evaluate(frame, expression):
                 return 0
         case ["@", ins, *args] if ins in methods:
             return methods[ins](frame, *args)
+        case ["#", ins, *args] if ins in methods:
+            return ins(frame, "_", *args)[0]
         case [obj, "@", method, *args] if hasattr(
             obj, method
         ):  # direct python method calling
@@ -428,7 +430,9 @@ def evaluate(frame, expression):
             return temp
         case [name, "=", value]:
             return {name: value}
-        case [obj, index]:
+        case [obj, "-", ">", index]:
+            if not isinstance(obj, (tuple, list, str)):
+                return constants.nil
             if isinstance(obj, (tuple, list, str)) and index >= len(obj):
                 return constants.nil
             elif isinstance(obj, dict) and index not in obj:

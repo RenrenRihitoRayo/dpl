@@ -101,6 +101,7 @@ class extension:
     def get(self, name, default=None):
         return self.__data.get(name, default)
 
+
     @property
     def functions(self):
         return self.__func

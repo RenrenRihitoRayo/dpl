@@ -1,0 +1,12 @@
+&use {.cliche.py}
+
+while [# :cliche.alive]
+    match [# :cliche.success]
+        with "success"
+            cliche.enjoy_life
+        end
+        default
+            cliche.keep_trying
+        end
+    end 
+end
