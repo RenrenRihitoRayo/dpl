@@ -303,7 +303,7 @@ def handle_args():
             while True:
                 try:
                     act = prompt(PROMPT_CTL["ps1"], completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist).strip()
-                except KeyboardInterrupt:
+                except (KeyboardInterrupt, EOFError):
                     exit()
                 if (
                     act
@@ -316,7 +316,7 @@ def handle_args():
                     while True:
                         try:
                             aa = prompt(PROMPT_CTL["ps2"], completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist).strip()
-                        except KeyboardInterrupt:
+                        except (KeyboardInterrupt, EOFError):
                             exit()
                         if not aa:
                             break
