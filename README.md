@@ -1,5 +1,11 @@
 # 1.4.6
 
+## Aliases when importing
+
+When using `&use` you can add `as name` at the end.
+For example `&use {some.py} as alias`.
+See `example/alias.dpl` for more details.
+
 ## Variable Handling
 
 Auto resolution of names (being able to
