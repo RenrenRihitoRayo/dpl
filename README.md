@@ -1,5 +1,26 @@
 # 1.4.6
 
+## New template syntax
+
+```DuProL
+&use {std/text_io.py}
+&use {std/types.py}
+
+template Person
+    define name as :types.str = "default_name"
+    define age  as :types.int = 0
+    define data as :types.dict
+end
+
+from_template :Person Andrew
+    name $name
+    age 15
+    data [dict [this=what]]
+end
+
+io:println :Andrew
+```
+
 ## Aliases when importing
 
 When using `&use` you can add `as name` at the end.
@@ -13,7 +34,7 @@ implicitly use global variables) can be
 disabled by setting `_meta.debug.allow_automatic_global_name_resolution`
 to `0` or any falsy value.
 
-```
+```DuProL
 &use {std/text_io.py}
 
 set _meta.debug.allow_automatic_global_name_resolution 0

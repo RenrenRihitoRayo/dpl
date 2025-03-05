@@ -1207,6 +1207,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     value, = argproc.process_args(frame, vitem)
                     if value == "$default":
                         dct[vname] = template[f"value:{vname}"]
+                    elif value == "$name":
+                        dct[vname] = tname
                     elif template[vname] == constants.any:
                         dct[vname] = value
                     elif not isinstance(value, template[vname]):

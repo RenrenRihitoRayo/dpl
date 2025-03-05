@@ -128,11 +128,12 @@ def parse_template(frame, temp_name, body):
         if ins == "define" and argc == 3 and args[1] == "as":
             name, _, type_ = args
             data[name] = type_
-        if ins == "define" and argc == 5 and args[1] == "as" and args[3] == "=":
+        elif ins == "define" and argc == 5 and args[1] == "as" and args[3] == "=":
             name, _, type_, _, value = args
             data[name] = type_
             data[f"value:{name}"] = value
         else:
+            error.error(pos, file, f"Invalid statement!")
             return 1
     varproc.rset(frame[-1], temp_name, data)
 
