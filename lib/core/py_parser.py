@@ -9,6 +9,9 @@ import traceback
 import threading
 import pickle
 from copy import deepcopy as copy
+from cffi import FFI
+
+ffi = FFI()
 
 try:
     from . import arguments as argproc
@@ -700,6 +703,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         elif err == error.SKIP_RESULT:
                             continue
                         return err
+        elif ins == "dlopen" and argc == 2:
+            for name, value in ffi.dlopen(args[1]):
+                print(name, value)
         elif ins == "stop" and argc == 0:
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
