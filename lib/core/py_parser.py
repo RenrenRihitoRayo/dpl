@@ -1186,11 +1186,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 return error.PYTHON_ERROR
         elif ins == "ccall" and argc >= 1:
             name, *args = args
-            if (temp := varproc.rget(frame[-1], name)) == state.bstate(
-                "nil"
-            ) or not hasattr(temp, "__call__"):
-                error.error(pos, file, f"Invalid function {name!r}!")
-                return error.NAME_ERROR
+            if not name:
+                error.error(pos, file, "Function not defined!")
+                break
             try:
                 name(args)
             except:
