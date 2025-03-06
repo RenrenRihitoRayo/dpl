@@ -1190,7 +1190,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, "Function not defined!")
                 break
             try:
-                name(args)
+                name(*args)
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
