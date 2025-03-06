@@ -1192,12 +1192,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 return error.NAME_ERROR
             try:
-                res = name(args)
-                if isinstance(res, tuple):
-                    for name, value in zip(rets, res):
-                        varproc.rset(frame[-1], name, value)
-                if isinstance(res, int) and res:
-                    return res
+                name(args)
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
