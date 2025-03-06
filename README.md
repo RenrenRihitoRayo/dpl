@@ -12,7 +12,7 @@ getcfn hello :test
 
 ccall :hello
 ```
-`test.c` => `text.so`
+`test.c` => `test.so`
 ```C
 #include <stdio.h>
 
