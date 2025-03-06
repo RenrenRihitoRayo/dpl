@@ -1,5 +1,26 @@
 # 1.4.6
 
+## Using DLL and SO files
+
+DPL now supports using dynamic libraries.
+
+`test.dpl`
+```DuProL
+defcfn "void hello();"
+dlopen test "./test.so"
+getcfn hello :test
+
+ccall :hello
+```
+`test.c` => `text.so`
+```C
+#include <stdio.h>
+
+void hello() {
+    printf("Hello, world!\n");
+}
+```
+
 ## New template syntax
 
 ```DuProL
