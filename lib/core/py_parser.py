@@ -707,6 +707,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             frame[-1][args[0]] = ffi.dlopen(args[1])
         elif ins == "getcfn" and argc == 2:
             frame[-1][args[0]] = getattr(args[1], args[0], constants.none)
+        elif ins == "fficdef" and argc == 1:
+            ffi.cdef(args[0])
         elif ins == "stop" and argc == 0:
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
