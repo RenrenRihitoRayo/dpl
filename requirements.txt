@@ -1,6 +1,6 @@
 dill
-cProfile
 ncurses
 requests
-tupa
+lupa
+cffi
 prompt_toolkit
