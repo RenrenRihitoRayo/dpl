@@ -1,5 +1,11 @@
 # 1.4.6
 
+## Notice
+
+As of now DPL will have a code
+standard requirements.
+In STANDARDS.md
+
 ## Using DLL and SO files
 
 DPL now supports using dynamic libraries.
