@@ -704,7 +704,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                             continue
                         return err
         elif ins == "dlopen" and argc == 2:
-            for name, value in ffi.dlopen(args[1]):
+            for name, value in vars(ffi.dlopen(args[1])):
                 print(name, value)
         elif ins == "stop" and argc == 0:
             return error.STOP_RESULT
