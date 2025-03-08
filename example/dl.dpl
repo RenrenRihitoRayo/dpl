@@ -2,7 +2,11 @@
 &use {std/dl_tools.py}
 &use {std/strings.py}
 
-# recompile the binary
+--
+    This is how to use the ffi api in DPL
+--
+
+# recompile the code
 match :_meta.internal.os.os_name
     with "windows"
         cmd "gcc -o test.dll -shared test.c"
@@ -25,7 +29,6 @@ io:println [@ dl_tools.convert_c_string :return]
 
 ccall :print_this [@ strings.encode "This text will get printed by C"]
 
-del test hello print_this dl_tools
 dlclose :test
 
 # clean up
