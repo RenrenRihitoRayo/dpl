@@ -707,6 +707,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         return err
         elif ins == "dlopen" and argc == 2:
             frame[-1][args[0]] = ffi.dlopen(args[1])
+        elif ins == "ffi_end" and argc == 0:
+            ffi = None
+            ext_s.dpl.ffi = None
+        elif ins == "ffi_start" and argc == 0:
+            ext_s.dpl.ffi = ffi = ffi()
         elif ins == "getc" and argc == 2:
             frame[-1][args[0]] = getattr(args[1], args[0], constants.none)
         elif ins == "cdef" and argc == 1:
