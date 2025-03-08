@@ -21,9 +21,9 @@ DPL now supports using dynamic libraries.
 
 `test.dpl`
 ```DuProL
-defcfn "void hello();"
+cdef "void hello();"
 dlopen test "./test.so"
-getcfn hello :test
+cget hello :test
 
 ccall :hello
 ```

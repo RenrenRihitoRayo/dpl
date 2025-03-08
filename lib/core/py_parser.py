@@ -707,6 +707,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         return err
         elif ins == "dlopen" and argc == 2:
 <<<<<<< HEAD
+<<<<<<< HEAD
             frame[-1][args[0]] = ffi.dlopen(args[1])
         elif ins == "ffi_end" and argc == 0:
             ffi = None
@@ -715,6 +716,16 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             ext_s.dpl.ffi = ffi = ffi()
 =======
             frame[-1][args[0]] = ext_s.dpl.ffi.dlopen(args[1])
+=======
+            if args[1].startswith("{") and args[1].endswith("}"):
+                file = info.get_path_with_lib(args[1][1:-1])
+            else:
+                file = args[1]
+            if not os.path.isfile(file):
+                error.error(pos, file, f"File {file!r} coundlt be loaded!")
+                return error.FILE_NOT_FOUND_ERROR
+            frame[-1][args[0]] = ext_s.dpl.ffi.dlopen(file)
+>>>>>>> 1.4.6
         elif ins == "dlclose" and argc == 1:
             ext_s.dpl.ffi.dlclose(args[0])
 >>>>>>> 1.4.6
