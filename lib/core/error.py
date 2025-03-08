@@ -14,7 +14,8 @@ ERRORS = (
     "THREAD_ERROR",
     "TYPE_ERROR",
     "NAME_ERROR",
-    "COMPAT_ERROR"
+    "COMPAT_ERROR",
+    "FILE_NOT_FOUND_ERROR"
 )
 
 META_ERR = varproc.meta["err"] = {"builtins": ERRORS, "defined_errors": list(ERRORS)}
