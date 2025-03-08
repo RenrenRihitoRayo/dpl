@@ -1,0 +1,14 @@
+&use {std/text_io.py}
+
+module test
+    # a public variable
+    export set this 90
+    # a public function
+    pub fn test
+        io:println :_capture.this
+    end
+    # set the current local scope to be the captured scope
+    # basically a closure, to make sure that this modules scope
+    # is accessible even from other files
+    set test.capture :_local
+end
