@@ -1,2 +1,4 @@
-&include {test.dpl}
-test
+&include {...}
+&includec {...}
+&extend {...}
+&use {...}

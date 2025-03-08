@@ -573,7 +573,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         frame = nframe
     while p < len(code) and not IS_STILL_RUNNING.is_set():
         pos, file, ins, oargs = code[p]
-        if ins not in {"while"}:  # Lazy evaluation
+        if ins not in {"while", "lazy"}:  # Lazy evaluation
             try:
                 args = argproc.process_args(frame, oargs)
             except Exception as e:
@@ -597,6 +597,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             else:
                 p, body = temp
             varproc.rset(frame[-1], name, objects.make_function(name, body, params))
+        elif ins == "lazy" and argc == 2:
+            frame[-1][args[0]] = args[1]
         elif ins == "pub" and argc >= 2 and args[0] == "fn":
             _, name, *params = args
             temp = get_block(code, p)
@@ -605,9 +607,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             else:
                 p, body = temp
             varproc.rset(
-                frame[-1], "_export." + name, objects.make_function(name, body, params)
+                frame[-1], "_export." + name, (temp:=objects.make_function(name, body, params))
             )
-            varproc.rset(frame[-1], name, objects.make_function(name, body, params))
+            varproc.rset(frame[-1], name, temp)
         elif ins == "export" and argc == 3 and args[0] == "set":
             _, name, value = args
             varproc.rset(frame[-1], "_export." + name, value)
@@ -964,6 +966,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     varproc.rset(frame[-1], name, value)
             if temp["self"] != constants.nil:
                 frame[-1]["self"] = temp["self"]
+            if temp["capture"] != constants.nil:
+                frame[-1]["_capture"] = temp["capture"]
             frame[-1]["_returns"] = rets
             err = run(temp["body"], frame)
             if err > 0:
@@ -1014,6 +1018,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     varproc.rset(frame[-1], name, value)
             if temp["self"] != constants.nil:
                 frame[-1]["self"] = temp["self"]
+            if temp["capture"] != constants.nil:
+                frame[-1]["_capture"] = temp["capture"]
             frame[-1]["_returns"] = rets
             frame[-1]["_memoize"] = (temp["memoize"], mem_args)
             err = run(temp["body"], frame)
@@ -1063,6 +1069,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     varproc.rset(frame[-1], name, value)
             if temp["self"] != constants.nil:
                 frame[-1]["self"] = temp["self"]
+            if temp["capture"] != constants.nil:
+                frame[-1]["_capture"] = temp["capture"]
             frame[-1]["_returns"] = rets
             frame[-1]["_safe_call"] = constants.true
             frame[-1]["_memoize"] = (temp["memoize"], mem_args)
@@ -1096,6 +1104,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     varproc.rset(frame[-1], name, value)
             if temp["self"] != constants.nil:
                 frame[-1]["self"] = temp["self"]
+            if temp["capture"] != constants.nil:
+                frame[-1]["_capture"] = temp["capture"]
             frame[-1]["_returns"] = rets
             frame[-1]["_safe_call"] = constants.true
             error.silent()
@@ -1348,6 +1358,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     varproc.rset(frame[-1], name, value)
             if temp["self"] != constants.nil:
                 frame[-1]["self"] = temp["self"]
+            if temp["capture"] != constants.nil:
+                frame[-1]["_capture"] = temp["capture"]
             err = run(temp["body"], frame)
             if err:
                 return err

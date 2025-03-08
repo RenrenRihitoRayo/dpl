@@ -315,6 +315,8 @@ def to_static(code):
         if isinstance(i, list):
             if is_static(i):
                 code[pos] = evaluate(None, i)
+            else:
+                code[pos] = to_static(i)
     return code
 
 
@@ -416,6 +418,8 @@ def evaluate(frame, expression):
                 return len(item)
             except:
                 return 0
+        case ["Eval", expr]:
+            return process_arg(frame, expr)
         case ["@", ins, *args] if ins in methods:
             return methods[ins](frame, *args)
         case ["#", ins, *args] if ins in methods:
@@ -516,6 +520,8 @@ def group(text):
 def exprs_preruntime(args):
     return [*map(expr_preruntime, args)]
 
+def process_arg(frame, e):
+    return expr_runtime(frame, e)
 
 def process_args(frame, e):
     return list(map(lambda x: expr_runtime(frame, x), e))
