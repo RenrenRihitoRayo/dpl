@@ -43,7 +43,11 @@ dlclose :test
 # clean up
 match :_meta.internal.os.os_name
     with "windows"
+<<<<<<< HEAD
         cmd "del -f test.dll"
+>>>>>>> 1.4.6
+=======
+        cmd "del test.dll"
 >>>>>>> 1.4.6
     end
     default
