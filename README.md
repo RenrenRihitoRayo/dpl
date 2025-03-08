@@ -1,5 +1,14 @@
 # 1.4.6
 
+## Using dynamic libraries
+
+You can now use C in DPL!
+Using dynamically linked libraries for windows and
+shared object files in posix compliant systems!
+
+Look at the example at `example/dl.dpl`
+as well as the C code in `example/test.c`
+
 ## Notice
 
 As of now DPL will have a code
