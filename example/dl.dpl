@@ -1,8 +1,38 @@
 &use {std/text_io.py}
+&use {std/dl_tools.py}
+&use {std/strings.py}
 
-dlopen test, "./test.so"
+# recompile the binary
+match :_meta.internal.os.os_name
+    with "windows"
+        cmd "gcc -o test.dll -shared test.c"
+        dlopen test, "test.dll"
+    end
+    default
+        cmd "gcc -o test.so -shared -fPIC test.c"
+        dlopen test, "./test.so"
+    end
+end
+
 cdef "char* hello();"
+cdef "void print_this(char* text);"
 getc hello :test
+getc print_this :test
 ccatch return :hello
 
-io:println :return
+# print the result
+io:println [@ dl_tools:convert_c_string :return]
+
+ccall :print_this [@ strings.encode "This text will get printed by C"]
+
+
+end_ffi
+# clean up
+match :_meta.internal.os.os_name
+    with "windows"
+        cmd "del test.dll"
+    end
+    default
+        cmd "rm test.so"
+    end
+end
