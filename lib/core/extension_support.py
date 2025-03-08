@@ -147,6 +147,7 @@ class dpl:
     info = info
     error = error
     state = state
+    ffi = None
     register_error = error.register_error
     restricted = restricted
     state_nil = state.bstate("nil")

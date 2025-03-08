@@ -11,8 +11,6 @@ import pickle
 from copy import deepcopy as copy
 from cffi import FFI
 
-ffi = FFI()
-
 try:
     from . import arguments as argproc
     from . import info
@@ -27,6 +25,10 @@ try:
 except ImportError:
     print(f"Please do not run it from here.")
     sys.exit(1)
+
+
+ffi = FFI()
+ext_s.dpl.ffi = ffi
 
 IS_STILL_RUNNING = threading.Event()
 
@@ -705,9 +707,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         return err
         elif ins == "dlopen" and argc == 2:
             frame[-1][args[0]] = ffi.dlopen(args[1])
-        elif ins == "getcfn" and argc == 2:
+        elif ins == "getc" and argc == 2:
             frame[-1][args[0]] = getattr(args[1], args[0], constants.none)
-        elif ins == "cdeffn" and argc == 1:
+        elif ins == "cdef" and argc == 1:
             ffi.cdef(args[0])
         elif ins == "stop" and argc == 0:
             return error.STOP_RESULT
@@ -1190,8 +1192,17 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, "Function not defined!")
                 break
             try:
-                res = name(*args)
-                print(res)
+                name(*args)
+            except:
+                error.error(pos, file, traceback.format_exc()[:-1])
+                return error.PYTHON_ERROR
+        elif ins == "ccatch" and argc >= 1:
+            ret, name, *args = args
+            if not name:
+                error.error(pos, file, "Function not defined!")
+                break
+            try:
+                frame[-1][ret] = name(*args)
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR

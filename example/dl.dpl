@@ -1,0 +1,8 @@
+&use {std/text_io.py}
+
+dlopen test, "./test.so"
+cdef "char* hello();"
+getc hello :test
+ccatch return :hello
+
+io:println :return
