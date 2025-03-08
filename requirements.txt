@@ -1,5 +1,4 @@
 dill
-ncurses
 requests
 lupa
 cffi
