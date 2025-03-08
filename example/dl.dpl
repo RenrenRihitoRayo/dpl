@@ -31,7 +31,7 @@ dlclose :test
 # clean up
 match :_meta.internal.os.os_name
     with "windows"
-        cmd "del -f test.dll"
+        cmd "del test.dll"
     end
     default
         cmd "rm test.so"
