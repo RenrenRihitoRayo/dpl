@@ -21,6 +21,7 @@ getc print_this :test
 ccatch return :hello
 
 # print the result
+<<<<<<< HEAD
 io:println [@ dl_tools:convert_c_string :return]
 
 ccall :print_this [@ strings.encode "This text will get printed by C"]
@@ -31,6 +32,19 @@ end_ffi
 match :_meta.internal.os.os_name
     with "windows"
         cmd "del test.dll"
+=======
+io:println [@ dl_tools.convert_c_string :return]
+
+ccall :print_this [@ strings.encode "This text will get printed by C"]
+
+del test hello print_this dl_tools
+dlclose :test
+
+# clean up
+match :_meta.internal.os.os_name
+    with "windows"
+        cmd "del -f test.dll"
+>>>>>>> 1.4.6
     end
     default
         cmd "rm test.so"

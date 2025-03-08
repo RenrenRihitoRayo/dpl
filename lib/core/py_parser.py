@@ -8,6 +8,7 @@ import itertools
 import traceback
 import threading
 import pickle
+import gc
 from copy import deepcopy as copy
 from cffi import FFI
 
@@ -27,8 +28,7 @@ except ImportError:
     sys.exit(1)
 
 
-ffi = FFI()
-ext_s.dpl.ffi = ffi
+ext_s.dpl.ffi = FFI()
 
 IS_STILL_RUNNING = threading.Event()
 
@@ -706,16 +706,22 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                             continue
                         return err
         elif ins == "dlopen" and argc == 2:
+<<<<<<< HEAD
             frame[-1][args[0]] = ffi.dlopen(args[1])
         elif ins == "ffi_end" and argc == 0:
             ffi = None
             ext_s.dpl.ffi = None
         elif ins == "ffi_start" and argc == 0:
             ext_s.dpl.ffi = ffi = ffi()
+=======
+            frame[-1][args[0]] = ext_s.dpl.ffi.dlopen(args[1])
+        elif ins == "dlclose" and argc == 1:
+            ext_s.dpl.ffi.dlclose(args[0])
+>>>>>>> 1.4.6
         elif ins == "getc" and argc == 2:
             frame[-1][args[0]] = getattr(args[1], args[0], constants.none)
         elif ins == "cdef" and argc == 1:
-            ffi.cdef(args[0])
+            ext_s.dpl.ffi.cdef(args[0])
         elif ins == "stop" and argc == 0:
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
@@ -781,11 +787,12 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 frame[-1]["_const"] = [name]
         elif ins == "fset" and argc == 2:
             varproc.rset(frame[-1], args[0], args[1], meta=False)
-        elif ins == "del" and argc == 1:
-            varproc.rpop(frame[-1], args[0])
+        elif ins == "del" and argc >= 1:
             consts = frame[-1].get("_const")
-            if consts and name in consts:
-                consts.remove(name)
+            for name in args:
+                varproc.rpop(frame[-1], name)
+                if consts and name in consts:
+                    consts.remove(name)
         elif ins == "module" and argc == 1:
             name = args[0]
             temp = [frame[-1]]

@@ -4,7 +4,7 @@ if __name__ != "__dpl__":
 if not dpl.info.VERSION.isLater((1, 4, None)):
     raise Exception("This is for version 1.4.x!")
 
-ext = dpl.extension("string", alias=__alias__)
+ext = dpl.extension("strings", alias=__alias__)
 
 
 @ext.add_method(from_func=True)
@@ -47,3 +47,9 @@ def clean(_, __, string):
 def myHash(_, __, string):
     "THIS IS NOT A PERFECT HASH FUNCTION AND JUST USES PYTHONS HASH FUNC\nTHIS WILL BE REPLACED WITH sha256 SOON"
     return (hash(string),)
+
+
+@ext.add_method("encode", from_func=True)
+@ext.add_func("encode")
+def _(_, __, string, protocol="utf-8"):
+    return bytes(string, protocol)

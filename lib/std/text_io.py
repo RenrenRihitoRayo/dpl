@@ -20,14 +20,14 @@ def myPrint(_, __, *args, end="", sep=" "):
     for pos, arg in enumerate(args):
         if isinstance(arg, dict) and helper.has_repr(arg):
             arg[pos] = helper.get_repr(arg["_im_repr"])
-    print(*args, end=end, sep=sep, file=ext.items["output"])
+    print(*args, end=end, sep=sep, file=ext.items["output"], flush=True)
 
 
 @ext.add_func()
 def printf(_, __, text, values):
     for name, value in values.items():
         text = text.replace(f"${{{name}}}", str(value))
-    print(text, end="", file=ext.items["output"])
+    print(text, end="", file=ext.items["output"], flush=True)
 
 
 @ext.add_func()
@@ -36,17 +36,17 @@ def println(_, __, *args, sep=" "):
     for pos, arg in enumerate(args):
         if isinstance(arg, dict) and helper.has_repr(arg):
             args[pos] = helper.get_repr(arg["_im_repr"])
-    print(*args, sep=sep, file=ext.items["output"])
+    print(*args, sep=sep, file=ext.items["output"], flush=True)
 
 
 @ext.add_func()
 def rawprint(_, __, *args, sep=" ", end=""):
-    print(*args, sep=sep, file=ext.items["output"], end=end)
+    print(*args, sep=sep, file=ext.items["output"], end=end, flush=True)
 
 
 @ext.add_func()
 def rawprintln(_, __, *args, sep=" "):
-    print(*args, sep=sep, file=ext.items["output"])
+    print(*args, sep=sep, file=ext.items["output"], flush=True)
 
 
 @ext.add_func("input")
@@ -71,6 +71,8 @@ def rawoutput(_, __, *values):
                 s.append(chr(i))
             except:
                 s.append(str(i))
+        elif isinstance(i, bytes):
+            s.append(i.decode("utf-8"))
         else:
             s.append(str(i))
     modules.sys.stdout.write("".join(s))
