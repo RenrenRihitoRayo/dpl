@@ -22,7 +22,6 @@ try:
     from . import objects
     from . import constants
     from . import extension_support as ext_s
-    from . import data_files
 except ImportError:
     print(f"Please do not run it from here.")
     sys.exit(1)
@@ -587,8 +586,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         else:
             args = oargs
         argc = len(args)
-        if varproc.is_debug_enabled("show_instructions"):
-            error.info(f"Executing: {code[p]}")
         if ins == "fn" and argc >= 1:
             name, *params = args
             temp = get_block(code, p)
@@ -599,6 +596,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             varproc.rset(frame[-1], name, objects.make_function(name, body, params))
         elif ins == "lazy" and argc == 2:
             frame[-1][args[0]] = args[1]
+        elif ins == "get_time" and argc == 1:
+            frame[-1][args[0]] = time.time()
         elif ins == "pub" and argc >= 2 and args[0] == "fn":
             _, name, *params = args
             temp = get_block(code, p)
@@ -708,17 +707,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                             continue
                         return err
         elif ins == "dlopen" and argc == 2:
-<<<<<<< HEAD
-<<<<<<< HEAD
-            frame[-1][args[0]] = ffi.dlopen(args[1])
-        elif ins == "ffi_end" and argc == 0:
-            ffi = None
-            ext_s.dpl.ffi = None
-        elif ins == "ffi_start" and argc == 0:
-            ext_s.dpl.ffi = ffi = ffi()
-=======
-            frame[-1][args[0]] = ext_s.dpl.ffi.dlopen(args[1])
-=======
             if args[1].startswith("{") and args[1].endswith("}"):
                 file = info.get_path_with_lib(args[1][1:-1])
             else:
@@ -727,10 +715,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, f"File {file!r} coundlt be loaded!")
                 return error.FILE_NOT_FOUND_ERROR
             frame[-1][args[0]] = ext_s.dpl.ffi.dlopen(file)
->>>>>>> 1.4.6
         elif ins == "dlclose" and argc == 1:
             ext_s.dpl.ffi.dlclose(args[0])
->>>>>>> 1.4.6
         elif ins == "getc" and argc == 2:
             frame[-1][args[0]] = getattr(args[1], args[0], constants.none)
         elif ins == "cdef" and argc == 1:
@@ -739,16 +725,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
             return error.SKIP_RESULT
-        elif ins == "initDataFile" and argc == 3 and args[0] in {"dict", "list"}:
-            frame[-1][args[1]] = (
-                data_files.DataFileDict(args[2])
-                if args[0] == "dict"
-                else data_files.DataFileList(args[2])
-            )
-        elif ins == "closeDataFile" and argc == 1:
-            args[0].close()
-        elif ins == "clearDataFile" and argc == 1:
-            args[0].clear()
         elif ins == "if" and argc == 1:
             temp = get_block(code, p)
             if temp is None:
@@ -848,10 +824,10 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "STOP_TIME" and argc == 0:
             end_time = time.perf_counter() - start_time
         elif ins == "LOG_TIME" and argc == 0:
-            ct, unit = utils.convert_sec(end_time)
+            ct, unit = utils.convert_sec(time.perf_counter() - start_time)
             error.info(f"Elapsed time: {ct:,.8f}{unit}")
         elif ins == "LOG_TIME" and argc == 1:
-            ct, unit = utils.convert_sec(end_time)
+            ct, unit = utils.convert_sec(time.perf_counter() - start_time)
             error.info(f"Elapsed time: {args[0]} {ct:,.8f}{unit}")
         elif ins == "cmd" and argc == 1:
             os.system(args[0])

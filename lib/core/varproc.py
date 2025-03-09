@@ -7,7 +7,6 @@ from . import constants
 from . import info
 from . import state
 from . import error
-from . import data_files
 
 # lock
 W_LOCK = threading.Lock()
@@ -18,7 +17,6 @@ dependencies = {"dpl": set(), "python": {}, "lua": {}}
 # debug options
 debug = {
     "allow_automatic_global_name_resolution":1, # to get variables faster
-    "show_instructions": 0,
     "show_scope_updates": 0,
     "show_value_updates": 0,
     "show_imports": 0,
@@ -124,7 +122,7 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=True):
         if (
             pos != last
             and name in node
-            and isinstance(node[name], (dict, data_files.DataFileDict))
+            and isinstance(node[name], dict)
         ):
             node = node[name]
         elif pos == last and name in node:
@@ -153,7 +151,7 @@ def rpop(dct, full_name, default=constants.nil, sep="."):
         if (
             pos != last
             and name in node
-            and isinstance(node[name], (dict, data_files.DataFileDict))
+            and isinstance(node[name], dict)
         ):
             node = node[name]
         elif pos == last and name in node:
@@ -190,7 +188,7 @@ def rset(dct, full_name, value, sep=".", meta=True):
                 meta
                 and full_name in dct
                 and isinstance(
-                    (temp := dct[full_name]), (dict, data_files.DataFileDict)
+                    (temp := dct[full_name]), dict
                 )
                 and "[meta_value]" in temp
             ):
@@ -210,7 +208,7 @@ def rset(dct, full_name, value, sep=".", meta=True):
         if (
             pos != last
             and name in node
-            and isinstance(node[name], (dict, data_files.DataFileDict))
+            and isinstance(node[name], dict)
         ):
             node = node[name]
         elif pos == last:
@@ -233,7 +231,7 @@ def rset(dct, full_name, value, sep=".", meta=True):
                     meta
                     and name in node
                     and isinstance(
-                        (temp := node[name]), (dict, data_files.DataFileDict)
+                        (temp := node[name]), dict
                     )
                     and "[meta_value]" in temp
                 ):

@@ -47,6 +47,7 @@ DEC = {"end", "then"}
 
 KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
     'set',
+    'del',
     'const',
     'fset',
     'cmd',
@@ -64,8 +65,10 @@ KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
     'in', 'as',
     'LenOf', 'Type', 'Range', 'RawRange', 'dRange',
     'dRawRange', 'mod', 'nil?', 'none?', 'Sum', '?bytes',
+    'Expr', 'lazy',
     'not', 'and', 'or', 'wait_for_threads',
-    'exec', 'sexec'
+    'exec', 'sexec',
+    'dlopen', 'dlclose', 'cget', 'cdef'
 ]
 
 CHARS = {
@@ -88,7 +91,6 @@ WARNINGS = True
 DEAD_CODE_OPT = True
 
 VERSION_TRIPLE = (1, 4, 6)
-
 
 def isCompat(version, VERSION=VERSION_TRIPLE):
     major, minor, patch = version
