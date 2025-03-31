@@ -9,7 +9,7 @@ import os
 
 SUGGEST = info.KEYWORDS+[
     'pub fn',
-    'export set',
+    'export set'
 ]
 SUGGEST.remove("pub")
 

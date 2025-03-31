@@ -1,5 +1,40 @@
 # 1.4.6
 
+## Enums, Ternary and a 'Strict' setting.
+
+```DuProL
+&use {std/text_io.py}
+
+# when reading variables with the value of nil
+# (for undefined variables or marked vars)
+# it will raise an error
+set _meta.debug.disable_nil_values true
+
+enum my_enum
+    # enum:__main__:my_enum:v1
+    v1
+    # enum:__main__:my_enum:v2
+    v2
+    # enum:__main__:my_enum:v3
+    v3
+end
+
+io:println (if true then "true" else "false")
+```
+
+## Debugging the scope
+
+Two functions were added. "dump_scope" and "dump_vars".
+
+```DuProL
+-- Dump the local scope --
+dump_scope
+
+-- Dump an objects attributes --
+object this
+dump_vars :this
+```
+
 ## Using dynamic libraries
 
 You can now use C in DPL!

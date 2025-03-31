@@ -40,7 +40,7 @@ def pprint(d, l=0, seen=None):
             print(f"{name!r} = {value!r}")
 
 @ext.add_func("assert")
-def _(frame, _, condition, message):
+def _(frame, _, condition, message='Not provided.'):
     "Raises an error"
     if not condition:
         print("\n-- LOCAL VARIABLES DUMP --")
@@ -49,7 +49,7 @@ def _(frame, _, condition, message):
 
 
 @ext.add_func()
-def quiet_assert(frame, _, condition, message):
+def quiet_assert(frame, _, condition, message='Not provided'):
     "Does not raise an error"
     if not condition:
         print("\n-- LOCAL VARIABLES DUMP --")

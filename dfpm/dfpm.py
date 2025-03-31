@@ -1,5 +1,7 @@
 # Simple package installer!
 
+# dump f*cking package manager
+
 import requests
 import os, sys
 import zipfile

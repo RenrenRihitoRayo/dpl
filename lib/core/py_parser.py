@@ -208,10 +208,6 @@ def process(fcode, name="__main__"):
     "Preprocess a file"
     res = []
     nframe = varproc.new_frame()
-    nframe[-1].update({
-        "__file__":name,
-        "__path__":os.path.dirname(name) or constants.none
-    })
     dead_code = True
     warnings = True
     define_func = False
@@ -226,6 +222,8 @@ def process(fcode, name="__main__"):
         ),
         enumerate(map(str.strip, fcode.split("\n")), 1),
     ):
+        line = line.replace("!__line__", str(lpos))
+        line = line.replace("!__file__", name if name != "__main__" else varproc.meta["internal"]["main_file"])
         if multiline:
             if line.endswith("--"):
                 multiline = False
@@ -410,12 +408,8 @@ def process(fcode, name="__main__"):
                 )
                 break
         else:
-            if " " in line:
-                ins, arg = line.strip().split(maxsplit=1)
-                args = argproc.nest_args(argproc.exprs_preruntime(argproc.group(arg)))
-            else:
-                ins = line
-                args = []
+            ins, *args = argproc.group(line)
+            args = argproc.nest_args(argproc.exprs_preruntime(args))
             args = argproc.to_static(
                 args
             )  # If there are static parts in the arguments run them before runtime.
@@ -648,6 +642,19 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         elif err == error.SKIP_RESULT:
                             continue
                         return err
+        elif ins == "enum" and argc == 1:
+            name = args[0]
+            names = set()
+            temp = get_block(code, p)
+            if temp is None:
+                break
+            else:
+                p, body = temp
+            for _, _, ins, _ in body:
+                names.add(ins)
+            tmp = frame[-1][name] = {}
+            for n in names:
+                tmp[n] = f"enum:{file}:{name}:{n}"
         elif ins == "loop" and argc == 0:
             temp = get_block(code, p)
             if temp is None:
@@ -665,6 +672,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         return err
         elif ins == "dump_scope" and argc == 0:
             pprint(frame[-1])
+        elif ins == "dump_vars" and argc == 1 and isinstance(args[0], dict):
+            pprint(args[0])
         elif ins == "loop" and argc == 1:
             temp = get_block(code, p)
             if temp is None:
@@ -1015,7 +1024,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if err > 0:
                 return err
             varproc.pscope(frame)
-        elif ins == "smcatch" and argc >= 2:  # safe catch return value of a function
+        elif ins == "smcatch" and argc >= 2 and len(args[0]) >= 1:  # safe catch return value of a function
             rets, func_name, *args = args
             mem_args = tuple(
                 map(
@@ -1064,10 +1073,12 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             frame[-1]["_safe_call"] = constants.true
             frame[-1]["_memoize"] = (temp["memoize"], mem_args)
             error.silent()
-            run(temp["body"], frame)
+            err = run(temp["body"], frame)
+            if err:
+                frame[-1][args[0][0]] = err
             error.active()
             varproc.pscope(frame)
-        elif ins == "scatch" and argc >= 2:  # catch return value of a function
+        elif ins == "scatch" and argc >= 2 and len(args[0]) >= 1:  # catch return value of a function
             rets, func_name, *args = args
             if (temp := varproc.rget(frame[-1], func_name)) == state.bstate(
                 "nil"
@@ -1099,6 +1110,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             frame[-1]["_safe_call"] = constants.true
             error.silent()
             err = run(temp["body"], frame)
+            if err:
+                frame[-1][args[0][0]] = err
             error.active()
             varproc.pscope(frame)
         elif ins == "body" and argc >= 1:  # give a code block to a python function

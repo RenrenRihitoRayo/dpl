@@ -242,19 +242,25 @@ def expr_runtime(frame, arg):
         return arg
     elif is_var(arg):
         if varproc.debug["allow_automatic_global_name_resolution"]:
-            return varproc.rget(frame[-1], arg[1:], default=varproc.rget(frame[0], arg[1:]))
+            v = varproc.rget(frame[-1], arg[1:], default=varproc.rget(frame[0], arg[1:]))
         else:
-            return varproc.rget(frame[-1], arg[1:])
+            v = varproc.rget(frame[-1], arg[1:])
+        if varproc.get_debug("disable_nil_values") and v == constants.nil:
+            raise Exception(f"{arg!r} is nil!")
+        return v
     elif is_fvar(arg):
         if varproc.debug["allow_automatic_global_name_resolution"]:
-            return varproc.rget(
+            v = varproc.rget(
                 frame[-1],
                 arg[1:],
                 default=varproc.rget(frame[0], arg[1:], meta=False),
                 meta=False,
             )
         else:
-            return varproc.rget(frame[-1], arg[1:], meta=False)
+            v = varproc.rget(frame[-1], arg[1:], meta=False)
+        if varproc.get_debug("disable_nil_values") and v == constants.nil:
+            raise Exception(f"{arg!r} is nil!")
+        return v
     elif arg == "!dict":
         return {}
     elif arg == "!list":
@@ -338,11 +344,13 @@ def evaluate(frame, expression):
         case [val1, "!", "=", val2]:
             return val1 != val2
         case [val1, "and", val2]:
-            return val1 and val2
+            return constants.true if val1 and val2 else constants.false
         case [val1, "or", val2]:
-            return val1 or val2
+            return constants.true if val1 or val2 else constants.false
         case ["not", val2]:
-            return not val2
+            return constants.true if not val2 else constants.false
+        case ["if", value, "then", true_v, "else", false_v]:
+            return true_v if value else false_v
         case ["!", val2]:
             return not val2
         case [val1, ">", "=", val2]:
@@ -385,6 +393,11 @@ def evaluate(frame, expression):
             return value == constants.nil
         case ["none?", value]:
             return value == constants.none
+        case ["def?", name]:
+            value = varproc.rget(frame[-1], name, default=None, meta=False)
+            if value is None:
+                return constants.false
+            return constants.true
         case ["Type", item]:
             return getattr(type(item), "__name__", constants.nil)
         case ["Sum", *args]:

@@ -1,1 +1,1 @@
-/mnt/c/Users/estre/OneDrive/Desktop/dpl/dpl.py "$@"
+/storage/emulated/0/dpl/dpl.py "$@"

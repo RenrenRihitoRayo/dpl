@@ -1,0 +1,8 @@
+&use {std/text_io.py}
+
+# !__file__ is the file name
+# !__line__ is the line it is used in
+# this literally is just a text replacement.
+# Be wary of using it.
+
+io:println "This is !__file__:!__line__"

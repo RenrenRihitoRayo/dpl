@@ -38,12 +38,13 @@ INC_EXT = {
     "template",
     "from_template",
     "with",
-    "default"
+    "default",
+    "enum"
 }
 
 INC = {"thread": 1}
 
-DEC = {"end", "then"}
+DEC = {"end"}
 
 KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
     'set',
@@ -52,7 +53,6 @@ KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
     'fset',
     'cmd',
     'exit',
-    'fallthrough',
     'skip',
     'stop',
     'raise',
@@ -62,13 +62,14 @@ KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
     '?dict',
     'dict',
     'export',
-    'in', 'as',
+    'in', 'as', 'not', 'and', 'or',
     'LenOf', 'Type', 'Range', 'RawRange', 'dRange',
-    'dRawRange', 'mod', 'nil?', 'none?', 'Sum', '?bytes',
+    'dRawRange', 'mod', 'nil?', 'none?', 'Sum', '?bytes', 'def?',
     'Expr', 'lazy',
-    'not', 'and', 'or', 'wait_for_threads',
+    'thread', 'wait_for_threads',
     'exec', 'sexec',
-    'dlopen', 'dlclose', 'cget', 'cdef'
+    'dlopen', 'dlclose', 'cget', 'cdef',
+    'dump_vars', 'dump_scope', 'fallthrough'
 ]
 
 CHARS = {

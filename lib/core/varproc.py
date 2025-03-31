@@ -16,7 +16,7 @@ dependencies = {"dpl": set(), "python": {}, "lua": {}}
 
 # debug options
 debug = {
-    "allow_automatic_global_name_resolution":1, # to get variables faster
+    "allow_automatic_global_name_resolution":1, # set to false to get variables faster
     "show_scope_updates": 0,
     "show_value_updates": 0,
     "show_imports": 0,
@@ -25,6 +25,7 @@ debug = {
     "debug_output_file": "debug_log.txt",
     "track_time": 0,
     "time_threshold": 1.5,
+    "disable_nil_values": 0,
     "_set_only_when_defined": 1,  # make sure that only defined variables in this scope can be set
 }
 

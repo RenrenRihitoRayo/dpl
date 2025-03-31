@@ -22,14 +22,6 @@ def myPrint(_, __, *args, end="", sep=" "):
             arg[pos] = helper.get_repr(arg["_im_repr"])
     print(*args, end=end, sep=sep, file=ext.items["output"], flush=True)
 
-
-@ext.add_func()
-def printf(_, __, text, values):
-    for name, value in values.items():
-        text = text.replace(f"${{{name}}}", str(value))
-    print(text, end="", file=ext.items["output"], flush=True)
-
-
 @ext.add_func()
 def println(_, __, *args, sep=" "):
     args = list(args)
