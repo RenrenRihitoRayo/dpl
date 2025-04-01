@@ -1,6 +1,6 @@
 # 1.4.7
 
-# New parser changes
+## *New parser changes*
 
 The parser now includes the instructions.
 
