@@ -1,3 +1,11 @@
+# 1.4.7
+
+## Proposals
+
+- Advanced optimizations (preruntime)
+- Type checking for builtin instructions (preventing bugs)
+- Loading dynamic libraries that are in memory
+
 # 1.4.6
 
 ## Enums, Ternary and a 'Strict' setting.
