@@ -5,4 +5,9 @@
 # this literally is just a text replacement.
 # Be wary of using it.
 
+&set this 90
+io:println (.:this * 2)
+set this 80
+io:println :this
+
 io:println "This is !__file__:!__line__"

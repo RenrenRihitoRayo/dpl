@@ -205,6 +205,14 @@ def is_fvar(arg):
     return arg.startswith(":") and is_id(arg[1:])
 
 
+def is_pvar(arg):
+    return arg.startswith(".%") and is_id(arg[2:])
+
+
+def is_pfvar(arg):
+    return arg.startswith(".:") and is_id(arg[2:])
+
+
 def expr_preruntime(arg):
     "Process arguments at preprocessing"
     if not isinstance(arg, str):
@@ -302,27 +310,30 @@ def my_range(start, end):
     return pos(start, end) if start < end else neg(start, end)
 
 
-def is_static(code):
-    for i in code:
+def is_static(frame, code):
+    for pos, i in enumerate(code):
         if isinstance(i, list):
             if not is_static(i):
                 return False
         elif not isinstance(i, str):
             continue
-        elif is_var(i) or is_fvar(i):
-            return False
-        elif is_id(i):
-            return False
+        elif is_pvar(i) or is_pfvar(i):
+            if varproc.rget(frame[-1], i[2:], default=None, meta=False) is None:
+                return False
     return True
 
 
-def to_static(code):
+def to_static(frame, code):
     for pos, i in enumerate(code):
         if isinstance(i, list):
-            if is_static(i):
-                code[pos] = evaluate(None, i)
+            if is_static(frame, i):
+                code[pos] = evaluate(frame, to_static(frame, i))
             else:
-                code[pos] = to_static(i)
+                code[pos] = to_static(frame, i)
+        elif not isinstance(i, str):
+            continue
+        elif (is_pfvar(i) or is_pvar(i)) and not (var:=varproc.rget(frame[-1], i[2:], default=None, meta=is_var(i))) is None:
+            code[pos] = var
     return code
 
 

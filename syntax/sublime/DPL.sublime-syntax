@@ -7,14 +7,14 @@ scope: source.dpl
 contexts:
   main:
 
-    - match: '^\s*\b((:?proto-)?body|expect-then|wait_for_threads|then|match|case|with|fallthrough|default|if|loops|expect|module|thread|import|while|return|loop|for|end|pass|fn|method|stop|skip|else)\b'
+    - match: '^\s*\b(body|enum|wait_for_threads|then|match|case|with|fallthrough|default|if|loops|expect|module|thread|import|while|return|loop|for|end|pass|fn|method|stop|skip)\b'
       scope: keyword.control.dpl
 
     - match: '^\s*?#' # this is intentional as comments can only stay on separate lines
       scope: comment.line.dpl
       push: line_comment
 
-    - match: '^\s*\b(cmd|help|del|const|fset|new|cmd|set|object|exit|pycatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
+    - match: '^\s*\b(cmd|help|del|dump_scope|dump_vars|const|fset|new|cmd|set|object|exit|pycatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
       scope: support.function
 
     - match: '\b(Sum|Range|RawRange|dRawRange|dRange|Index|ToFloat|ToStr|ToInt|Append|Pop)\b'
@@ -23,7 +23,7 @@ contexts:
     - match: '\b(in|as)\b'
       scope: keyword.operator.dpl
 
-    - match: '&(include|enable|disable|as)'
+    - match: '&(include|enable|disable|as|set|use(\:luaj)?)'
       scope: keyword.operator.dpl
 
     - match: "=="

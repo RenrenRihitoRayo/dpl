@@ -189,6 +189,9 @@ def pprint(d, l=0, seen=None):
             else:
                 print("  "*l+repr(i))
         return
+    elif not isinstance(d, dict):
+        print("  "*l+repr(d))
+        return
     for name, value in d.items():
         if name.startswith("_"):
             ...
@@ -234,7 +237,8 @@ def process(fcode, name="__main__"):
             last_comment = lpos
             multiline = True
         elif line.startswith("&"):
-            ins, *args = line[1:].lstrip().split()
+            ins, *args = argproc.group(line[1:].lstrip())
+            args = argproc.nest_args(argproc.exprs_preruntime(args))
             args = argproc.process_args(nframe, args)
             argc = len(args)
             if ins == "include" and argc == 1:
@@ -410,7 +414,7 @@ def process(fcode, name="__main__"):
         else:
             ins, *args = argproc.group(line)
             args = argproc.nest_args(argproc.exprs_preruntime(args))
-            args = argproc.to_static(
+            args = argproc.to_static(nframe,
                 args
             )  # If there are static parts in the arguments run them before runtime.
             res.append((lpos - offset, name, ins, args))
@@ -533,7 +537,7 @@ def process(fcode, name="__main__"):
                         _, body = get_block(nres, p)
                         np = pos + len(body)
                     elif pos > np:
-                        error.error(
+                        error.pre_error(
                             pos,
                             file,
                             f"Only 'case', 'with', 'default' and 'as' statements are allowed in match blocks!\nGot: {ins}",
@@ -589,8 +593,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             else:
                 p, body = temp
             varproc.rset(frame[-1], name, objects.make_function(name, body, params))
-        elif ins == "lazy" and argc == 2:
-            frame[-1][args[0]] = args[1]
         elif ins == "get_time" and argc == 1:
             frame[-1][args[0]] = time.time()
         elif ins == "pub" and argc >= 2 and args[0] == "fn":

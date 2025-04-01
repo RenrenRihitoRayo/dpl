@@ -1,5 +1,34 @@
 # 1.4.7
 
+## Preruntime Changes
+
+The preruntime now supports defining variables
+and using them. Effectively enhancing the static
+optimization of the code.
+
+```DuProL
+&set this (90 + 90)
+# the line below is optimized down to 180
+# even before runtime.
+set this (.:this * 90)
+
+# the line below is completely ran on runtime
+set this 90
+set result (:this * 2)
+```
+
+In the next iteration for 1.4.6, I willl try to optimize
+unused variables out. This will enhance memory usage and
+speed even by a tiny bit.
+
+If you complain about the preruntime being too slow,
+then compile the file to its bytecode and run it that way.
+
+```Bash
+dpl compile this.dpl # outputs to 'this.cdpl'
+dpl rc this.cdpl # to run
+```
+
 ## *New parser changes*
 
 The parser now includes the instructions.
