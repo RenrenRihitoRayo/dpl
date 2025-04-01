@@ -337,6 +337,18 @@ def to_static(frame, code):
     return code
 
 
+def get_names(args):
+    names = set()
+    for i in args:
+        if not isinstance(i, str):
+            continue
+        if isinstance(i, list):
+            names.update(*get_names(i))
+        elif is_fvar(i) or is_var(i):
+            names.add(i[1:])
+    return names
+
+
 def evaluate(frame, expression):
     "Evaluate an expression"
     match (process_args(frame, expression)):

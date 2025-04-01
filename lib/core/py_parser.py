@@ -522,7 +522,16 @@ def process(fcode, name="__main__"):
                 print(f"Warning Info: {warn_num:,} Total warnings.")
         # Try to catch syntax errors earlier
         np = 0
+        used_names = set()
+        defined_names = {}
         for p, [pos, file, ins, args] in enumerate(nres):
+            for name in argproc.get_names(args):
+                if varproc.get_debug("warn_undefined_vars") and name not in defined_names:
+                    if varproc.get_debug("error_on_undefined_vars"):
+                        error.error(pos, file, f"{name!r} is not defined!")
+                        return error.PREPROCESSING_ERROR
+                    else:
+                        error.warn(f"File: {file}\nLine: {pos}\n{name!r} is not defined!")
             if ins in info.INC_EXT:
                 temp = get_block(nres, p, True)
                 if not temp:
@@ -544,6 +553,11 @@ def process(fcode, name="__main__"):
                         )
                         return error.PREPROCESSING_ERROR
                 np = 0
+            elif ins == "set" or (ins == "export" and args[1] == "set"):
+                if ins == "set":
+                    defined_names[args[0]] = pos
+                else:
+                    defined_names.add[args[1]] = pos
         return {
             "code": nres if dead_code and info.DEAD_CODE_OPT else res,
             "frame": nframe or None,

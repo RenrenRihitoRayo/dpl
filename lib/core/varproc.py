@@ -26,6 +26,8 @@ debug = {
     "track_time": 0,
     "time_threshold": 1.5,
     "disable_nil_values": 0,
+    "error_on_undefined_vars": 0,
+    "warn_undefined_vars": 1,
     "_set_only_when_defined": 1,  # make sure that only defined variables in this scope can be set
 }
 

@@ -1,5 +1,19 @@
 # 1.4.7
 
+## Stricter Control on Undefined Variables
+
+```DuProL
+&use {std/text_io.py}
+
+# Warning will be printed
+io:println :this
+
+&set _meta.debug.error_on_undefined_vars true
+
+# Error will be issued
+io:println :this
+```
+
 ## Preruntime Changes
 
 The preruntime now supports defining variables
