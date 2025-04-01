@@ -91,7 +91,7 @@ CLOSE_P = ")]"
 WARNINGS = True
 DEAD_CODE_OPT = True
 
-VERSION_TRIPLE = (1, 4, 6)
+VERSION_TRIPLE = (1, 4, 7)
 
 def isCompat(version, VERSION=VERSION_TRIPLE):
     major, minor, patch = version

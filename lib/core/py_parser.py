@@ -568,6 +568,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         pos, file, ins, oargs = code[p]
         if ins not in {"while", "lazy"}:  # Lazy evaluation
             try:
+                ins = argproc.process_arg(frame, ins)
                 args = argproc.process_args(frame, oargs)
             except Exception as e:
                 error.error(

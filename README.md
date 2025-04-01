@@ -1,5 +1,20 @@
 # 1.4.7
 
+# New parser changes
+
+The parser now includes the instructions.
+
+Meaning "-this 123" will be treated as ["-", "this", 123]
+rather than the old way which wouldve just split the instruction (e.i. just ["-this", 123])
+from the line.
+
+And as a side effect we can run instructions using variables.
+```DuProL
+&use {std/text_io.py}
+set my_print "io:println"
+:my_print "Works!"
+```
+
 ## Proposals
 
 - Advanced optimizations (preruntime)
