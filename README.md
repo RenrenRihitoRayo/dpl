@@ -381,7 +381,7 @@ ext = api.dpl.pycall(
     }
 )
 
-ext = ext:add_func("func_name")
+ext:add_func("func_name")
 (function(frame, locdir, ...)
     -- do stuff here
     return api.type.tuple({})
