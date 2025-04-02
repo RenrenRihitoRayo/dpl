@@ -8,6 +8,11 @@
 # Warning will be printed
 io:println :this
 
+# Warning will not be printed
+&set _meta.debug.warn_undefined_vars false
+io:println :this
+
+&set _meta.debug.warn_undefined_vars true
 &set _meta.debug.error_on_undefined_vars true
 
 # Error will be issued
