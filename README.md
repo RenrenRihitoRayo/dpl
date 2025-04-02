@@ -3,7 +3,7 @@
 ## New Module
 
 A new module was added "std-dpl/state.dpl"
-which implememts a 'State' object.
+which implements a 'State' object.
 Its only a few lines but its there for convinience.
 
 ## ***Bugs***
