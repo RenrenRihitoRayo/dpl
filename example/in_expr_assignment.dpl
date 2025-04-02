@@ -1,0 +1,10 @@
+&use {std/text_io.py}
+
+# prints 'Darren' twice
+io:println [set name = Darren]
+io:println :name
+
+# prints 'True: 180'
+if [[set res = [90 + 90]] > 100]
+    io:println 'True: ${res}'
+end

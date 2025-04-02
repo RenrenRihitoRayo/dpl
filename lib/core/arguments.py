@@ -313,7 +313,7 @@ def my_range(start, end):
 def is_static(frame, code):
     for pos, i in enumerate(code):
         if isinstance(i, list):
-            if not is_static(i):
+            if not is_static(frame, i):
                 return False
         elif not isinstance(i, str):
             continue
@@ -460,6 +460,12 @@ def evaluate(frame, expression):
             return methods[ins](frame, *args)
         case ["#", ins, *args] if ins in methods:
             return ins(frame, "_", *args)[0]
+        case ["set", name, "=", value]:
+            varproc.rset(frame[-1], name, value)
+            return value
+        case ["fset", name, "=", value]:
+            varproc.rset(frame[-1], name, value, meta=False)
+            return constants.nil
         case [obj, "@", method, *args] if hasattr(
             obj, method
         ):  # direct python method calling

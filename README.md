@@ -1,5 +1,23 @@
 # 1.4.7
 
+## In-expression variable instruction.
+
+Similar to the walrus operator in python,
+this allows us to make variables in statements.
+
+```DuProL
+&use {std/text_io.py}
+
+# prints 'Darren' twice
+io:println [set name = Darren]
+io:println :name
+
+# prints 'True!'
+if [[set res = [90 + 90]] > 100]
+    io:println "True!"
+end
+```
+
 ## New Module
 
 A new module was added "std-dpl/state.dpl"
