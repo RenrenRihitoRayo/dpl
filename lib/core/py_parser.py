@@ -406,6 +406,13 @@ def process(fcode, name="__main__"):
                 define_func = True
             elif ins == "set" and argc == 2:
                 varproc.rset(nframe[-1], args[0], args[1])
+            elif ins == "save_config" and argc == 0:
+                nframe[0]["_preruntime_config"] = {
+                    "dead_code": dead_code,
+                    "warnings": warnings,
+                    "def_fn": define_func,
+                    "debug_config": copy(varproc.debug)
+                }
             else:
                 error.pre_error(
                     lpos, name, f"{name!r}:{lpos}: Invalid directive {ins!r}"
@@ -525,13 +532,15 @@ def process(fcode, name="__main__"):
         used_names = set()
         defined_names = {}
         for p, [pos, file, ins, args] in enumerate(nres):
-            for name in argproc.get_names(args):
-                if varproc.get_debug("warn_undefined_vars") and name not in defined_names:
-                    if varproc.get_debug("error_on_undefined_vars"):
-                        error.error(pos, file, f"{name!r} is not defined!")
-                        return error.PREPROCESSING_ERROR
-                    else:
-                        error.warn(f"File: {file}\nLine: {pos}\n{name!r} is not defined!")
+#            for name in argproc.get_names(args):
+#                if "." in name or name in ("self", "_local", "_global", "_nonlocal", "_frame_stack", "_meta", "_preruntime_config"):
+#                    continue
+#                if varproc.get_debug("warn_undefined_vars") and name not in defined_names:
+#                    if varproc.get_debug("error_on_undefined_vars"):
+#                        error.error(pos, file, f"{name!r} is not defined!")
+#                        return error.PREPROCESSING_ERROR
+#                    else:
+#                        error.warn(f"File: {file}\nLine: {pos}\n{name!r} is not defined!")
             if ins in info.INC_EXT:
                 temp = get_block(nres, p, True)
                 if not temp:
@@ -553,11 +562,11 @@ def process(fcode, name="__main__"):
                         )
                         return error.PREPROCESSING_ERROR
                 np = 0
-            elif ins == "set" or (ins == "export" and args[1] == "set"):
-                if ins == "set":
-                    defined_names[args[0]] = pos
-                else:
-                    defined_names.add[args[1]] = pos
+#            elif ins in ("set", "object", "new") or (ins == "export" and args[1] == "set"):
+#                if ins in ("set", "object", "new"):
+#                    defined_names[args[0]] = pos
+#                else:
+#                    defined_names.add[args[1]] = pos
         return {
             "code": nres if dead_code and info.DEAD_CODE_OPT else res,
             "frame": nframe or None,
@@ -607,6 +616,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             else:
                 p, body = temp
             varproc.rset(frame[-1], name, objects.make_function(name, body, params))
+        elif ins == "load_config" and argc == 1 and isinstance(args[0], dict):
+            varproc.debug.update(args[0])
         elif ins == "get_time" and argc == 1:
             frame[-1][args[0]] = time.time()
         elif ins == "pub" and argc >= 2 and args[0] == "fn":

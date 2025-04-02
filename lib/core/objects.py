@@ -67,6 +67,7 @@ def make_method(name, body, params, self):
             "docs": f"Method of {varproc.rget(self, '_internal.name')}. ({name})",
             "defs": {},
             "id": id_tracker - 1,
+            "capture":constants.nil
         },
         name,
         "builtin-method-object",

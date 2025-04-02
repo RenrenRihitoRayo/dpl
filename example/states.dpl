@@ -1,0 +1,6 @@
+&use {std/text_io.py}
+&include {std-dpl/state.dpl}
+
+catch [state] State.new 90
+
+io:println :state.value

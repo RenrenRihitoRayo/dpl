@@ -1,0 +1,25 @@
+&use {std/text_io.py}
+
+object State
+
+method :State new value
+    new :self tmp
+    set tmp.value :value
+    set tmp.funcs !list
+    return :tmp
+end
+
+method :State set new_value
+    set self.value :value
+    self.update
+end
+
+method :State update
+    for func in :self.funcs
+        io:println func.name
+    end
+end
+
+method :State add_func func
+    pass [:self.funcs@append :func]
+end
