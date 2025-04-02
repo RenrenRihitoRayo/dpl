@@ -11,6 +11,7 @@ Its only a few lines but its there for convinience.
 The undefined variables feature is still primitive.
 We might ditch it temporarily and implement it in the future.
 
+
 ## Stricter Control on Undefined Variables
 
 ```DuProL
