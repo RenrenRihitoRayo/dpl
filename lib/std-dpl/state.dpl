@@ -1,5 +1,3 @@
-&use {std/text_io.py}
-
 object State
 
 method :State new value
@@ -10,13 +8,13 @@ method :State new value
 end
 
 method :State set new_value
-    set self.value :value
+    set self.value :new_value
     self.update
 end
 
 method :State update
     for func in :self.funcs
-        io:println func.name
+        func :self
     end
 end
 

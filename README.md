@@ -1,6 +1,12 @@
 # 1.4.7
 
-## Bugs
+## New Module
+
+A new module was added "std-dpl/state.dpl"
+which implememts a 'State' object.
+Its only a few lines but its there for convinience.
+
+## ***Bugs***
 
 The undefined variables feature is still primitive.
 We might ditch it temporarily and implement it in the future.

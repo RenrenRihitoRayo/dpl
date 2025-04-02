@@ -1,6 +1,22 @@
 &use {std/text_io.py}
+
+# new dpl module that implements a state object
 &include {std-dpl/state.dpl}
 
 catch [state] State.new 90
 
 io:println :state.value
+
+# define a func and register it to the state
+fn test state
+    io:println 'state was updated to => ${state.value}'
+end
+state.add_func :test
+
+# trigger
+state.set 80
+
+-- Output:
+   90
+   state was updated to => 80
+--
