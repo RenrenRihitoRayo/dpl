@@ -36,7 +36,7 @@ dpl_func_attr = [
     "body",
     "args",
     "docs",
-    "defs",
+    "defaults",
 ]
 
 threads = []
@@ -841,7 +841,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if obj == state.bstate("nil"):
                 error.error(pos, file, f"Unknown object")
                 break
-            varproc.rset(obj, "_internal.name", args[1])
+            varproc.rset(obj, "_internal.instance_name", args[1])
             varproc.rset(frame[-1], args[1], copy(obj))
         elif ins == "method" and argc >= 2:
             self, name, *params = args
@@ -916,7 +916,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 ):
                     args = (0, args)
                 for name, value in zip(temp, args):
-                    varproc.rset(frame[-1], f"_nonlocal.{name}", value)
+                    varproc.rset(frame[-1], f"_nonlocal.{name}", value, meta=False)
                 if (tmp := frame[-1].get("_memoize")) not in constants.constants_false:
                     tmp[0][tmp[1]] = tuple(
                         map(
@@ -974,10 +974,10 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
             varproc.nscope(frame)
-            if temp["defs"]:
+            if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
                     else:
                         frame[-1][name] = value
             else:
@@ -1026,10 +1026,10 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 p += 1
                 continue
             varproc.nscope(frame)
-            if temp["defs"]:
+            if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
                     else:
                         frame[-1][name] = value
             else:
@@ -1077,10 +1077,10 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 p += 1
                 continue
             varproc.nscope(frame)
-            if temp["defs"]:
+            if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
                     else:
                         frame[-1][name] = value
             else:
@@ -1114,10 +1114,10 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
             varproc.nscope(frame)
-            if temp["defs"]:
+            if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
                     else:
                         frame[-1][name] = value
             else:
@@ -1341,10 +1341,10 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             and has(dpl_func_attr, temp)
         ):  # Call a function
             varproc.nscope(frame)
-            if temp["defs"]:
+            if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args[1:]):
                     if value is None:
-                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
                     else:
                         frame[-1][name] = value
             else:
@@ -1370,10 +1370,10 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             and has(dpl_func_attr, temp)
         ):  # Call a function
             varproc.nscope(frame)
-            if temp["defs"]:
+            if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defs"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
                     else:
                         frame[-1][name] = value
             else:

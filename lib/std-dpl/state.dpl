@@ -1,11 +1,13 @@
 object State
 
-method :State new value
+method :State new value name
     new :self tmp
     set tmp.value :value
     set tmp.funcs !list
+    set tmp._internal.instance_name :name
     return :tmp
 end
+set State.new.defaults.name "N/A"
 
 method :State set new_value
     set self.value :new_value
@@ -20,4 +22,8 @@ end
 
 method :State add_func func
     pass [:self.funcs@append :func]
+end
+
+method :State _im_repr
+    set result '<State ${self._internal.instance_name} = ${self.value!}>'
 end

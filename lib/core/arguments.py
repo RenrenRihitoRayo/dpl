@@ -279,6 +279,8 @@ def expr_runtime(frame, arg):
         text = arg[1:-1]
         for name, value in flatten_dict(frame[-1]).items():
             text = text.replace(f"${{{name}}}", str(value))
+        for name, value in flatten_dict(frame[-1]).items():
+            text = text.replace(f"${{{name}!}}", repr(value))
         return text
     else:
         return expr_preruntime(arg)

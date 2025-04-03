@@ -45,7 +45,7 @@ def make_function(name, body, params):
             "args": params,
             "self": constants.nil,
             "docs": f"Function. ({name!r})",
-            "defs": {},
+            "defaults": {},
             "memoize": {},
             "id": id_tracker - 1,
             "capture":constants.nil
@@ -65,7 +65,7 @@ def make_method(name, body, params, self):
             "args": params,
             "self": self,
             "docs": f"Method of {varproc.rget(self, '_internal.name')}. ({name})",
-            "defs": {},
+            "defaults": {},
             "id": id_tracker - 1,
             "capture":constants.nil
         },
@@ -84,6 +84,7 @@ def make_object(name):
                 "type": f"type:{name}",
                 "docs": f"An object. ({name})",
                 "id": id_tracker - 1,
+                "instance_name": f"{name}:root"
             }
         },
         name,
