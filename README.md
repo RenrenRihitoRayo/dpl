@@ -107,6 +107,9 @@ io:println "Hello, world!"
  .`                                 `/
 
 [root@localhost ~]# dpl -remove-host hw.dpl
+*Hawk screeches* There goes your freedom.
+Hello, world!
+[root@localhost ~]# 
 ```
 
 ## In-expression variable instruction.
