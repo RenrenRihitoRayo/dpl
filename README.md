@@ -57,6 +57,12 @@ Why use DPL?
 
 * You enjoy chaos, minimalism, and/or pain.
 
+# DPL's Core Ideals
+
+> It works? Alright then DPL's works
+> Doesnt? Well it's your fault.
+> If you can only read it you're special, if no one can what the hell.
+> You know what? F*ck it, do what ever you want shove in what fits.
 
 ---
 
