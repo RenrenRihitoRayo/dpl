@@ -46,6 +46,18 @@ catch [res] obj.add()
 io:println :res
 ```
 
+# Reasons to use DPL
+
+> Linting? None. You are the linter now. May your choices be wise, or at least funny.
+
+Why use DPL?
+* You’re tired of languages judging you.
+
+* You believe standards are optional. You want full control and full responsibility.
+
+* You enjoy chaos, minimalism, and/or pain.
+
+
 ---
 
 # Change Notes / Dev Logs
