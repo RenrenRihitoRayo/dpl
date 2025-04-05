@@ -23,6 +23,26 @@ There are no style rules. There are no guardrails. Just a loosely-held-together 
 - Syntax? Let's call it... *flexible*.  
 - Naming conventions? **Snake case**, **PascalCase**, **camelCase**, or **whoknows_case** — all welcome.
 
+## How To Use DPL
+
+```Plaintext
+[root@localhost ~]# git clone https://github.com/DarrenPapa/dpl
+[root@localhost ~]# cd dpl
+[root@localhost ~/dpl]# bash scripts/install.sh
+Added ... to PATH in ~/.bashrc
+[root@localhost ~/dpl]# dpl
+DPL REPL for DPL v1.4.7
+Python 3.11.4 (...) [...]
+>>> &use {std/text_io.py}
+>>> io:println "Hello, world!"
+Hello, world!
+>>> exit
+[root@localhost ~/dpl]# dpl example/hello-world.dpl
+Hello, world!
+[root@localhost ~/dpl]# # get info about the code base
+[root@localhost ~/dpl]# python3 info.py
+```
+
 ## Code Sample
 
 ```DuProL
@@ -46,7 +66,7 @@ catch [res] obj.add()
 io:println :res
 ```
 
-# Reasons to use DPL
+## Reasons to use DPL
 
 > Linting? None. You are the linter now. May your choices be wise, or at least funny.
 
@@ -57,7 +77,7 @@ Why use DPL?
 
 * You enjoy chaos, minimalism, and/or pain.
 
-# DPL's Core Ideals
+## DPL's Core Ideals
 
 > It works? Alright then DPL's works
 > Doesnt? Well it's your fault.
