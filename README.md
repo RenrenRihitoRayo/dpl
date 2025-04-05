@@ -1,3 +1,55 @@
+# DPL – The Dumb Programming Language
+
+> *"Simplicity is everywhere in DPL, like an airport cutting expenses."*  
+> *"DPL gives you freedom. In return, it's your fault when you fail."*
+
+Welcome to **DPL**, the programming language that doesn’t try to be smart — just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
+
+There are no style rules. There are no guardrails. Just a loosely-held-together interpreter and your own chaotic energy.
+
+## Philosophy
+
+- The **interpreter** has standards.  
+- The **language** does not.  
+- **If your code looks weird, that’s your aesthetic.**  
+- If it breaks, that's your fault.  
+- If it works, that's DPL.
+
+## Features
+
+- Object-oriented-ish? Sure.  
+- Classes? Kinda.  
+- Functions? Yes, and they sometimes even work.  
+- Syntax? Let's call it... *flexible*.  
+- Naming conventions? **Snake case**, **PascalCase**, **camelCase**, or **whoknows_case** — all welcome.
+
+## Code Sample
+
+```DuProL
+&use {std/text_io.py}
+
+object MathThing
+
+method :MathThing new value1 value2
+    new :self temp
+    set temp.v1 value1
+    set temp.v2 value2
+    return :temp
+end
+
+method :MathThing add
+    return [:self.v1 + :self.v2]
+end
+
+catch [obj] MathThing.new 5 7
+catch [res] obj.add()
+io:println :res
+```
+
+---
+
+# Change Notes / Dev Logs
+
 # 1.4.7
 
 ## In-expression variable instruction.
