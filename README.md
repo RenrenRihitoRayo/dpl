@@ -52,6 +52,12 @@ io:println :res
 
 # 1.4.7
 
+## Addition of the '-remove-freedom' flag
+
+This flag changes the function that runs the code
+with one that enforces type checking on the builtin
+instructions.
+
 ## In-expression variable instruction.
 
 Similar to the walrus operator in python,

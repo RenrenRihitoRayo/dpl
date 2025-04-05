@@ -159,6 +159,7 @@ class dpl:
     objects = objects
     falsy = (state_nil, state_none, state_false, None, False)
     truthy = (state_true, True)
+    exit = None
 
     def pycall(func, args, table):
         return func(*(args or []), **table)

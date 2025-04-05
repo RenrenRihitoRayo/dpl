@@ -412,6 +412,9 @@ dpl -cprofile ...
     Profiles the code using cProfile for more accurate but slower execution.
 dpl -disable-auto-complete ...
     Disable the auto complete.
+dpl -remove-freedom
+    Enabled type checking in builtin instructions.
+    Example: `set 90 90` won't work anymore.
 """
             )
         case _:
@@ -426,6 +429,9 @@ if __name__ == "__main__":
     flags = cli_args.flags(info.ARGV, True)
     varproc.flags.update(flags)
     info.ARGC = len(info.ARGV)
+    if "remove-freedom":
+        print("*Hawk screeches* There goes your freedom.")
+        parser.run = parser.safe_run
     if "cprofile" in flags:
         profiler = cProfile.Profile()
         profiler.enable()
