@@ -429,6 +429,9 @@ if __name__ == "__main__":
     flags = cli_args.flags(info.ARGV, True)
     varproc.flags.update(flags)
     info.ARGC = len(info.ARGV)
+    import distro
+    if "arch" in distro.name().lower() and "silence-impotence" not in flags:
+        print("I bet you say 'I use arch btw'")
     if "remove-freedom":
         print("*Hawk screeches* There goes your freedom.")
         parser.run = parser.safe_run

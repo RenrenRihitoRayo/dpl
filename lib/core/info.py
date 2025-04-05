@@ -215,6 +215,15 @@ SYS_INFO = platform.platform()
 SYS_MACH_INFO = platform.uname()
 SYS_OS_NAME = SYS_MACH_INFO.system
 
+if UNIX: # probably linux so use distro to fetch more info
+    try:
+        import distro
+        LINUX_DISTRO = distro.name() or 'N/A'
+        LINUX_VERSION = distro.version() or 'N/A'
+        LINUX_CODENAME = distro.codename() or 'N/A'
+    except:
+        ...
+
 
 def get_path_with_lib(path):
     return os.path.join(LIBDIR, path)

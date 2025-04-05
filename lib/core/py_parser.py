@@ -92,7 +92,12 @@ varproc.meta["internal"]["os"] = {
     "information": info.SYS_INFO,  # basically the tripple
     "processor": info.SYS_PROC,  # processor (intel and such)
     "threads": os.cpu_count(),  # physical thread count,
-    "os_name":info.SYS_OS_NAME.lower()
+    "os_name":info.SYS_OS_NAME.lower(),
+    "linux":{
+        "name": info.LINUX_NAME,
+        "version": info.LINUX_VERSION,
+        "codename": info.LINUX_CODENAME
+    }
 }
 
 
