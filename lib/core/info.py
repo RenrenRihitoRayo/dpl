@@ -222,7 +222,9 @@ if UNIX: # probably linux so use distro to fetch more info
         LINUX_VERSION = distro.version() or 0
         LINUX_CODENAME = distro.codename() or 0
     except:
-        ...
+        LINUX_DISTRO = 0
+        LINUX_VERSION = 0
+        LINUX_CODENAME = 0
 
 
 def get_path_with_lib(path):
