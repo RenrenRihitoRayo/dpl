@@ -93,12 +93,14 @@ varproc.meta["internal"]["os"] = {
     "processor": info.SYS_PROC,  # processor (intel and such)
     "threads": os.cpu_count(),  # physical thread count,
     "os_name":info.SYS_OS_NAME.lower(),
-    "linux":{
-        "name": info.LINUX_NAME,
+}
+
+if info.UNIX and info.SYS_OS_NAME == "linux":
+    varproc.meta["internal"]["os"]["linux"] = {
+        "name": info.LINUX_DISTRO,
         "version": info.LINUX_VERSION,
         "codename": info.LINUX_CODENAME
     }
-}
 
 
 def get_size_of(_, __, object):
@@ -216,8 +218,8 @@ def process(fcode, name="__main__"):
     "Preprocess a file"
     res = []
     nframe = varproc.new_frame()
-    dead_code = True
-    warnings = True
+    dead_code = info.DEAD_CODE_OPT
+    warnings = info.WARNINGS
     define_func = False
     multiline = False
     last_comment = 0

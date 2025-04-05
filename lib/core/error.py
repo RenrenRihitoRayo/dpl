@@ -66,10 +66,7 @@ Debug options:
             )
         with open(output, "a") as f:
             for name, enabled in varproc.debug.items():
-                if isinstance(enabled, str):
-                    f.write(f"  value: {enabled!r} - {name!r}\n")
-                elif isinstance(enabled, int):
-                    f.write(f"  {'on ' if enabled else 'off'} - {name!r}\n")
+                f.write(f"  value: {enabled!r} - {name!r}\n")
     if varproc.is_debug_enabled("log_events"):
         with open(output, "a") as f:
             f.write(f"{text}\n")
@@ -92,7 +89,7 @@ def error(pos, file, cause=None):
         my_print(f"Cause:\n{cause}")
 
 
-og_error = error  # Use this to always call an error even when silent
+og_print = my_print  # Use this to always call an error even when silent
 
 
 def info(text, show_date=True):
@@ -124,10 +121,10 @@ def pre_warn(text, show_date=True):
 
 
 def silent():
-    global error
-    error = lambda *x, **y: ...
+    global my_print
+    my_print = lambda *x, **y: ...
 
 
 def active():
-    global error
-    error = og_error
+    global my_print
+    my_print = og_print

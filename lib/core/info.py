@@ -213,14 +213,14 @@ SYS_PROC = platform.processor() or constants.none
 SYS_MACH = platform.machine()
 SYS_INFO = platform.platform()
 SYS_MACH_INFO = platform.uname()
-SYS_OS_NAME = SYS_MACH_INFO.system
+SYS_OS_NAME = SYS_MACH_INFO.system.lower()
 
 if UNIX: # probably linux so use distro to fetch more info
     try:
         import distro
-        LINUX_DISTRO = distro.name() or 'N/A'
-        LINUX_VERSION = distro.version() or 'N/A'
-        LINUX_CODENAME = distro.codename() or 'N/A'
+        LINUX_DISTRO = distro.name() or 0
+        LINUX_VERSION = distro.version() or 0
+        LINUX_CODENAME = distro.codename() or 0
     except:
         ...
 
