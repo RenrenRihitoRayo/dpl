@@ -3,7 +3,7 @@
 > *"Simplicity is everywhere in DPL, like an airport cutting expenses."*  
 > *"DPL gives you freedom. In return, it's your fault when you fail."*
 
-Welcome to **DPL**, the programming language that doesn’t try to be smart — just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
+Welcome to **DPL**, the programming language that doesn't try to be smart — just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
 
 There are no style rules. There are no guardrails. Just a loosely-held-together interpreter and your own chaotic energy.
 
@@ -75,6 +75,39 @@ Why use DPL?
 This flag changes the function that runs the code
 with one that enforces type checking on the builtin
 instructions.
+
+### Example usage
+
+hw.dpl
+```DuProL
+&use {std/text_io.py}
+io:println "Hello, world!"
+```
+
+```Bash
+[root@localhost ~]# neofetch
+                   -`                    root@localhost
+                  .o+`                   --------------
+                 `ooo/                   OS: Arch Linux ARM aarc
+                `+oooo:                  Host: [totaly rad pc]
+               `+oooooo:                 Kernel: 6.2.1
+               -+oooooo+:                Uptime: 6 years
+             `/:-:++oooo+:               Packages: 133 (pacman),
+            `/++++/+++++++:              Shell: bash 5.2.37
+           `/++++++++++++++:             Terminal: linker64
+          `/+++ooooooooooooo/`           CPU: MT6769V/CZ (8) @ 1
+         ./ooosssso++osssssso+`          Memory: 2298MiB / 1GiB
+        .oossssso-````/ossssss+`
+       -osssssso.      :ssssssso.
+      :osssssss/        osssso+++.
+     /ossssssss/        +ssssooo/-
+   `/ossssso+/:-        -:/+osssso+-
+  `+sso+:-`                 `.-/+oso:
+ `++:.                           `-/+/
+ .`                                 `/
+
+[root@localhost ~]# dpl -remove-host hw.dpl
+```
 
 ## In-expression variable instruction.
 
