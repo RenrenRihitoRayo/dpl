@@ -84,7 +84,7 @@ hw.dpl
 io:println "Hello, world!"
 ```
 
-```Bash
+```Plaintext
 [root@localhost ~]# neofetch
                    -`                    root@localhost
                   .o+`                   --------------
