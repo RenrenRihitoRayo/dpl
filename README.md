@@ -114,7 +114,7 @@ method :MathThing add
 end
 
 catch [obj] MathThing.new 5 7
-catch [res] obj.add()
+catch [res] obj.add
 io:println :res
 ```
 
