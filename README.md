@@ -25,9 +25,12 @@ There are no style rules. There are no guardrails. Just a loosely-held-together 
 
 ## How To Use DPL
 
+You must have python and python-pip installed.
+
 ```Plaintext
 [root@localhost ~]# git clone https://github.com/DarrenPapa/dpl
 [root@localhost ~]# cd dpl
+[root@localhost ~/dpl]# pip install -r requirements.txt
 [root@localhost ~/dpl]# bash scripts/install.sh
 Added ... to PATH in ~/.bashrc
 [root@localhost ~/dpl]# dpl
