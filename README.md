@@ -23,6 +23,55 @@ There are no style rules. There are no guardrails. Just a loosely-held-together 
 - Syntax? Let's call it... *flexible*.  
 - Naming conventions? **Snake case**, **PascalCase**, **camelCase**, or **whoknows_case** — all welcome.
 
+## Types
+
+Primitives:
+- int
+- float
+- str
+
+Containers:
+- dict (objects and scopes)
+- list
+
+Flags:
+- nil
+- none
+- true
+- false
+
+### Truthy Values
+
+- Any non-empty list, dict and strings
+- If an int or float is not zero
+- true (duh)
+
+### Falsy Values
+
+- Empty list, dict and strings
+- 0 and 0.0
+- false (duh)
+- none
+- nil
+
+## Usecases For `none` and `nil`
+
+### `none`
+
+To explicitly say that this variable exists and is not yet set.
+
+### `nil`
+
+Returns when an unset variable is read.
+
+#### Explicit and Implicitly Defined (for nil)
+
+Explicitly undefined means that the variable doesnt exist in scope!
+While Implicitly undefined means that the variable does exist but is set as nil.
+
+To differentiate between these two use the `def?` operator. Ex: `set exists [def? var]`
+To make sure its only implicitly undefined use `def?` with `nil?`. Ex: `set exists_bit_is_nil [[def? var] and [nil? :var]]`
+
 ## How To Use DPL
 
 You must have python and python-pip installed.
@@ -92,6 +141,12 @@ Why use DPL?
 # Change Notes / Dev Logs
 
 # 1.4.7
+
+## New Addition to objects
+
+Objects must have methods to cast their contents into different types.
+If the object shouldnt be casted to that type, the method should return none.
+Why not nil? Well nil will means that there was a problem.
 
 ## Addition of the '-remove-freedom' flag
 
