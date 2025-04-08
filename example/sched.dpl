@@ -1,0 +1,8 @@
+&use {std/text_io.py}
+
+thread
+    get_time cur_time
+    sched [:cur_time + 5]
+        io:println "Five seconds have passed!"
+    end
+end

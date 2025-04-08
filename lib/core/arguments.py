@@ -322,6 +322,8 @@ def is_static(frame, code):
         elif is_pvar(i) or is_pfvar(i):
             if varproc.rget(frame[-1], i[2:], default=None, meta=False) is None:
                 return False
+        elif is_var(i) or is_fvar(i):
+            return False
     return True
 
 
@@ -336,6 +338,8 @@ def to_static(frame, code):
             continue
         elif (is_pfvar(i) or is_pvar(i)) and not (var:=varproc.rget(frame[-1], i[2:], default=None, meta=is_var(i))) is None:
             code[pos] = var
+        else:
+            break
     return code
 
 

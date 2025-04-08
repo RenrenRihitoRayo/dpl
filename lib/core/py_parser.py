@@ -751,6 +751,17 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
             return error.SKIP_RESULT
+        elif ins == "sched" and argc == 1:
+            temp = get_block(code, p)
+            if temp is None:
+                break
+            else:
+                p, body = temp
+            while time.time() < args[0]:
+                pass
+            err = run(body, frame=frame)
+            if err:
+                return err
         elif ins == "if" and argc == 1:
             temp = get_block(code, p)
             if temp is None:
@@ -1607,6 +1618,17 @@ def safe_run(code, frame=None, thread_event=IS_STILL_RUNNING):
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
             return error.SKIP_RESULT
+        elif ins == "sched" and argc == 1 and types[0] == int:
+            temp = get_block(code, p)
+            if temp is None:
+                break
+            else:
+                p, body = temp
+            while time.time() < args[0]:
+                pass
+            err = run(body, frame=frame)
+            if err:
+                return err
         elif ins == "if" and argc == 1:
             temp = get_block(code, p)
             if temp is None:

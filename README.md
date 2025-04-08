@@ -142,6 +142,21 @@ Why use DPL?
 
 # 1.4.7
 
+## Scheduling
+
+DPL will suport scheduling in terms of seconds.
+
+```DuProL
+&use {std/text_io.py}
+
+thread
+    get_time cur_time
+    sched [:cur_time + 5]
+        io:println "Five seconds have passed!"
+    end
+end
+```
+
 ## New Addition to objects
 
 Objects must have methods to cast their contents into different types.

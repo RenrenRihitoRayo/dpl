@@ -39,6 +39,7 @@ INC_EXT = {
     "from_template",
     "with",
     "default",
+    "sched",
     "enum"
 }
 

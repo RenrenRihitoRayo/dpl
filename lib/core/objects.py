@@ -31,6 +31,118 @@ def set_repr(frame, name="???", type_name=None, repr=None):
                 )
             ],
         }
+    if "to_int" not in frame:
+        frame["to_int"] = {  # define a boring default _im_repr
+            "name": 0,
+            "args": [],
+            "defs": 0,
+            "docs": f"Default internal method for ({name}).",
+            "self": 0,
+            "body": [
+                (
+                    0,
+                    "_internal",
+                    "return",
+                    (constants.none,),
+                )
+            ],
+        }
+    if "to_float" not in frame:
+        frame["to_float"] = {  # define a boring default _im_repr
+            "name": 0,
+            "args": [],
+            "defs": 0,
+            "docs": f"Default internal method for ({name}).",
+            "self": 0,
+            "body": [
+                (
+                    0,
+                    "_internal",
+                    "return",
+                    (constants.none,),
+                )
+            ],
+        }
+    if "to_str" not in frame:
+        frame["to_str"] = {  # define a boring default _im_repr
+            "name": 0,
+            "args": [],
+            "defs": 0,
+            "docs": f"Default internal method for ({name}).",
+            "self": 0,
+            "body": [
+                (
+                    0,
+                    "_internal",
+                    "return",
+                    (constants.none,),
+                )
+            ],
+        }
+    if "to_list" not in frame:
+        frame["to_list"] = {  # define a boring default _im_repr
+            "name": 0,
+            "args": [],
+            "defs": 0,
+            "docs": f"Default internal method for ({name}).",
+            "self": 0,
+            "body": [
+                (
+                    0,
+                    "_internal",
+                    "return",
+                    (constants.none,),
+                )
+            ],
+        }
+    if "to_dict" not in frame:
+        frame["to_dict"] = {  # define a boring default _im_repr
+            "name": 0,
+            "args": [],
+            "defs": 0,
+            "docs": f"Default internal method for ({name}).",
+            "self": 0,
+            "body": [
+                (
+                    0,
+                    "_internal",
+                    "return",
+                    (constants.none,),
+                )
+            ],
+        }
+    if "to_none" not in frame:
+        frame["to_none"] = {  # define a boring default _im_repr
+            "name": 0,
+            "args": [],
+            "defs": 0,
+            "docs": f"Default internal method for ({name}).",
+            "self": 0,
+            "body": [
+                (
+                    0,
+                    "_internal",
+                    "return",
+                    (constants.none,),
+                )
+            ],
+        }
+    if "to_nil" not in frame:
+        frame["to_nil"] = {  # define a boring default _im_repr
+            "name": 0,
+            "args": [],
+            "defs": 0,
+            "docs": f"Default internal method for ({name}).",
+            "self": 0,
+            "body": [
+                (
+                    0,
+                    "_internal",
+                    "return",
+                    (constants.nil,),
+                )
+            ],
+        }
     id_tracker += 1
     return frame
 
