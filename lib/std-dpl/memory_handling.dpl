@@ -1,0 +1,66 @@
+&use {std/text_io.py}
+
+&define_error "MEM_HANDLE_ERROR"
+
+object RC
+
+method :RC new value
+    new :self tmp
+    set tmp.value :value
+    set tmp.refs 1
+    set tmp.func none
+    return :tmp
+end
+
+method :RC inc_ref
+    set self.refs [:self.refs + 1]
+end
+
+method :RC dec_ref
+    match :self.refs
+        case [:self.refs <= 0]
+            raise :_meta.err.MEM_HANDLE_ERROR "MEM_HANDLE_ERROR: This might cause a double free!"
+        end
+        with 1
+            self.free
+        end
+    end
+    set self.refs [:self.refs - 1]
+end
+
+method :RC set_free func
+    set self.func :func
+end
+
+method :RC free
+    if [:self.refs <= 0]
+        raise :_meta.err.MEM_HANDLE_ERROR "MEM_HANDLE_ERROR: This might cause a double free!"
+    end
+    self.func :self
+    set self.refs 0
+    set self.value none
+    set self.func none
+end
+
+method :RC _im_repr
+    return '<RC [${self.refs}] ${self.value!}>'
+end
+
+
+
+ifmain
+    catch [my_ref] RC.new "What"
+    io:println :my_ref
+    
+    fn test state
+        # simulate freeing
+        io:println 'Freeing ${state.value!}...'
+    end
+    
+    my_ref.set_free :test
+    
+    # Causes the class to trigger the free function
+    my_ref.dec_ref
+    # Raises an error to avoid a double free
+    my_ref.dec_ref
+end

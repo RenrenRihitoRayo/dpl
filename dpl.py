@@ -412,9 +412,6 @@ dpl -cprofile ...
     Profiles the code using cProfile for more accurate but slower execution.
 dpl -disable-auto-complete ...
     Disable the auto complete.
-dpl -remove-freedom
-    Enabled type checking in builtin instructions.
-    Example: `set 90 90` won't work anymore.
 """
             )
         case _:
@@ -433,8 +430,7 @@ if __name__ == "__main__":
         if info.LINUX_DISTRO and "arch" in info.LINUX_DISTRO and "silence-impotence" not in flags:
             print("I bet you say 'I use arch btw'")
     if "remove-freedom" in flags:
-        print("*Hawk screeches* There goes your freedom.")
-        parser.run = parser.safe_run
+        print("*Hawk screeches* The tariffs go crazy huh")
     if "cprofile" in flags:
         profiler = cProfile.Profile()
         profiler.enable()

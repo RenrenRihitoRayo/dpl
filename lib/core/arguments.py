@@ -4,6 +4,7 @@
 from ast import expr, parse
 from platform import processor
 from sys import flags
+import random
 
 from requests.models import parse_header_links
 from . import state
@@ -15,7 +16,7 @@ from .info import *
 from . import py_argument_handler as pah
 
 run_code = None  # to be set by py_parser
-
+chaos = False
 
 def nest_args(tokens):
     stack = [[]]
@@ -116,8 +117,8 @@ def parse_match(frame, body, value):
                 return error.SYNTAX_ERROR
             if name:
                 frame[-1][name] = value
-            res = run_code(temp[1], frame=frame)
-            return res
+            return run_code(temp[1], frame=frame)
+    return 0
 
 
 def parse_template(frame, temp_name, body):
@@ -245,6 +246,11 @@ def expr_runtime(frame, arg):
     if isinstance(arg, list):
         return evaluate(frame, arg)
     elif not isinstance(arg, str):
+        if chaos and random.choice([0, 0, 1]):
+            if isinstance(arg, int):
+                return random.randint(arg-1, arg+3)
+            elif isinstance(arg, float):
+                return int(arg) if random.choice([0, 0, 1]) else arg
         return arg
     if is_id(arg):
         return arg
@@ -274,14 +280,14 @@ def expr_runtime(frame, arg):
     elif arg == "!list":
         return []
     elif arg.startswith('"') and arg.endswith('"'):
-        return arg[1:-1]
+        return arg[1:-1] if not (chaos and random.choice([0, 0, 1])) else (random.shuffle(s:=list(arg[1:-1])), ''.join(s))[-1]
     elif arg.startswith("'") and arg.endswith("'"):
         text = arg[1:-1]
         for name, value in flatten_dict(frame[-1]).items():
             text = text.replace(f"${{{name}}}", str(value))
         for name, value in flatten_dict(frame[-1]).items():
             text = text.replace(f"${{{name}!}}", repr(value))
-        return text
+        return text if not (chaos and random.choice([0, 0, 1])) else (random.shuffle(s:=list(text)), ''.join(s))[-1]
     else:
         return expr_preruntime(arg)
 

@@ -8,13 +8,15 @@ from . import info
 from . import state
 from . import error
 
-# lock
+# locks
+# ensures the interpreter is thread safe
 W_LOCK = threading.Lock()
 WS_LOCK = threading.Lock()
 
 dependencies = {"dpl": set(), "python": {}, "lua": {}}
 
 # debug options
+# some features here maybe separated
 debug = {
     "allow_automatic_global_name_resolution":1, # set to false to get variables faster
     "show_scope_updates": 0,
@@ -35,6 +37,9 @@ flags = set()
 
 # related to interpreter methods or behavior
 # and meta programming to the extreme
+# this exposes as much internal data as possible
+# the interpreter must fetch its info from here
+# at least on runtime
 meta = {
     "debug": debug,
     "argv": info.ARGV,
@@ -90,6 +95,7 @@ def nscope(frame):
         t["_global"] = frame[0]
         t["_nonlocal"] = frame[-1]
         t["_local"] = t
+        t["_frame_stack"] = frame
     with WS_LOCK:
         frame.append(t)
     if is_debug_enabled("show_scope_updates"):

@@ -8,10 +8,11 @@ def has_repr(obj):
 
 def get_repr(func):
     frame = dpl.varproc.new_frame()
+    dpl.varproc.nscope(frame)
     frame[-1]["_returns"] = ["result"]
     if func["self"] != dpl.state.bstate("nil"):
-        dpl.varproc.rset(frame[-1], "self", func["self"])
+        frame[-1]["self"] = func["self"]
     err = dpl.run_code(func["body"], frame=frame)
     if err > 0:
         raise Exception(err)
-    return frame[-1].get("result", dpl.constants.nil)
+    return frame[0].get("result", dpl.constants.none)

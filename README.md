@@ -142,6 +142,51 @@ Why use DPL?
 
 # 1.4.7
 
+## `ifmain` and the new `std-dpl/memory_handling.dpl` module
+
+The `ifmain` is a block that only executes if the file it is in is ran as a script
+and not included from another file. Basically like Python's `if __name__ == "__main__"`.
+
+The new module contains the logic for manual reference counting for C/C++ objects.
+
+```DuProL
+&include {std-dpl/memory_handling.dpl}
+&use {std/text_io.py}
+
+catch [my_rc] RC.new "example value"
+
+fn free_func state
+    io:println 'Freeing ${state.value!}'
+end
+
+my_rc.set_free :free_func
+# Prints <Rc [ref count] value> in this case:
+# <RC [1] 'example value'>
+io:println :my_rc
+# should print "Freeing 'example value'"
+my_rc.def_ref
+```
+
+Garbage collection maybe possible too,
+just by using a list and a thread.
+
+## Notice
+
+Due to problems the "-remove-freedom" flag has been removed.
+This is to keep the code base simpler to manage.
+
+## Accuracy Loss Mode
+
+By doing `&whatever` it will cause some inaccuracies.
+With integers 0 might become -1, 1 or as is.
+With floats it might lose its accuracy via truncation.
+Strings might be shuffled.
+
+## New proposals
+
+- Migrate some parts of the interpreter to C if not all.
+- Provide a more consistent documentation not just this dev history.
+
 ## Scheduling
 
 DPL will suport scheduling in terms of seconds.
@@ -517,7 +562,7 @@ Python 3.11.4 (main, Sep 30 2023, 10:54:38) [GCC 11.4.0]
 
 Its pretty simple to setup.
 Just write a "include-[lang].txt" file.
-For example we\'ll use python.
+For example we'll use python.
 In that case we will write "include-py.txt".
 In that file we will list the files we want
 to export.

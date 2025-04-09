@@ -119,7 +119,7 @@ def pre_warn(text, show_date=True):
     else:
         my_print(f"[WARNING PRE]: {text}")
 
-
+# make the errors toggleable
 def silent():
     global my_print
     my_print = lambda *x, **y: ...

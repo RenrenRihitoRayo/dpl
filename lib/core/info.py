@@ -40,7 +40,8 @@ INC_EXT = {
     "with",
     "default",
     "sched",
-    "enum"
+    "enum",
+    "ifmain"
 }
 
 INC = {"thread": 1}
