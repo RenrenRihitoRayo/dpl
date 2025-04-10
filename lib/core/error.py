@@ -46,6 +46,9 @@ ERRORS_DICT = {
     globals().get(name): name for name in filter(lambda x: x.endswith("ERROR"), dir())
 }
 
+def get_error_string(name, message):
+    return None if name not in ERRORS_DICT else f"err:{ERRORS_DICT.get(name)}:{message}"
+
 output = varproc.get_debug("debug_output_file")
 
 if os.path.isfile(output):

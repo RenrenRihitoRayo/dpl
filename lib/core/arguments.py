@@ -275,9 +275,9 @@ def expr_runtime(frame, arg):
         if varproc.get_debug("disable_nil_values") and v == constants.nil:
             raise Exception(f"{arg!r} is nil!")
         return v
-    elif arg == "!dict":
+    elif arg == ".dict":
         return {}
-    elif arg == "!list":
+    elif arg == ".list":
         return []
     elif arg.startswith('"') and arg.endswith('"'):
         return arg[1:-1] if not (chaos and random.choice([0, 0, 1])) else (random.shuffle(s:=list(arg[1:-1])), ''.join(s))[-1]
@@ -373,6 +373,22 @@ def evaluate(frame, expression):
             return val1 * val2
         case [val1, "/", val2]:
             return val1 / val2
+        case ["Type", item]:
+            return getattr(type(item), "__name__", constants.nil)
+        case ["Sum", *args]:
+            t = type(args[0])
+            start = args[0]
+            for i in args[1:]:
+                start += t(i)
+            return start
+        case [val1, "in", val2]:
+            return val1 in val2
+        case [val1, "/", "/", val2]:
+            return val1 // val2
+        case [val1, "mod", val2]:
+            return val1 % val2
+        case [val1, "^", val2]:
+            return val1**val2
         # conditionals
         case [val1, "=", "=", val2]:
             return val1 == val2
@@ -386,8 +402,6 @@ def evaluate(frame, expression):
             return constants.true if not val2 else constants.false
         case ["if", value, "then", true_v, "else", false_v]:
             return true_v if value else false_v
-        case ["!", val2]:
-            return not val2
         case [val1, ">", "=", val2]:
             return val1 >= val2
         case [val1, "<", "=", val2]:
@@ -396,6 +410,18 @@ def evaluate(frame, expression):
             return val1 < val2
         case [val1, ">", val2]:
             return val1 > val2
+        case [name, "=", value]:
+            return {name: value}
+        case [obj, "-", ">", index]:
+            if not isinstance(obj, (tuple, list, str)):
+                return constants.nil
+            if isinstance(obj, (tuple, list, str)) and index >= len(obj):
+                return constants.nil
+            elif isinstance(obj, dict) and index not in obj:
+                return constants.nil
+            else:
+                return obj[index]
+        # types
         case ["?list", *lst]:
             return lst
         case ["?tuple", *lst]:
@@ -424,6 +450,9 @@ def evaluate(frame, expression):
             for i in args:
                 temp.update(i)
             return temp
+        case ["!", *vals]:
+            return vals
+        # values
         case ["nil?", value]:
             return value == constants.nil
         case ["none?", value]:
@@ -433,22 +462,7 @@ def evaluate(frame, expression):
             if value is None:
                 return constants.false
             return constants.true
-        case ["Type", item]:
-            return getattr(type(item), "__name__", constants.nil)
-        case ["Sum", *args]:
-            t = type(args[0])
-            start = args[0]
-            for i in args[1:]:
-                start += t(i)
-            return start
-        case [val1, "in", val2]:
-            return val1 in val2
-        case [val1, "/", "/", val2]:
-            return val1 // val2
-        case [val1, "mod", val2]:
-            return val1 % val2
-        case [val1, "^", val2]:
-            return val1**val2
+        # ranges
         case ["RawRange", num]:
             return range(num)
         case ["Range", num]:
@@ -468,40 +482,32 @@ def evaluate(frame, expression):
                 return 0
         case ["Eval", expr]:
             return process_arg(frame, expr)
-        case ["@", ins, *args] if ins in methods:
-            return methods[ins](frame, *args)
-        case ["#", ins, *args] if ins in methods:
-            return ins(frame, "_", *args)[0]
+        # values
         case ["set", name, "=", value]:
             varproc.rset(frame[-1], name, value)
             return value
         case ["fset", name, "=", value]:
             varproc.rset(frame[-1], name, value, meta=False)
             return constants.nil
+        # method calling
+        case ["@", ins, *args] if ins in methods:
+            return methods[ins](frame, *args)
+        case ["#", ins, *args] if ins in methods:
+            return ins(frame, "_", *args)[0]
         case [obj, "@", method, *args] if hasattr(
             obj, method
         ):  # direct python method calling
             getattr(obj, method)(*args)
+        # other
         case ["?args", *args]:
             temp = pah.arguments_handler(None, None)
             temp.parse(args)
             return temp
-        case [name, "=", value]:
-            return {name: value}
-        case [obj, "-", ">", index]:
-            if not isinstance(obj, (tuple, list, str)):
-                return constants.nil
-            if isinstance(obj, (tuple, list, str)) and index >= len(obj):
-                return constants.nil
-            elif isinstance(obj, dict) and index not in obj:
-                return constants.nil
-            else:
-                return obj[index]
     return expression
 
 
 sep = " ,"
-special_sep = "@()+/*[]<>="
+special_sep = "@()+/*[]<>=!"
 
 
 def group(text):

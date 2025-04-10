@@ -142,6 +142,32 @@ Why use DPL?
 
 # 1.4.7
 
+## `std/error_handling.py`
+
+This module implements error handling similar to what rust does.
+Where you return either an error or the values.
+
+```DuProL
+&use {std/text_io.py}
+&use {std/error_handling.py}
+
+fn func
+    if cond
+        return [@err:wrap_err :_meta.err.RUNTIME_ERROR "Yep"]
+    end
+    return [@err:wrap_ok 90]
+end
+
+catch [!value] func
+# if 'value' is an error 'error' will be used
+# 'value' if otherwise
+err:unwrap :value [!error rvalue]
+io:println :error :rvalue
+if [not [nil? :error]]
+    err:raise_from_string :error
+end
+```
+
 ## `ifmain` and the new `std-dpl/memory_handling.dpl` module
 
 The `ifmain` is a block that only executes if the file it is in is ran as a script
