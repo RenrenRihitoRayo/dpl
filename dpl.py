@@ -412,8 +412,7 @@ dpl -cprofile ...
     Profiles the code using cProfile for more accurate but slower execution.
 dpl -disable-auto-complete ...
     Disable the auto complete.
-"""
-            )
+""")
         case _:
             print("Invalid invokation!")
             print("See 'dpl help' for more")

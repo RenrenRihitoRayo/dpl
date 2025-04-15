@@ -1,8 +1,8 @@
 local_dir="$(pwd)"
 
-echo "dpl.py run $@" > dpl-run
+echo "dpl.py run \$@" > dpl-run
 chmod +x dpl-run
-echo "dpl.py $@" > dpl
+echo "dpl.py \$@" > dpl
 chmod +x dpl
 
 # Check if it's already in .bashrc

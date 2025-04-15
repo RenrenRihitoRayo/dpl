@@ -166,6 +166,8 @@ methods = {}
 # Need I explain?
 def is_int(arg):
     arg = arg.replace("_", "")
+    if arg.count("-") > 1:
+        return False
     return arg.replace("-", "").replace(",", "").isdigit()
 
 
@@ -191,11 +193,13 @@ def is_bin(arg):
 
 def is_float(arg):
     arg = arg.replace("_", "")
+    if arg.count("-") > 1 or 0 <= arg.count(".") > 1:
+        return False
     return arg.replace("-", "").replace(",", "").replace(".", "").isdigit()
 
 
 def is_id(arg):
-    return arg.replace(".", "").replace("_", "a").isalnum()
+    return arg.replace(".", "").replace("_", "a").replace(":", "a").replace("-", "a").isalnum()
 
 
 def is_var(arg):
@@ -252,8 +256,6 @@ def expr_runtime(frame, arg):
             elif isinstance(arg, float):
                 return int(arg) if random.choice([0, 0, 1]) else arg
         return arg
-    if is_id(arg):
-        return arg
     elif is_var(arg):
         if varproc.debug["allow_automatic_global_name_resolution"]:
             v = varproc.rget(frame[-1], arg[1:], default=varproc.rget(frame[0], arg[1:]))
@@ -275,6 +277,8 @@ def expr_runtime(frame, arg):
         if varproc.get_debug("disable_nil_values") and v == constants.nil:
             raise Exception(f"{arg!r} is nil!")
         return v
+    if is_id(arg):
+        return arg
     elif arg == ".dict":
         return {}
     elif arg == ".list":
