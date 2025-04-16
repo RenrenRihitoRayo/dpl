@@ -1,0 +1,11 @@
+dump_vars :_meta
+# should print nothing
+dump_scope
+
+fn return_90_squared
+    return [90 * 90]
+end
+
+dump_vars :return_90_squared
+# should print something
+dump_scope

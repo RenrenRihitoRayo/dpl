@@ -142,6 +142,10 @@ Why use DPL?
 
 # 1.4.7
 
+## Meta values
+
+Meta values are now deprecated and will be removed by 1.4.8
+
 ## `std/error_handling.py`
 
 This module implements error handling similar to what rust does.

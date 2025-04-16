@@ -240,8 +240,12 @@ def expr_preruntime(arg):
         return constants.nil
     elif arg == "...":
         return constants.elipsis
-    elif arg == "!tuple":  # really?
-        return tuple()
+    elif arg == ".dict":
+        return {}
+    elif arg == ".list":
+        return []
+    elif arg == ".set":
+        return set()
     return arg
 
 
@@ -279,10 +283,6 @@ def expr_runtime(frame, arg):
         return v
     if is_id(arg):
         return arg
-    elif arg == ".dict":
-        return {}
-    elif arg == ".list":
-        return []
     elif arg.startswith('"') and arg.endswith('"'):
         return arg[1:-1] if not (chaos and random.choice([0, 0, 1])) else (random.shuffle(s:=list(arg[1:-1])), ''.join(s))[-1]
     elif arg.startswith("'") and arg.endswith("'"):
@@ -430,6 +430,8 @@ def evaluate(frame, expression):
             return lst
         case ["?tuple", *lst]:
             return tuple(lst)
+        case ["?set", *lst]:
+            return set(lst)
         case ["?dict", *lst]:
             return dict(lst)
         case ["?string", item]:
