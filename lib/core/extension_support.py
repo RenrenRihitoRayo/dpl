@@ -101,6 +101,12 @@ class extension:
     def get(self, name, default=None):
         return self.__data.get(name, default)
 
+    def mangle(self, name):
+        return (
+            f"{self.name}.{name}"
+            if not self.meta_name
+            else f"{self.meta_name}:{name}"
+        )
 
     @property
     def functions(self):
@@ -163,6 +169,12 @@ class dpl:
 
     def pycall(func, args, table):
         return func(*(args or []), **table)
+    
+    def add_matcher(name):
+        def wrap(fn):
+            argproc.matches[name] = fn
+            return fn
+        return wrap
 
 
 def luaj_import(

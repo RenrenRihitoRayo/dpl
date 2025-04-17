@@ -5,6 +5,7 @@ from ast import expr, parse
 from platform import processor
 from sys import flags
 import random
+import traceback
 
 from requests.models import parse_header_links
 from . import state
@@ -161,6 +162,7 @@ def flatten_dict(d, parent_key="", sep=".", seen=None):
 
 
 methods = {}
+matches = {}
 
 
 # Need I explain?
@@ -373,6 +375,10 @@ def evaluate(frame, expression):
             return val1 + val2
         case [val1, "-", val2]:
             return val1 - val2
+        case ["-", val2]:
+            return - val2
+        case ["~", val2]:
+            return ~ val2
         case [val1, "*", val2]:
             return val1 * val2
         case [val1, "/", val2]:
@@ -509,7 +515,14 @@ def evaluate(frame, expression):
             temp = pah.arguments_handler(None, None)
             temp.parse(args)
             return temp
-    return expression
+        case default:
+            for name, fn in matches.items():
+                try:
+                    if not (res:=fn(frame, default)) is None:
+                        return res
+                except:
+                    raise Exception(f"Error while evaluating: {default}\n{traceback.format_exc()}") from None
+    return constants.nil
 
 
 sep = " ,"

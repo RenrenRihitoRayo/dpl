@@ -142,6 +142,16 @@ Why use DPL?
 
 # 1.4.7
 
+## `std/math.py` and new dpl.add_matcher decorator
+
+DPL now supports defining custom exptession syntax!
+As long as it doesnt clash with builtin expressions.
+This is utilized by the new module `std/math.py` which
+defines a syntax that comes more naturally than the builtin expressions.
+You can finally chain expressions! `[math [! 90 + 90] * 2]` outputs 360.
+By the way `[!...]` is not negation, thats `[not ...]`, for unary negation `[- ...]`
+to invert [~ ...], `[!...]` is the array syntax.
+
 ## Meta values
 
 Meta values are now deprecated and will be removed by 1.4.8
