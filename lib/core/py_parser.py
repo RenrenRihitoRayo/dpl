@@ -618,7 +618,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(
                     pos,
                     file,
-                    f"Something went wrong when arguments were processed:\n{traceback.format_exc()}\n> {oargs!r}",
+                    f"Something went wrong when arguments were processed:\n{e}\n> {oargs!r}",
                 )
                 return error.PYTHON_ERROR
             argc = len(args)
@@ -637,6 +637,12 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             varproc.debug.update(args[0])
         elif ins == "get_time" and argc == 1:
             frame[-1][args[0]] = time.time()
+        elif ins == "_intern.get_index" and argc == 1:
+            frame[-1][args[0]] = p
+        elif ins == "_intern.jump" and argc == 1:
+            p = args[0]
+        elif ins == "_intern.jump" and argc == 2:
+            if args[1]: p = args[0]
         elif ins == "pub" and argc >= 2 and args[0] == "fn":
             _, name, *params = args
             temp = get_block(code, p)
@@ -1461,7 +1467,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     "\nAdditional Info: User may have called a partially defined function!",
                     end="",
                 )
-            error.error(pos, file, f"Invalid instruction {ins}\n{args}")
+            error.error(pos, file, f"Invalid instruction {ins}")
             return error.RUNTIME_ERROR
         p += 1
     else:

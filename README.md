@@ -142,15 +142,48 @@ Why use DPL?
 
 # 1.4.7
 
+## Meta values and Update Mappings
+
+Update mappings now support uodating multiple values!
+Meta values have now been removed. Doing `%variable` will result in an error!
+
 ## `std/math.py` and new dpl.add_matcher decorator
 
-DPL now supports defining custom exptession syntax!
+DPL now supports defining custom expression syntax!
 As long as it doesnt clash with builtin expressions.
 This is utilized by the new module `std/math.py` which
 defines a syntax that comes more naturally than the builtin expressions.
 You can finally chain expressions! `[math [! 90 + 90] * 2]` outputs 360.
 By the way `[!...]` is not negation, thats `[not ...]`, for unary negation `[- ...]`
 to invert [~ ...], `[!...]` is the array syntax.
+
+```DuProL
+# std/math.py
+...
+
+@dpl.add_matcher(ext.mangle("expr_match"))
+def matcher(frame, expr):
+    ...
+```
+
+For example I want to define a matcher that uses a match statement
+to square anything
+
+```DuProL
+@dpl.add_matcher("my_expr_matcher")
+def matcher_fn(frame, expr):
+    match expr:
+        case ["square", int(value)] if isinstance(value, (int, float)):
+            return value ** 2
+        case ["square", value] if isinstance(value, (str, list, tuple, dict)):
+            return value * 2
+        case ["square", default]: # unknown type
+            return default
+```
+
+If your match function returns `None` it is considered as a fail.
+If you want to return `None` without being detected as a fail, you need to wrap it in `dpl.wrap`
+like this: `dpl.wrap(None)` and get its value by doing `:value.value`
 
 ## Meta values
 

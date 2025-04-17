@@ -60,6 +60,5 @@ def evaluate(expr):
 
 @dpl.add_matcher(ext.mangle("expr_match"))
 def matcher(frame, expr):
-    match expr:
-        case ["math", *expr]:
-            return evaluate(expr)[0]
+    if expr and expr[0] == "math":
+        return evaluate(expr[1:])[0]

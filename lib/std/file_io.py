@@ -16,8 +16,23 @@ def myOpen(_, local, file_name, mode="r"):
             file = modules.os.path.join(local, file_name)
         return (open(file),)
     except Exception as e:
-        return (e,)
+        return dpl.error.get_error_string("PYTHON_ERROR", repr(e))
 
+
+@ext.add_func()
+def with_file(frame, local, body, name, _eq_, file_name, mode="r"):
+    if _eq_ != "=":
+        return dpl.error.get_error_string("SYNTAX_ERROR", f"Expected it to be `body io:with_file {name} **=** {file_name!r} {mode!r}`") 
+    try:
+        if modules.os.path.isabs(file_name):
+            file = file_name
+        else:
+            file = modules.os.path.join(local, file_name)
+        with open(file, mode) as f:
+            frame[-1][name] = f
+            return dpl.run_code(body, frame=frame)
+    except Exception as e:
+        return dpl.error.get_error_string("PYTHON_ERROR", repr(e))
 
 @ext.add_func()
 def seek(_, __, file_object, position, whence=0):

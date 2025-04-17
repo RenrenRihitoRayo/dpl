@@ -145,6 +145,13 @@ def require(path):
         return None
 
 
+class wrap:
+    def __init__(self, data):
+        self.type = type(data) if not data is None else None
+        self.value = data
+    def __repr__(self):
+        return f"wrap(type={self.type}, value={self.value!r})"
+
 class dpl:
     require = require
     utils = utils
@@ -166,6 +173,7 @@ class dpl:
     falsy = (state_nil, state_none, state_false, None, False)
     truthy = (state_true, True)
     exit = None
+    wrap = wrap
 
     def pycall(func, args, table):
         return func(*(args or []), **table)

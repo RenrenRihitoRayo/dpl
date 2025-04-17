@@ -119,8 +119,6 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=True):
         temp = dct.get(full_name, default)
         if is_debug_enabled("show_value_updates"):
             error.info(f"Variable {full_name!r} was read!")
-        if meta and isinstance(temp, dict) and "[meta_value]" in temp:
-            return temp["[meta_value]"]
         else:
             return temp
     path = [*enumerate(full_name.split(sep), 1)][::-1]
@@ -137,8 +135,6 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=True):
         elif pos == last and name in node:
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was read!")
-            if meta and isinstance(node[name], dict) and "[meta_value]" in node[name]:
-                return node[name]["[meta_value]"]
             else:
                 return node[name]
         else:
@@ -191,23 +187,13 @@ def rset(dct, full_name, value, sep=".", meta=True):
             ):
                 return 1
             if meta and full_name in dct and "[update_mapping]" in (temp := dct):
-                temp[temp["[update_mapping]"].get(full_name, full_name)] = value
-                temp[full_name] = value
-            if (
-                meta
-                and full_name in dct
-                and isinstance(
-                    (temp := dct[full_name]), dict
-                )
-                and "[meta_value]" in temp
-            ):
-                dct[full_name]["[meta_value]"] = value
-                if "[update_mapping]" in temp:
-                    vname = temp["[update_mapping]"].get("[onset]")
-                    if vname:
+                names = temp["[update_mapping]"].get(name, name)
+                if isinstance(names, tuple):
+                    for vname in names:
                         temp[vname] = value
-            else:
-                dct[full_name] = value
+                else:
+                    temp[names] = value
+            dct[full_name] = value
             return
     path = [*enumerate(full_name.split(sep), 1)][::-1]
     last = len(path)
@@ -234,22 +220,12 @@ def rset(dct, full_name, value, sep=".", meta=True):
                 ):
                     return 1
                 if meta and name in node and "[update_mapping]" in (temp := node):
-                    temp[temp["[update_mapping]"].get(name, name)] = value
-                    temp[name] = value
-                if (
-                    meta
-                    and name in node
-                    and isinstance(
-                        (temp := node[name]), dict
-                    )
-                    and "[meta_value]" in temp
-                ):
-                    node[name]["[meta_value]"] = value
-                    if "[update_mapping]" in temp:
-                        vname = temp["[update_mapping]"].get("[onset]")
-                        if vname:
+                    names = temp["[update_mapping]"].get(name, name)
+                    if isinstance(names, tuple):
+                        for vname in names:
                             temp[vname] = value
-                else:
-                    node[name] = value
+                    else:
+                        temp[names] = value
+                temp[name] = value
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was set to `{value!r}`!")

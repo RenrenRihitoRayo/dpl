@@ -32,7 +32,12 @@ def nest_args(tokens):
         elif token in CLOSE_P:
             if len(stack) == 1:
                 raise ValueError("Mismatched parentheses")
+            st = False
+            if stack[-1] and stack[-1][0] == "#" and stack[-1][-1] == "#":
+                st = True
             stack.pop()
+            if st:
+                stack[-1].pop()
         else:
             stack[-1].append(token)
     if len(stack) > 1:
@@ -204,16 +209,8 @@ def is_id(arg):
     return arg.replace(".", "").replace("_", "a").replace(":", "a").replace("-", "a").isalnum()
 
 
-def is_var(arg):
-    return arg.startswith("%") and is_id(arg[1:])
-
-
 def is_fvar(arg):
     return arg.startswith(":") and is_id(arg[1:])
-
-
-def is_pvar(arg):
-    return arg.startswith(".%") and is_id(arg[2:])
 
 
 def is_pfvar(arg):
@@ -262,24 +259,15 @@ def expr_runtime(frame, arg):
             elif isinstance(arg, float):
                 return int(arg) if random.choice([0, 0, 1]) else arg
         return arg
-    elif is_var(arg):
-        if varproc.debug["allow_automatic_global_name_resolution"]:
-            v = varproc.rget(frame[-1], arg[1:], default=varproc.rget(frame[0], arg[1:]))
-        else:
-            v = varproc.rget(frame[-1], arg[1:])
-        if varproc.get_debug("disable_nil_values") and v == constants.nil:
-            raise Exception(f"{arg!r} is nil!")
-        return v
     elif is_fvar(arg):
         if varproc.debug["allow_automatic_global_name_resolution"]:
             v = varproc.rget(
                 frame[-1],
                 arg[1:],
-                default=varproc.rget(frame[0], arg[1:], meta=False),
-                meta=False,
+                default=varproc.rget(frame[0], arg[1:]),
             )
         else:
-            v = varproc.rget(frame[-1], arg[1:], meta=False)
+            v = varproc.rget(frame[-1], arg[1:])
         if varproc.get_debug("disable_nil_values") and v == constants.nil:
             raise Exception(f"{arg!r} is nil!")
         return v
@@ -294,8 +282,12 @@ def expr_runtime(frame, arg):
         for name, value in flatten_dict(frame[-1]).items():
             text = text.replace(f"${{{name}!}}", repr(value))
         return text if not (chaos and random.choice([0, 0, 1])) else (random.shuffle(s:=list(text)), ''.join(s))[-1]
+    elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
+        return arg
+    elif arg in ("?tuple", "?args", "?float", "?int", "?string", "?bytes", "?set", "?list", "nil?", "none?", "def?"):
+        return arg
     else:
-        return expr_preruntime(arg)
+        raise Exception(f"Invalid literal: {arg}")
 
 
 def add_method(name=None, from_func=False, process=True):
@@ -325,21 +317,23 @@ def my_range(start, end):
 
 
 def is_static(frame, code):
-    for pos, i in enumerate(code):
+    for i in code:
         if isinstance(i, list):
             if not is_static(frame, i):
                 return False
         elif not isinstance(i, str):
             continue
-        elif is_pvar(i) or is_pfvar(i):
+        elif is_pfvar(i):
             if varproc.rget(frame[-1], i[2:], default=None, meta=False) is None:
                 return False
-        elif is_var(i) or is_fvar(i):
+        elif is_fvar(i):
             return False
     return True
 
 
 def to_static(frame, code):
+    ot = type(code)
+    code = list(code)
     for pos, i in enumerate(code):
         if isinstance(i, list):
             if is_static(frame, i):
@@ -348,11 +342,11 @@ def to_static(frame, code):
                 code[pos] = to_static(frame, i)
         elif not isinstance(i, str):
             continue
-        elif (is_pfvar(i) or is_pvar(i)) and not (var:=varproc.rget(frame[-1], i[2:], default=None, meta=is_var(i))) is None:
+        elif is_pfvar(i) and not (var:=varproc.rget(frame[-1], i[2:], default=None)) is None:
             code[pos] = var
         else:
             break
-    return code
+    return ot(code)
 
 
 def get_names(args):
@@ -413,13 +407,13 @@ def evaluate(frame, expression):
         case ["if", value, "then", true_v, "else", false_v]:
             return true_v if value else false_v
         case [val1, ">", "=", val2]:
-            return val1 >= val2
+            return constants.true if val1 >= val2 else constants.false
         case [val1, "<", "=", val2]:
-            return val1 <= val2
+            return constants.true if val1 <= val2 else constants.false
         case [val1, "<", val2]:
-            return val1 < val2
+            return constants.true if val1 < val2 else constants.false
         case [val1, ">", val2]:
-            return val1 > val2
+            return constants.true if val1 > val2 else constants.false
         case [name, "=", value]:
             return {name: value}
         case [obj, "-", ">", index]:
@@ -434,7 +428,9 @@ def evaluate(frame, expression):
         # types
         case ["?list", *lst]:
             return lst
-        case ["?tuple", *lst]:
+        case ["tuple", *lst]:
+            return tuple(lst)
+        case ["?tuple", lst]:
             return tuple(lst)
         case ["?set", *lst]:
             return set(lst)
@@ -502,14 +498,18 @@ def evaluate(frame, expression):
             varproc.rset(frame[-1], name, value, meta=False)
             return constants.nil
         # method calling
-        case ["@", ins, *args] if ins in methods:
+        case ["@", obj, "-", ">", method, *args] if hasattr(
+            obj, method
+        ):  # direct python method fetching. Ex: object.attr is `[@ :object -> attr]`
+            return getattr(obj, method)
+        case ["#", ins, *args] if ins in methods:
             return methods[ins](frame, *args)
         case ["#", ins, *args] if ins in methods:
             return ins(frame, "_", *args)[0]
         case [obj, "@", method, *args] if hasattr(
             obj, method
         ):  # direct python method calling
-            getattr(obj, method)(*args)
+            return getattr(obj, method)(*args)
         # other
         case ["?args", *args]:
             temp = pah.arguments_handler(None, None)
@@ -526,7 +526,7 @@ def evaluate(frame, expression):
 
 
 sep = " ,"
-special_sep = "@()+/*[]<>=!"
+special_sep = "@()+/*#[]<>=!"
 
 
 def group(text):
