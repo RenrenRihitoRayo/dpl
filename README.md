@@ -1,23 +1,20 @@
 # DPL – The Dumb Programming Language
 
-> *"Simplicity is everywhere in DPL, like an airport cutting expenses."*  
-> *"DPL gives you freedom. In return, it's your fault when you fail."*
+> "Simplicity is everywhere in DPL, like an airport cutting expenses."
+> "DPL gives you freedom. In return, it's your fault when you fail."
 
 Welcome to **DPL**, the programming language that doesn't try to be smart — just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
-
 There are no style rules. There are no guardrails. Just a loosely-held-together interpreter and your own chaotic energy.
 
 ## Philosophy
 
-- The **interpreter** has standards.  
-- The **language** does not.  
+- The **language** shouldnt have standards.  
 - **If your code looks weird, that’s your aesthetic.**  
 - If it breaks, that's your fault.  
 - If it works, that's DPL.
 
 ## Features
 
-- Object-oriented-ish? Sure.  
 - Classes? Kinda.  
 - Functions? Yes, and they sometimes even work.  
 - Syntax? Let's call it... *flexible*.  
@@ -33,6 +30,8 @@ Primitives:
 Containers:
 - dict (objects and scopes)
 - list
+- sets
+- tuples
 
 Flags:
 - nil
@@ -40,15 +39,19 @@ Flags:
 - true
 - false
 
+We dont abstract the python types here,
+you can call its methods and do some stuff with it.
+`set CAPS ["my string"@upper]`
+
 ### Truthy Values
 
-- Any non-empty list, dict and strings
+- Any non-empty containers and strings
 - If an int or float is not zero
 - true (duh)
 
 ### Falsy Values
 
-- Empty list, dict and strings
+- Empty containers and strings
 - 0 and 0.0
 - false (duh)
 - none
@@ -124,10 +127,8 @@ io:println :res
 
 Why use DPL?
 * You’re tired of languages judging you.
-
 * You believe standards are optional. You want full control and full responsibility.
-
-* You enjoy chaos, minimalism, and/or pain.
+* You enjoy chaos, minimalism, or pain.
 
 ## DPL's Core Ideals
 
@@ -142,10 +143,38 @@ Why use DPL?
 
 # 1.4.7
 
+## Added an attribute to check which implememtation is used
+
+`_meta.internal.implementation` by default is `python` when using a compiled version `parser-cpython-ver.so` rather than
+`py_parser`. Note it it is not recommended to hand write the parser in C oe C++,
+but by writing Cython scripts then compiling, Nuitka is also suitable for this action.
+
+## Info on implementations
+
+Any python importable code that is named `parser-coython-[ver]` will be used when possible,
+it treats it as the parser that implements the following functions:
+- process: turns text into a list of tuples `(pos: int, file_name: str, instruction: str, args: list)`
+- run: executes the code either from a string or the outout of process. should accept (code, frame, thread_event=IS_STILL_RUNNING), returns the error code, 0 for success, any erro code less than 0 is still }ropagated but as control codes (like skip and stop) rather then errors.
+
+It should use the `lib/core/runtime` and use that to initiate the runtime,
+as well as inherit data from it by calling `runtime.expose(globals())`
+
 ## Meta values and Update Mappings
 
-Update mappings now support uodating multiple values!
+Update mappings now support updating multiple values!
 Meta values have now been removed. Doing `%variable` will result in an error!
+
+```DuProL
+Error in line 3 file '__main__'
+Cause:
+Something went wrong when arguments were processed:
+Invalid literal: %test
+> ['%test']
+
+[/storage/emulated/0/temp.dpl]
+Finished with an error: 4
+Error Name: PYTHON_ERROR
+```
 
 ## `std/math.py` and new dpl.add_matcher decorator
 

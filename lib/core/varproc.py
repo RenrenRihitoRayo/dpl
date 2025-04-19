@@ -55,6 +55,7 @@ meta = {
         "python_version": str(sys.version_info),
         "python_version_string": info.PYTHON_VER,
         "_set_only_when_defined": 1,
+        "implementation":"python" # python - full python impl, non-python - uses another language for parser
     },
     "dependencies": dependencies,
     "err": {"defined_errors": tuple()},

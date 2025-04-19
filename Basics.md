@@ -68,3 +68,15 @@ Every name except `_meta` is self explanatory.
 `_meta` contains data that the interpreter uses or has.
 For example debug flags and configs in `_meta.debug`, defined errors in `_meta.err`.
 You can use `dump_vars :_meta` to see all of it.
+
+## Functions
+
+```DuProL
+&use {std/text_io.py}
+
+fn greet name
+    io:println 'Hello ${name}!'
+end
+
+greet "Edward"
+```

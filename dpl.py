@@ -4,22 +4,59 @@
 # We use match statements for the CLI
 # To keep it lightweight, we dont need speed here.
 
+
+import lib.core.info as info
+import lib.core.cli_arguments as cli_args
+prog_flags = cli_args.flags(info.ARGV, True)
+
+info.imported = set()
+info.unique_imports = 0
+og_import = __import__
+def my_import(module, globals=None, locals=None, from_list=tuple(), level=0):
+    name = module or "???"
+    if "show-imports-as-is" in flags:
+        print(":: import", name, flush=True)
+    else:
+        if name not in info.imported:
+            print(":: import", name, flush=True)
+            info.imported.add(name)
+    info.unique_imports += 1
+    return og_import(module, globals, locals, from_list, level)
+if "show-imports" in prog_flags:
+    print("DEBUG: __import__ bypass has been set.\nExpect debug output for every import.")
+    __builtins__.__import__ = my_import
+
+import time
+
+if "init-time" in prog_flags:
+    INIT_START_TIME = time.perf_counter()
+    
 import subprocess
 import shutil
 import time
 import pstats
-import lib.core.info as info
 import lib.core.utils as utils
 import lib.core.error as error
-import lib.core.cli_arguments as cli_args
 import lib.core.extension_support as ext_s
 import lib.core.get_dependencies as get_dep
 from dfpm import dfpm
+import lib.core.info as info # repitition is intentional
+import lib.core.cli_arguments as cli_args
 from documenter import docs
 import cProfile
+import prompt_toolkit
+InMemoryHistory = prompt_toolkit.history.InMemoryHistory
+prompt =  prompt_toolkit.prompt
+WordCompleter = prompt_toolkit.completion.WordCompleter
 
 try:  # Try to use the .pyd or .so parser to get some kick
-    import lib.core.parser as parser
+    try:
+        import lib.core.parser as parser
+    except ImportError as e:
+        raise ImportError("Non-Python Parser had an error while importing!") from e
+    except Exception as e:
+        raise Exception("Non-Python Parser had difficulties") from e
+    meta["internal"]["implementation"] = "non-python"
 except Exception as e:  # fallback to normal python impl if it fails
     import lib.core.py_parser as parser
 import lib.core.varproc as varproc
@@ -28,6 +65,12 @@ import lib.core.suggestions as suggest
 
 import os
 import sys
+
+ext_s.modules.prompt_toolkit = prompt_toolkit
+ext_s.modules.cProfile = cProfile
+ext_s.modules.pstats = pstats
+ext_s.shutil = shutil
+ext_s.subrocess = subprocess
 
 # DANGEROUS
 sys.setrecursionlimit(10**6)
@@ -38,8 +81,11 @@ try:
     has_dill = True
 except ModuleNotFoundError:
     import pickle
+    print("Warning compiling DPL scripts may result in an error\nThe `dill` module isnt installed, python functions are not pickleable!")
     has_dill = False
 
+if "show-imports" in prog_flags and "exit-when-done-importing" in flags:
+    exit(0)
 
 def rec(this, ind=0):
     if not isinstance(this, (tuple, list)):
@@ -261,9 +307,6 @@ def handle_args():
                         res.append(line[2:])
             print("\n".join(res))
         case ["repr"] | []:
-            from prompt_toolkit.history import InMemoryHistory
-            from prompt_toolkit import prompt
-            from prompt_toolkit.completion import WordCompleter
             if os.path.isfile(os.path.join(info.BINDIR, "start_prompt.txt")):
                 start_text = open(os.path.join(info.BINDIR, "start_prompt.txt")).read()
             else:
@@ -271,21 +314,21 @@ def handle_args():
             frame = varproc.new_frame()
             cmd_hist = InMemoryHistory()
             acc = []
-            if not "-disable-auto-complete" in flags:
+            if not "-disable-auto-complete" in prog_flags:
                 for f in frame:
                     acc.extend(utils.flatten_dict(f).keys())
                     acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
                     acc.extend(map(lambda x:"%"+x, utils.flatten_dict(f).keys()))
-            if "import-all" in varproc.flags:
-                if "verbose" in varproc.flags:
+            if "import-all" in prog_flags:
+                if "verbose" in prog_flags:
                     print("Importing all standard modules...")
                 for pos, file in enumerate(
                     temp := varproc.meta["internal"]["libs"]["std_libs"], 1
                 ):
-                    if "verbose" in varproc.flags:
+                    if "verbose" in prog_flags:
                         print(f"[{(pos/len(temp))*100:7.2f}% ] Importing: {file}")
                     ext_s.py_import(frame, file, "@std")
-                if "verbose" in varproc.flags:
+                if "verbose" in prog_flags:
                     print("Done importing!")
             PROMPT_CTL = frame[-1]["_meta"]["internal"]["prompt_ctl"] = {}
             PROMPT_CTL["ps1"] = ">>> "
@@ -354,12 +397,11 @@ def handle_args():
                 try:
                     if err := parser.run(parser.process(act, "./repr.dpl-instance"), frame=frame):
                         rec(err)
-                    if not "-disable-auto-complete" in flags:
+                    if not "-disable-auto-complete" in prog_flags:
                         acc = []
                         for f in frame:
                             acc.extend(utils.flatten_dict(f).keys())
                             acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
-                            acc.extend(map(lambda x:"%"+x, utils.flatten_dict(f).keys()))
                 except Exception as e:
                     print(f"Python Exception was raised while running:\n{repr(e)}")
         case ["deps"]:
@@ -420,21 +462,24 @@ dpl -disable-auto-complete ...
     if "pause" in varproc.flags:
         input("\n[Press Enter To Finish]")
 
+if "init-time" in prog_flags:
+    END = time.perf_counter() - INIT_START_TIME
+    s, u = utils.convert_sec(END)
+    print(f"DEBUG: Initialization time: {s}{u}")
 
 if __name__ == "__main__":
-    flags = cli_args.flags(info.ARGV, True)
-    varproc.flags.update(flags)
+    varproc.flags.update(prog_flags)
     info.ARGC = len(info.ARGV)
     if hasattr(info, "LINUX_DISTRO"):
         if info.LINUX_DISTRO and "arch" in info.LINUX_DISTRO and "silence-impotence" not in flags:
             print("I bet you say 'I use arch btw'")
-    if "remove-freedom" in flags:
+    if "remove-freedom" in prog_flags:
         print("*Hawk screeches* The tariffs go crazy huh")
-    if "cprofile" in flags:
+    if "cprofile" in prog_flags:
         profiler = cProfile.Profile()
         profiler.enable()
     handle_args()
-    if "cprofile" in flags:
+    if "cprofile" in prog_flags:
         profiler.disable()
         default = "tottime"
         order_by = None
