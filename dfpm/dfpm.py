@@ -44,12 +44,12 @@ def dl_repo(user_name, repo_name, branch="master", use_branch_name=True, locatio
     except Exception as e:
         print(e)
         return
-    if not os.path.exists(destination_dir):
-        os.makedirs(destination_dir)
     print(f"{repo_name}: Done!")
     if response.status_code == 200:
         zip_path = os.path.join(destination_dir, f"{repo_name}-{branch}.zip")
         print(f"{repo_name}: Writing to {destination_dir}.zip...")
+        if not os.path.exists(destination_dir):
+            os.makedirs(destination_dir)
         with open(zip_path, "wb") as file:
             file.write(response.content)
 

@@ -145,6 +145,10 @@ Most recent at top.
 
 # 1.4.7
 
+## DFPM
+
+The package manager now generates the destination folder only when its successful in downloading the package.
+
 ## Symbol Packing
 
 DPL now groups symbols.
