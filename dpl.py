@@ -410,6 +410,7 @@ def handle_args():
             print(
                 f"""Help for DPL [v{varproc.meta['internal']['version']}]
 
+Commands:
 dpl run [file] args...
     Runs the given DPL script.
 dpl rc [file] args...
@@ -442,6 +443,8 @@ dpl get-docs file
 dpl deps
     Lists the dependencies for DPL. (not accurate)
     Only recognizes "import x" and not "from y import x"
+
+Flags and such:
 dpl -info
     Prints info.
 dpl -arg-test
@@ -454,6 +457,11 @@ dpl -cprofile ...
     Profiles the code using cProfile for more accurate but slower execution.
 dpl -disable-auto-complete ...
     Disable the auto complete.
+dpl -init-time
+    Show initialization time.
+dpl -show-imports
+    Show all imports done by dpl.
+    Note thay this captures the imports also done by the imported modules.
 """)
         case _:
             print("Invalid invokation!")

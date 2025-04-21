@@ -10,6 +10,8 @@ import threading
 import pickle
 import gc
 from copy import deepcopy as copy
+from . import py_argument_handler
+arguments_handler = py_argument_handler.arguments_handler
 
 try:
     from . import arguments as argproc
@@ -126,8 +128,8 @@ def process(fcode, name="__main__"):
     "Preprocess a file"
     res = []
     nframe = varproc.new_frame()
-    dead_code = info.DEAD_CODE_OPT
-    warnings = info.WARNINGS
+    dead_code = info.flags.DEAD_CODE_OPT
+    warnings = info.flags.WARNINGS
     define_func = False
     multiline = False
     last_comment = 0
@@ -140,8 +142,6 @@ def process(fcode, name="__main__"):
         ),
         enumerate(map(str.strip, fcode.split("\n")), 1),
     ):
-        line = line.replace("!__line__", str(lpos))
-        line = line.replace("!__file__", name if name != "__main__" else varproc.meta["internal"]["main_file"])
         if multiline:
             if line.endswith("--"):
                 multiline = False
@@ -151,7 +151,10 @@ def process(fcode, name="__main__"):
         elif line.startswith("--"):
             last_comment = lpos
             multiline = True
-        elif line.startswith("&"):
+            continue
+        line.replace("!__line__", str(lpos))
+        line.replace("!__file__", name if name != "__main__" else varproc.meta["internal"]["main_file"])
+        if line.startswith("&"):
             ins, *args = argproc.group(line[1:].lstrip())
             args = argproc.nest_args(argproc.exprs_preruntime(args))
             args = argproc.process_args(nframe, args)
@@ -163,8 +166,8 @@ def process(fcode, name="__main__"):
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
                 if not os.path.exists(file):
-                    print("Not found:", file, f"\nLine {lpos}\nFile {name}")
-                    break
+                    error.error(lpos, file, f"Not found: {file}")
+                    return error.PREPROCESSING_ERROR
                 if os.path.isdir(file):
                     if not os.path.isfile(files:=os.path.join(file, "include-dpl.txt")):
                         with open(files) as f:
@@ -203,8 +206,8 @@ def process(fcode, name="__main__"):
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
                 if not os.path.exists(file):
-                    print("Not found:", file)
-                    break
+                    error.error(lpos, file, f"Not found: {file}")
+                    return error.PREPROCESSING_ERROR
                 if os.path.isdir(file):
                     if not os.path.isfile(files:=os.path.join(file, "include-cdpl.txt")):
                         with open(files) as f:
@@ -254,8 +257,11 @@ def process(fcode, name="__main__"):
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), file)
                     search_path = "_loc"
+                if not os.path.exists(file):
+                    error.error(lpos, file, f"Not found while including: {file}")
+                    return error.PREPROCESSING_ERROR
                 if ext_s.py_import(nframe, file, search_path, loc=os.path.dirname(name)):
-                    print(f"pytho: Something wrong happened...\nLine {lpos}\nFile {name}")
+                    print(f"python: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
             elif ins == "whatever" and argc == 0:
                 argproc.chaos = True
@@ -268,8 +274,11 @@ def process(fcode, name="__main__"):
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), file)
                     search_path = "_loc"
+                if not os.path.exists(file):
+                    error.error(lpos, file, f"Not found while including: {file}")
+                    return error.PREPROCESSING_ERROR
                 if ext_s.py_import(nframe, file, search_path, loc=os.path.dirname(name), alias=args[2]):
-                    print(f"pytho: Something wrong happened...\nLine {lpos}\nFile {name}")
+                    print(f"python: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
             elif ins == "use:luaj" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
@@ -352,7 +361,7 @@ def process(fcode, name="__main__"):
                 f"{name!r}:{last_comment}: Unclosed multiline comment!",
             )
             return error.PREPROCESSING_ERROR
-        if dead_code and info.DEAD_CODE_OPT:
+        if dead_code and info.flags.DEAD_CODE_OPT:
             p = 0
             warn_num = 0
             nres = []
@@ -363,7 +372,7 @@ def process(fcode, name="__main__"):
                     and p + 1 < len(res)
                     and res[p + 1][2] in {"end", "stop", "skip"}
                 ):
-                    if warnings and info.WARNINGS:
+                    if warnings and info.flags.WARNINGS:
                         error.warn(
                             f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}"
                         )
@@ -378,7 +387,7 @@ def process(fcode, name="__main__"):
                     and p + 1 < len(res)
                     and res[p + 1][2] == "end"
                 ):
-                    if warnings and info.WARNINGS:
+                    if warnings and info.flags.WARNINGS:
                         error.warn(
                             f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}"
                         )
@@ -398,7 +407,7 @@ def process(fcode, name="__main__"):
                             f"Error: Malformed {ins!r} statement/sub-statements!\nLine {pos}\nIn file {file!r}"
                         )
                         return error.PREPROCESSING_ERROR
-                    if warnings and info.WARNINGS:
+                    if warnings and info.flags.WARNINGS:
                         error.warn(
                             f"Warning: {ins!r} statement/sub-statements is empty!\nLine {pos}\nIn file {file!r}"
                         )
@@ -432,7 +441,7 @@ def process(fcode, name="__main__"):
                     else:
                         return []
                     if define_func:
-                        if warnings and info.WARNINGS:
+                        if warnings and info.flags.WARNINGS:
                             print(
                                 f'Warning: set "{line[3][0]}" none\nLine {pos}\nIn file {file!r}'
                             )
@@ -444,7 +453,7 @@ def process(fcode, name="__main__"):
                 else:
                     nres.append(line)
                 p += 1
-            if warnings and info.WARNINGS and warn_num:
+            if warnings and info.flags.WARNINGS and warn_num:
                 print(f"Warning Info: {warn_num:,} Total warnings.")
         else:
             nres = res
@@ -489,7 +498,7 @@ def process(fcode, name="__main__"):
 #                else:
 #                    defined_names.add[args[1]] = pos
         return {
-            "code": nres if dead_code and info.DEAD_CODE_OPT else res,
+            "code": nres if dead_code and info.flags.DEAD_CODE_OPT else res,
             "frame": nframe or None,
         }
     return error.PREPROCESSING_ERROR
@@ -720,13 +729,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "fallthrough" and argc == 0:
             return error.FALLTHROUGH
         elif ins == "set" and argc == 2:
-            if t := varproc.rset(frame[-1], args[0], args[1]):
-                error.error(
-                    pos,
-                    file,
-                    f"Tried to set a constant variable!\nPlease use fset instead!\nLine {pos}\nFile {file}",
-                )
-                return error.NAME_ERROR
+            varproc.rset(frame[-1], args[0], args[1])
         elif ins == "const" and argc == 2:
             name = args[0]
             if varproc.rset(frame[-1], name, args[1]):
@@ -1362,6 +1365,20 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "end" and argc == 0:
             error.error(pos, file, "Lingering end statement!")
             return error.SYNTAX_ERROR
+        elif ins == "!" and argc >= 2:
+            it, func, *args = args
+            try:
+                if it == "call":
+                    if args and isinstance(args[0], arguments_handler): args[0].call(func)
+                    else: func(*args)
+                elif it == "catch" and len(args) >= 1:
+                    if len(args) >= 2 and isinstance(args[1], arguments_handler): [frame[-1].__setitem__(name, value)
+                    for name, value in zip(args[0], args[1].call(func))]
+                    else: [frame[-1].__setitem__(name, value)
+                    for name, value in zip(args[0], func(*args[1:]))]
+            except Exception as e:
+                error.error(pos, file, traceback.format_exc())
+                return error.PYTHON_ERROR
         else:
             if not isinstance((obj := varproc.rget(frame[-1], ins)), dict) and obj in (
                 None,

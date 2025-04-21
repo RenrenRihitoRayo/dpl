@@ -2,6 +2,7 @@
 
 import datetime
 import os
+from .info import flags
 from . import varproc
 
 ERRORS = (
@@ -56,6 +57,8 @@ if os.path.isfile(output):
 
 
 def my_print(text):
+    if not flags.ERRORS:
+        return
     if varproc.is_debug_enabled("log_events") and not os.path.isfile(output):
         with open(output, "w") as f:
             f.write(

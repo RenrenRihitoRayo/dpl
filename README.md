@@ -141,7 +141,17 @@ Why use DPL?
 
 # Change Notes / Dev Logs
 
+Most recent at top.
+
 # 1.4.7
+
+## Symbol Packing
+
+DPL now groups symbols.
+`[90 >= 90]` is now `[90, ">=", 90]` rather than `[90, ">", "=", 90]`
+this will speed up most expressions and will lessen memory usage on runtime.
+
+This will help the match statement parse it more cleanly and efficiently.
 
 ## Added an attribute to check which implememtation is used
 

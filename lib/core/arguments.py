@@ -41,7 +41,7 @@ def nest_args(tokens):
         else:
             stack[-1].append(token)
     if len(stack) > 1:
-        raise ValueError("Mismatched parentheses")
+        raise ValueError(f"Mismatched parentheses: {tokens}")
     return stack[0]
 
 
@@ -245,6 +245,8 @@ def expr_preruntime(arg):
         return []
     elif arg == ".set":
         return set()
+    elif arg == "π":
+        return 22/7
     return arg
 
 
@@ -284,7 +286,7 @@ def expr_runtime(frame, arg):
         return text if not (chaos and random.choice([0, 0, 1])) else (random.shuffle(s:=list(text)), ''.join(s))[-1]
     elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
         return arg
-    elif arg in ("?tuple", "?args", "?float", "?int", "?string", "?bytes", "?set", "?list", "nil?", "none?", "def?"):
+    elif arg in ("?tuple", "?args", "?float", "?int", "?string", "?bytes", "?set", "?list", "nil?", "none?", "def?") or arg in sym:
         return arg
     else:
         raise Exception(f"Invalid literal: {arg}")
@@ -332,8 +334,6 @@ def is_static(frame, code):
 
 
 def to_static(frame, code):
-    ot = type(code)
-    code = list(code)
     for pos, i in enumerate(code):
         if isinstance(i, list):
             if is_static(frame, i):
@@ -342,11 +342,11 @@ def to_static(frame, code):
                 code[pos] = to_static(frame, i)
         elif not isinstance(i, str):
             continue
-        elif is_pfvar(i) and not (var:=varproc.rget(frame[-1], i[2:], default=None)) is None:
+        elif is_pfvar(i) and (not (var:=varproc.rget(frame[-1], i[2:], default=None)) is None):
             code[pos] = var
         else:
             break
-    return ot(code)
+    return code
 
 
 def get_names(args):
@@ -360,6 +360,17 @@ def get_names(args):
             names.add(i[1:])
     return names
 
+
+class kwarg:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+    def keys():
+        return [name]
+    def __getitem__(self, _):
+        return self.value
+    def __repr__(self):
+        return f"<{self.name} = {self.value!r}>"
 
 def evaluate(frame, expression):
     "Evaluate an expression"
@@ -394,9 +405,9 @@ def evaluate(frame, expression):
         case [val1, "^", val2]:
             return val1**val2
         # conditionals
-        case [val1, "=", "=", val2]:
+        case [val1, "==", val2]:
             return val1 == val2
-        case [val1, "!", "=", val2]:
+        case [val1, "!=", val2]:
             return val1 != val2
         case [val1, "and", val2]:
             return constants.true if val1 and val2 else constants.false
@@ -406,17 +417,17 @@ def evaluate(frame, expression):
             return constants.true if not val2 else constants.false
         case ["if", value, "then", true_v, "else", false_v]:
             return true_v if value else false_v
-        case [val1, ">", "=", val2]:
+        case [val1, ">=", val2]:
             return constants.true if val1 >= val2 else constants.false
-        case [val1, "<", "=", val2]:
+        case [val1, "<=", val2]:
             return constants.true if val1 <= val2 else constants.false
         case [val1, "<", val2]:
             return constants.true if val1 < val2 else constants.false
         case [val1, ">", val2]:
             return constants.true if val1 > val2 else constants.false
         case [name, "=", value]:
-            return {name: value}
-        case [obj, "-", ">", index]:
+            return kwarg(name, value)
+        case [obj, "->", index]:
             if not isinstance(obj, (tuple, list, str)):
                 return constants.nil
             if isinstance(obj, (tuple, list, str)) and index >= len(obj):
@@ -509,11 +520,19 @@ def evaluate(frame, expression):
         case [obj, "@", method, *args] if hasattr(
             obj, method
         ):  # direct python method calling
+            if args and isinstance(args[0], pah.arguments_handler):
+                return args[0].call(getattr(obj, method))
             return getattr(obj, method)(*args)
         # other
         case ["?args", *args]:
-            temp = pah.arguments_handler(None, None)
-            temp.parse(args)
+            lst = []
+            dct = {}
+            for i in args:
+                if isinstance(i, kwarg):
+                    dct[i.name] = i.value
+                else:
+                    lst.append(i)
+            temp = pah.arguments_handler(lst, dct)
             return temp
         case default:
             for name, fn in matches.items():
@@ -522,12 +541,12 @@ def evaluate(frame, expression):
                         return res
                 except:
                     raise Exception(f"Error while evaluating: {default}\n{traceback.format_exc()}") from None
-    return constants.nil
+    return expression
 
 
 sep = " ,"
-special_sep = "@()+/*#[]<>=!"
-
+special_sep = "@()+/*#[]π<>=!π"
+sym = [">=", "<=", "->", "==", "!="]
 
 def group(text):
     res = []
@@ -593,7 +612,15 @@ def group(text):
             id_tmp.append(i)
     if id_tmp:
         res.append("".join(id_tmp))
-    return res
+    nres = []
+    while res:
+        i = res.pop()
+        if res and (tmp:=i+res[-1]) in sym:
+            nres.append(tmp)
+            res.pop()
+        else:
+            nres.append(i)
+    return nres[::-1]
 
 
 def exprs_preruntime(args):

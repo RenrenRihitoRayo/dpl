@@ -8,6 +8,8 @@ import os
 import sys
 import platform
 
+unique_imports = set()
+
 try:
     from . import constants
 except ImportError:
@@ -90,8 +92,10 @@ CHARS = {
 OPEN_P = "[("
 CLOSE_P = ")]"
 
-WARNINGS = True
-DEAD_CODE_OPT = True
+class flags:
+    WARNINGS = True      # Specific to warnings.
+    DEAD_CODE_OPT = True # Dead code optimizatiins
+    ERRORS = True        # Logs, Warnings and Such
 
 VERSION_TRIPLE = (1, 4, 7)
 

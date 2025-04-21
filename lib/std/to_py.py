@@ -24,11 +24,11 @@ def define(frame, __, body, name):
 def to_py(frame, _, temp):
     def func(*args):
         dpl.varproc.nscope(frame)
-        if temp["defs"]:
+        if temp["defaults"]:
             for name, value in modules.itertools.zip_longest(temp["args"], args):
                 if value is None:
                     dpl.varproc.rset(
-                        frame[-1], name, temp["defs"].get(name, dpl.state.bstate("nil"))
+                        frame[-1], name, temp["defaults"].get(name, dpl.state.bstate("nil"))
                     )
                 else:
                     dpl.varproc.rset(frame[-1], name, value)
@@ -39,6 +39,8 @@ def to_py(frame, _, temp):
                 dpl.varproc.rset(frame[-1], name, value)
         if temp["self"] != dpl.state.bstate("nil"):
             varproc.rset(frame[-1], "self", temp["self"])
+        if temp["capture"] != dpl.state.bstate("nil"):
+            varproc.rset(frame[-1], "_capture", temp["capture"])
         err = dpl.run_code(temp["body"], frame)
         if err:
             return err
