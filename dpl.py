@@ -458,6 +458,13 @@ dpl -init-time
 dpl -show-imports
     Show all imports done by dpl.
     Note thay this captures the imports also done by the imported modules.
+dpl -simple-run
+    Skip any cli handling and just take the first argument it sees and treats it as a file.
+    Usage: dpl -simple-run file
+    As the name suggests it doesnt handle any other argunents.
+dpl -skip-non-essential
+    This skips any non essential imports that arent used when running files.
+    This will mess up the REPL if misused.
 """)
         case _:
             print("Invalid invokation!")
