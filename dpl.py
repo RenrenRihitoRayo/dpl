@@ -8,46 +8,51 @@
 import lib.core.info as info
 import lib.core.cli_arguments as cli_args
 prog_flags = cli_args.flags(info.ARGV, True)
-
-info.imported = set()
-info.unique_imports = 0
-og_import = __import__
-def my_import(module, globals=None, locals=None, from_list=tuple(), level=0):
-    name = module or "???"
-    if "show-imports-as-is" in flags:
-        print(":: import", name, flush=True)
-    else:
-        if name not in info.imported:
-            print(":: import", name, flush=True)
-            info.imported.add(name)
-    info.unique_imports += 1
-    return og_import(module, globals, locals, from_list, level)
-if "show-imports" in prog_flags:
-    print("DEBUG: __import__ bypass has been set.\nExpect debug output for every import.")
-    __builtins__.__import__ = my_import
-
 import time
+
 
 if "init-time" in prog_flags:
     INIT_START_TIME = time.perf_counter()
     
-import subprocess
-import shutil
-import time
-import pstats
 import lib.core.utils as utils
 import lib.core.error as error
-import lib.core.extension_support as ext_s
-import lib.core.get_dependencies as get_dep
 from dfpm import dfpm
-import lib.core.info as info # repitition is intentional
-import lib.core.cli_arguments as cli_args
-from documenter import docs
-import cProfile
-import prompt_toolkit
-InMemoryHistory = prompt_toolkit.history.InMemoryHistory
-prompt =  prompt_toolkit.prompt
-WordCompleter = prompt_toolkit.completion.WordCompleter
+if "skip-non-essential" not in prog_flags:
+    from documenter import docs
+    import cProfile
+    import prompt_toolkit
+    InMemoryHistory = prompt_toolkit.history.InMemoryHistory
+    prompt =  prompt_toolkit.prompt
+    WordCompleter = prompt_toolkit.completion.WordCompleter
+    import subprocess
+    import shutil
+    import os
+    import lib.core.extension_support as ext_s
+    import pstats
+    import lib.core.get_dependencies as get_dep
+    ext_s.modules.prompt_toolkit = prompt_toolkit
+    ext_s.modules.cProfile = cProfile
+    ext_s.modules.pstats = pstats
+    ext_s.shutil = shutil
+    ext_s.subrocess = subprocess
+    import lib.core.suggestions as suggest
+    
+    info.imported = set()
+    info.unique_imports = 0
+    og_import = __import__
+    def my_import(module, globals=None, locals=None, from_list=tuple(), level=0):
+        name = module or "???"
+        if "show-imports-as-is" in prog_flags:
+            print(":: import", name, flush=True)
+        else:
+            if name not in info.imported:
+                print(":: import", name, flush=True)
+                info.imported.add(name)
+        info.unique_imports += 1
+        return og_import(module, globals, locals, from_list, level)
+    if "show-imports" in prog_flags:
+        print("DEBUG: __import__ bypass has been set.\nExpect debug output for every import.")
+        __builtins__.__import__ = my_import
 
 try:  # Try to use the .pyd or .so parser to get some kick
     try:
@@ -61,16 +66,8 @@ except Exception as e:  # fallback to normal python impl if it fails
     import lib.core.py_parser as parser
 import lib.core.varproc as varproc
 import lib.core.utils as utils
-import lib.core.suggestions as suggest
 
-import os
 import sys
-
-ext_s.modules.prompt_toolkit = prompt_toolkit
-ext_s.modules.cProfile = cProfile
-ext_s.modules.pstats = pstats
-ext_s.shutil = shutil
-ext_s.subrocess = subprocess
 
 # DANGEROUS
 sys.setrecursionlimit(10**6)
@@ -83,9 +80,6 @@ except ModuleNotFoundError:
     import pickle
     print("Warning compiling DPL scripts may result in an error\nThe `dill` module isnt installed, python functions are not pickleable!")
     has_dill = False
-
-if "show-imports" in prog_flags and "exit-when-done-importing" in flags:
-    exit(0)
 
 def rec(this, ind=0):
     if not isinstance(this, (tuple, list)):
@@ -121,14 +115,16 @@ def ez_run(code, process=True, file="???", profile=False):
     if err:
         exit(1)
 
+if "simple-run" in prog_flags:
+    if "init-time" in prog_flags:
+        END = time.perf_counter() - INIT_START_TIME
+        s, u = utils.convert_sec(END)
+        print(f"DEBUG: Initialization time: {s}{u}")
+    with open(sys.argv[0], "r") as f:
+        ez_run(f.read())
+    exit(0)
 
 def handle_args():
-    if "arg-test" in varproc.flags:
-        print("Flags:", varproc.flags)
-        return
-    if "info" in varproc.flags:
-        info.print_info()
-        return
     if "version" in varproc.flags or "v" in varproc.flags:
         print(
             f"DPL v{info.VERSION}\nUsing Python {info.PYTHON_VER}\n© Darren Chase Papa 2024\nMIT License (see LICENSE)"
@@ -474,6 +470,9 @@ if "init-time" in prog_flags:
     END = time.perf_counter() - INIT_START_TIME
     s, u = utils.convert_sec(END)
     print(f"DEBUG: Initialization time: {s}{u}")
+
+if "show-imports" in prog_flags and "exit-when-done-importing" in prog_flags:
+    exit(0)
 
 if __name__ == "__main__":
     varproc.flags.update(prog_flags)

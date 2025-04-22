@@ -1,6 +1,0 @@
-dill
-requests
-lupa
-cffi
-prompt_toolkit
-distro

@@ -730,28 +730,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             return error.FALLTHROUGH
         elif ins == "set" and argc == 2:
             varproc.rset(frame[-1], args[0], args[1])
-        elif ins == "const" and argc == 2:
-            name = args[0]
-            if varproc.rset(frame[-1], name, args[1]):
-                error.error(
-                    pos,
-                    file,
-                    "Tried to set a constant variable!\nPlease use fset instead!\nLine {pos}\nFile {file}",
-                )
-                return error.RUNTIME_ERROR
-            consts = frame[-1].get("_const")
-            if consts:
-                consts.append(name)
-            else:
-                frame[-1]["_const"] = [name]
-        elif ins == "fset" and argc == 2:
-            varproc.rset(frame[-1], args[0], args[1], meta=False)
         elif ins == "del" and argc >= 1:
-            consts = frame[-1].get("_const")
             for name in args:
                 varproc.rpop(frame[-1], name)
-                if consts and name in consts:
-                    consts.remove(name)
         elif ins == "module" and argc == 1:
             name = args[0]
             temp = [frame[-1]]
