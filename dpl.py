@@ -11,22 +11,39 @@ prog_flags = cli_args.flags(info.ARGV, True)
 import time
 
 
+info.imported = set()
+info.unique_imports = 0
+og_import = __import__
+def my_import(module, globals=None, locals=None, from_list=tuple(), level=0):
+    name = module or "???"
+    if "show-imports-as-is" in prog_flags:
+        print(":: import", name, flush=True)
+    else:
+        if name not in info.imported:
+            print(":: import", name, flush=True)
+            info.imported.add(name)
+    info.unique_imports += 1
+    return og_import(module, globals, locals, from_list, level)
+if "show-imports" in prog_flags:
+    print("DEBUG: __import__ bypass has been set.\nExpect debug output for every import.")
+    __builtins__.__import__ = my_import
+
 if "init-time" in prog_flags:
     INIT_START_TIME = time.perf_counter()
     
 import lib.core.utils as utils
 import lib.core.error as error
-from dfpm import dfpm
+import os
 if "skip-non-essential" not in prog_flags:
     from documenter import docs
     import cProfile
+    from dfpm import dfpm
     import prompt_toolkit
     InMemoryHistory = prompt_toolkit.history.InMemoryHistory
     prompt =  prompt_toolkit.prompt
     WordCompleter = prompt_toolkit.completion.WordCompleter
     import subprocess
     import shutil
-    import os
     import lib.core.extension_support as ext_s
     import pstats
     import lib.core.get_dependencies as get_dep
@@ -37,32 +54,17 @@ if "skip-non-essential" not in prog_flags:
     ext_s.subrocess = subprocess
     import lib.core.suggestions as suggest
     
-    info.imported = set()
-    info.unique_imports = 0
-    og_import = __import__
-    def my_import(module, globals=None, locals=None, from_list=tuple(), level=0):
-        name = module or "???"
-        if "show-imports-as-is" in prog_flags:
-            print(":: import", name, flush=True)
-        else:
-            if name not in info.imported:
-                print(":: import", name, flush=True)
-                info.imported.add(name)
-        info.unique_imports += 1
-        return og_import(module, globals, locals, from_list, level)
-    if "show-imports" in prog_flags:
-        print("DEBUG: __import__ bypass has been set.\nExpect debug output for every import.")
-        __builtins__.__import__ = my_import
 
 try:  # Try to use the .pyd or .so parser to get some kick
     try:
         import lib.core.parser as parser
     except ImportError as e:
-        raise ImportError("Non-Python Parser had an error while importing!") from e
+        raise ImportError(f"Non-Python Parser had an error while importing: {e}") from e
     except Exception as e:
-        raise Exception("Non-Python Parser had difficulties") from e
+        raise Exception(f"Non-Python Parser had difficulties: {e}")
     meta["internal"]["implementation"] = "non-python"
 except Exception as e:  # fallback to normal python impl if it fails
+    if "show-parser-import" in prog_flags: print(e)
     import lib.core.py_parser as parser
 import lib.core.varproc as varproc
 import lib.core.utils as utils
@@ -462,6 +464,7 @@ dpl -simple-run
     Skip any cli handling and just take the first argument it sees and treats it as a file.
     Usage: dpl -simple-run file
     As the name suggests it doesnt handle any other argunents.
+    This will also disble profiling.
 dpl -skip-non-essential
     This skips any non essential imports that arent used when running files.
     This will mess up the REPL if misused.

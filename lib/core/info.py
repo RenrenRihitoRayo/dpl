@@ -96,6 +96,8 @@ class flags:
     WARNINGS = True      # Specific to warnings.
     DEAD_CODE_OPT = True # Dead code optimizatiins
     ERRORS = True        # Logs, Warnings and Such
+    # If the instruction sugnature isnt found (True for Ignore False to Raise)
+    TC_DEFAULT_WHEN_NOT_FOUND = True
 
 VERSION_TRIPLE = (1, 4, 7)
 

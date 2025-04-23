@@ -7,6 +7,8 @@ from . import constants
 from . import info
 from . import state
 from . import error
+from . import type_checker
+
 
 # locks
 # ensures the interpreter is thread safe
@@ -18,6 +20,8 @@ dependencies = {"dpl": set(), "python": {}, "lua": {}}
 # debug options
 # some features here maybe separated
 debug = {
+    "type_checker": 0,
+    "TC_DEFAULT_WHEN_NOT_FOUND": 1,
     "allow_automatic_global_name_resolution":1, # set to false to get variables faster
     "show_scope_updates": 0,
     "show_value_updates": 0,
@@ -60,6 +64,7 @@ meta = {
     "dependencies": dependencies,
     "err": {"defined_errors": tuple()},
     "_set_only_when_defined": 1,
+    "type_signatures":type_checker.typed
 }
 
 
@@ -174,6 +179,8 @@ def rset(dct, full_name, value, sep=".", meta=True):
     "Set a variable"
     if not isinstance(full_name, str):
         return
+    if full_name[-1] == "?":
+        print(f"{full_name} => {value}")
     if "." not in full_name:
         with W_LOCK:
             if dct.get("_set_only_when_defined") and full_name not in dct:

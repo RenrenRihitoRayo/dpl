@@ -1,0 +1,1 @@
+#cmd: python3 /storage/emulated/0/dpl/dpl.py -skip-non-essential -init-time -simple-run $file

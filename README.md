@@ -145,6 +145,22 @@ Most recent at top.
 
 # 1.4.7
 
+## DPL now has type checking and new stuff.
+
+DPL now has type checking!
+Although it slows down the interpreter a lot.
+Static type checking is yet to be implemented.
+
+A new expression was introduced for interpolated strings.
+`[fast-format "string"]` which interpolated onlt the local variables
+and hides variables starting with underscores ("_").
+
+The syntax for indexing has now been changed from `[:object->index]`
+to `[:object[index]]`
+
+Variables ending with a question mark ("?") regardless of the debug options
+will orint their values.
+
 ## DFPM
 
 The package manager now generates the destination folder only when its successful in downloading the package.

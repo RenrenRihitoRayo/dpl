@@ -1,20 +1,20 @@
 # Used to handle arguments and expressions
 # NOT FOR THE CLI
 
-from ast import expr, parse
-from platform import processor
 from sys import flags
 import random
 import traceback
 
-from requests.models import parse_header_links
+# from requests.models import parse_header_links
 from . import state
 from . import constants
 from . import error
 from . import varproc
-from io import TextIOWrapper
 from .info import *
 from . import py_argument_handler as pah
+
+rget = varproc.rget
+get_debug = varproc.get_debug
 
 run_code = None  # to be set by py_parser
 chaos = False
@@ -144,7 +144,7 @@ def parse_template(frame, temp_name, body):
             return 1
     varproc.rset(frame[-1], temp_name, data)
 
-def flatten_dict(d, parent_key="", sep=".", seen=None):
+def flatten_dict(d, parent_key="", sep=".", seen=None, hide=False):
     if seen is None:
         seen = set()
     items = {}
@@ -153,10 +153,12 @@ def flatten_dict(d, parent_key="", sep=".", seen=None):
         return d
     seen.add(dict_id)
     for key, value in d.items():
+        if hide and isinstance(key, str) and key.startswith("_"):
+            continue
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
         if isinstance(value, dict):
             items.update(flatten_dict(value, new_key, sep, seen))
-        elif isinstance(value, list):
+        elif isinstance(value, (list, tuple)):
             items[f"{new_key}"] = value
             for i, item in enumerate(value):
                 items[f"{new_key}[{i}]"] = item
@@ -206,7 +208,7 @@ def is_float(arg):
 
 
 def is_id(arg):
-    return arg.replace(".", "").replace("_", "a").replace(":", "a").replace("-", "a").isalnum()
+    return arg.replace(".", "").replace("_", "a").replace(":", "a").replace("?", "a").replace("-", "a").isalnum()
 
 
 def is_fvar(arg):
@@ -269,8 +271,8 @@ def expr_runtime(frame, arg):
                 default=varproc.rget(frame[0], arg[1:]),
             )
         else:
-            v = varproc.rget(frame[-1], arg[1:])
-        if varproc.get_debug("disable_nil_values") and v == constants.nil:
+            v = rget(frame[-1], arg[1:])
+        if get_debug("disable_nil_values") and v == constants.nil:
             raise Exception(f"{arg!r} is nil!")
         return v
     if is_id(arg):
@@ -280,9 +282,11 @@ def expr_runtime(frame, arg):
     elif arg.startswith("'") and arg.endswith("'"):
         text = arg[1:-1]
         for name, value in flatten_dict(frame[-1]).items():
-            text = text.replace(f"${{{name}}}", str(value))
+            if f"${{{name}}}" in text:
+                text = text.replace(f"${{{name}}}", str(value))
         for name, value in flatten_dict(frame[-1]).items():
-            text = text.replace(f"${{{name}!}}", repr(value))
+            if f"${{{name}!}}" in text:
+                text = text.replace(f"${{{name}!}}", repr(value))
         return text if not (chaos and random.choice([0, 0, 1])) else (random.shuffle(s:=list(text)), ''.join(s))[-1]
     elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
         return arg
@@ -325,6 +329,8 @@ def is_static(frame, code):
                 return False
         elif not isinstance(i, str):
             continue
+        elif i in ("fast-format",):
+            return False
         elif is_pfvar(i):
             if varproc.rget(frame[-1], i[2:], default=None, meta=False) is None:
                 return False
@@ -404,6 +410,13 @@ def evaluate(frame, expression):
             return val1 % val2
         case [val1, "^", val2]:
             return val1**val2
+        # string op
+        case ["fast-format", text]:
+            local = flatten_dict(frame[-1], hide=True)
+            for name, value in flatten_dict(frame[-1]).items():
+                if f"${{{name}}}" in text:
+                    text = text.replace(f"${{{name}}}", str(value)) 
+            return text
         # conditionals
         case [val1, "==", val2]:
             return val1 == val2
@@ -427,7 +440,7 @@ def evaluate(frame, expression):
             return constants.true if val1 > val2 else constants.false
         case [name, "=", value]:
             return kwarg(name, value)
-        case [obj, "->", index]:
+        case [obj, [index]]:
             if not isinstance(obj, (tuple, list, str)):
                 return constants.nil
             if isinstance(obj, (tuple, list, str)) and index >= len(obj):

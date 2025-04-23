@@ -14,7 +14,7 @@ ext = dpl.extension(meta_name="io", alias=__alias__)
 ext.items["output"] = modules.sys.stdout
 
 
-@ext.add_func("print")
+@ext.add_func("print", "@ranged $$ :: any ...")
 def myPrint(_, __, *args, end="", sep=" "):
     args = list(args)
     for pos, arg in enumerate(args):
@@ -22,7 +22,7 @@ def myPrint(_, __, *args, end="", sep=" "):
             arg[pos] = helper.get_repr(arg["_im_repr"])
     print(*args, end=end, sep=sep, file=ext.items["output"], flush=True)
 
-@ext.add_func()
+@ext.add_func(typed="@ranged $$ :: any ...")
 def println(_, __, *args, sep=" "):
     args = list(args)
     for pos, arg in enumerate(args):
@@ -31,30 +31,30 @@ def println(_, __, *args, sep=" "):
     print(*args, sep=sep, file=ext.items["output"], flush=True)
 
 
-@ext.add_func()
+@ext.add_func(typed="@ranged $$ :: any ...")
 def rawprint(_, __, *args, sep=" ", end=""):
     print(*args, sep=sep, file=ext.items["output"], end=end, flush=True)
 
 
-@ext.add_func()
+@ext.add_func(typed="@ranged $$ :: any ...")
 def rawprintln(_, __, *args, sep=" "):
     print(*args, sep=sep, file=ext.items["output"], flush=True)
 
 
-@ext.add_func("input")
+@ext.add_func("input", "%$$[str]\n%$$[str,str]")
 def myInput(frame, __, prompt=None, name=None):
     res = input(prompt if prompt not in dpl.falsy else "")
     if name is not None:
         dpl.varproc.rset(frame[-1], name, res)
 
 
-@ext.add_func()
+@ext.add_func(typed="$$ :: any")
 def setOutputFile(_, __, file):
 
     ext.items["output"] = file
 
 
-@ext.add_func()
+@ext.add_func(typed="@ranged $$ :: any ...")
 def rawoutput(_, __, *values):
     s = []
     for i in values:
@@ -71,16 +71,6 @@ def rawoutput(_, __, *values):
     modules.sys.stdout.flush()
 
 
-@ext.add_func()
+@ext.add_func(typed="%$$")
 def flush(_, __):
     modules.sys.stdout.flush()
-
-
-# misc
-
-
-@ext.add_func()
-def printf(_, __, fmt, *values, sep=" ", end=""):
-    for pos, value in enumerate(values):
-        fmt = fmt.replace(f"%{pos}", str(value))
-    print(fmt, sep=sep, end=end)

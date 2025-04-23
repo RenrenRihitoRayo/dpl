@@ -1,5 +1,23 @@
 # Simplified type checker for DPL
+from . import arguments as argproc
+from . import constants
+from . import state
+from . import varproc
 from typing import Any, Union
+from threading import Event, Lock, Thread
+
+og_isinstance = isinstance
+
+def isinstance(object, type):
+    if type is Any:
+        return True
+    else:
+        return og_isinstance(object, type)
+
+class types:
+    ident = object()
+    nil = constants.nil
+    none = constants.none
 
 # instruction / function types
 typed = {
@@ -15,10 +33,16 @@ def match_type(types, input, ranged=False):
     for pos, [t, tt] in enumerate(zip(types, input)):
         if t == "...": break
         last = t
-        if isinstancr(t, str) and not t == tt:
+        if isinstance(t, str) and not t == tt:
             return False
-        elif not isinstance(tt, t):
+        elif isinstance(t, state.bstate) and not t == tt:
             return False
+        if isinstance(t, str):
+            continue
+        if not isinstance(tt, t):
+            return False
+    if not input or not pos:
+        return True
     while pos < len(input):
         if not isinstance(input[pos], last):
             return False
@@ -81,11 +105,27 @@ def parse_types(code):
                 if not type:
                     continue
                 if type in ("str", "int", "float", "dict", "set", "tuple", "list"):
-                    types[i] = getattr(__builtins__, type)
+                    types[i] = __builtins__[type]
                 elif type == "any":
                     types[i] = Any
                 elif type == "...":
                     types[i] = "..."
+                elif type == "true":
+                    types[i] = constants.true
+                elif type == "false":
+                    types[i] = constants.false
+                elif type == "none":
+                    types[i] = constants.none
+                elif type == "nil":
+                    types[i] = constants.nil
+                elif type == "dpl:any":
+                    types[i] = constants.any
+                elif type == "thread":
+                    types[i] = Thread
+                elif type == "thread_event":
+                    types[i] = Event
+                elif type == "thread_lock":
+                    types[i] = Lock
                 elif "|" in type:
                     types1 = type.split("|")
                     for i, type in enumerate(types1):
@@ -93,14 +133,30 @@ def parse_types(code):
                         if not type:
                             continue
                         if type in ("str", "int", "float", "dict", "set", "tuple", "list"):
-                            types1[i] = getattr(__builtins__, type)
+                            types1[i] = __builtins__[type]
                         elif type == "any":
                             types1[i] = Any
                         elif type == "...":
                             types1[i] = "..."
                         elif type in alias:
                             types1[i] = alias[type]
-                    types[i] = Union[tuple(types1)]
+                        elif type == "thread":
+                            types1[i] = Thread
+                        elif type == "thread_event":
+                            types1[i] = Event
+                        elif type == "thread_lock":
+                            types1[i] = Lock
+                        elif type == "true":
+                            types1[i] = constants.true
+                        elif type == "false":
+                            types1[i] = constants.false
+                        elif type == "none":
+                            types1[i] = constants.none
+                        elif type == "nil":
+                            types1[i] = constants.nil
+                        elif type == "dpl:any":
+                            types1[i] = constants.any
+                    types[i] = tuple(types1)
                 elif type.startswith('"') and type.endswith('"'):
                     types[i] = type[1:-1]
                 elif type in alias:
@@ -110,11 +166,27 @@ def parse_types(code):
             ins, type = line.split("=", 1)
             type = type.strip()
             if type in ("str", "int", "float", "dict", "set", "tuple", "list"):
-                type = getattr(__builtins__, type)
+                type = __builtins__[type]
             elif type == "any":
                 type = Any
             elif type == "...":
                 type = "..."
+            elif type == "thread":
+                type = Thread
+            elif type == "thread_event":
+                type = Event
+            elif type == "thread_lock":
+                type = Lock
+            elif type == "true":
+                type = constants.true
+            elif type == "false":
+                type = constants.false
+            elif type == "none":
+                type = constants.none
+            elif type == "nil":
+                type = constants.nil
+            elif type == "dpl:any":
+                type = constants.any
             elif type.startswith('"') and type.endswith('"'):
                 type = type[1:-1]
             elif "|" in type:
@@ -124,15 +196,31 @@ def parse_types(code):
                     if not type:
                         continue
                     if type in ("str", "int", "float", "dict", "set", "tuple", "list"):
-                        types1[i] = getattr(__builtins__, type)
+                        types1[i] = __builtins__[type]
                     elif type == "any":
                         types1[i] = Any
                     elif type == "...":
                         types1[i] = "..."
+                    elif type == "thread":
+                        types1[i] = Thread
+                    elif type == "thread_event":
+                        types1[i] = Event
+                    elif type == "thread_lock":
+                        types1[i] = Lock
+                    elif type == "true":
+                        types1[i] = constants.true
+                    elif type == "false":
+                        types1[i] = constants.false
+                    elif type == "none":
+                        types1[i] = constants.none
+                    elif type == "nil":
+                        types1[i] = constants.nil
+                    elif type == "dpl:any":
+                        types1[i] = constants.any
                     elif type in alias:
                         types1[i] = alias[type]
-                    type = Union[tuple(types1)]
-                type = Union[tuple(types1)]
+                    type = tuple(types1)
+                type = tuple(types1)
             alias[ins.strip()] = type
         elif line.startswith("%"):
             typed[line[1:]] = (ranged, [])
@@ -143,6 +231,7 @@ typed.update(parse_types('''
 iterable = str|list|tuple|set|dict
 
 @ranged fn :: str ...
+@ranged pub :: "fn" str ...
 %end
 match :: any
 #--
@@ -151,18 +240,106 @@ match :: any
     arguments.py
 --#
 set :: str any
+export :: "set" str any
+@ranged :: str ...
 for :: str "in" iterable
 loop :: int
 %loop[0]
 while :: any
 
+%pause
+
+%thread[0]
+thread[1] :: thread_event
+new_thread_event :: str
+%wait_for_threads
+
+DEFINE_ERROR[1] :: str
+DEFINE_ERROR[2] :: str int
+
+cmd :: str
+cmd[2] :: str str
+
+tc_register :: str
+
+module :: str
+@ranged ccall :: any ...
+@ranged catch :: list str any ...
+@ranged ccatch :: str any ...
+@ranged mcatch :: list str any ...
+@ranged scatch :: list str any ...
+@ranged smcatch :: list str any ...
+@ranged pycatch :: list str any ...
+@ranged body :: str ...
+
+@ranged return :: any ...
+@ranged freturn :: any ...
+
+dlopen :: str str
+dlclose :: any
+getc :: str any
+cdef :: str
+
+template :: str
+from_template :: dict
+
+%skip
+%stop
+%pass
+%fallthrough
+@ranged pass :: any ...
+
+sched[int] :: int
+sched[float] :: float
+
+if :: any
+%ifmain
+match :: any
+
+exec :: str str list
+sexec :: str str str list
+
+@ranged safe :: str any ...
+object :: str
+new :: dict str
+@ranged method :: dict str ...
+
+%START_TIME
+%STOP_TIME
+%LOG_TIME[0]
+LOG_TIME :: str
+
+exit :: int
+help :: any
+
+raise :: int
+raise[2] :: int str
+
+%dump_scope
+dump_vars :: dict
 '''))
 
-print(typed)
+def get_ins(ins, args):
+    atypes = ",".join(types:=map(lambda x: type(x).__name__, args))
+    if (tmp:=f"{ins}[{atypes}]") in typed:
+        return tuple(types)
+    elif (tmp:=f"{ins}[{len(args)}]") in typed:
+        return typed[tmp][1]
+    elif (tmp:=f"{ins}[]") in typed:
+        return typed[tmp][1]
+    elif ins in typed:
+        return typed[ins][1]
+    return None
 
 def check_ins(ins, args):
-    if (tmp:=f"ins[{len(args)}]") in typed:
+    atypes = ",".join(map(lambda x: type(x).__name__, args))
+    if (tmp:=f"{ins}[{atypes}]") in typed:
+        return True
+    elif (tmp:=f"{ins}[{len(args)}]") in typed:
         return match_type(typed[tmp], args)
     elif ins in typed:
         return match_type(typed[ins], args)
-    return False
+    return varproc.is_debug_enabled("TC_DEFAULT_WHEN_NOT_FOUND")
+
+def register(code):
+    typed.update(parse_types(code))

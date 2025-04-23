@@ -2,8 +2,6 @@
 # This is needed for the cythonized parser and slows down the pure python impl!
 # I tried it, it still failed :)
 
-
-from ast import Constant, arg
 from typing import Any
 import lupa
 import types
@@ -12,6 +10,7 @@ import time
 import os, sys
 import traceback
 import __main__
+from . import type_checker
 from . import utils
 from . import varproc
 from . import arguments as argproc
@@ -50,19 +49,20 @@ class extension:
     def __init__(self, name=None, meta_name=None, alias=None):
         self.__func = {}  # functions
         self.__meth = {}  # methods
-        self.name = (
+        self.__data = {}
+        self._name = (
             name  # This is a scope name, dpl defined name.func_name
         )
         self.meta_name = meta_name  # while this is the mangled name, python defined "{meta_name}:{func_name}"
         if not alias is None:
-            if self.name:
-                self.name = alias
+            if self._name:
+                self._name = alias
             elif self.meta_name:
                 self.meta_name = alias
             else:
-                self.name = alias
+                self._name = alias
 
-    def add_func(self, name=None):
+    def add_func(self, name=None, typed=None):
         "Add a function."
         def wrap(func):
             nonlocal name
@@ -70,13 +70,15 @@ class extension:
                 func.__doc__ = (
                     f"Function `{self.meta_name}:{name}`"
                     if self.meta_name
-                    else f"Function {self.name}.{name}"
+                    else f"Function {self._name}.{name}"
                 ) + ": Default doc string..."
             if name is None:
                 name = getattr(func, "__name__", None) or "_"
-            self.__func[name if not self.meta_name else f"{self.meta_name}:{name}"] = (
+            self.__func[self.mangle(name)] = (
                 func
             )
+            if typed:
+                type_checker.register(typed.replace("$$", self.mangle(name)))
             return func
         return wrap
 
@@ -86,13 +88,7 @@ class extension:
             nonlocal name
             if name is None:
                 name = getattr(func, "__name__", None) or "_"
-            self.__meth[
-                (
-                    f"{self.name}.{name}"
-                    if not self.meta_name
-                    else f"{self.meta_name}:{name}"
-                )
-            ] = (
+            self.__meth[self.mangle(name)] = (
                 func if not from_func else lambda *args: func(args[0], None, *args[1:])
             )
             return func
@@ -103,10 +99,16 @@ class extension:
 
     def mangle(self, name):
         return (
-            f"{self.name}.{name}"
+            f"{self._name}.{name}"
             if not self.meta_name
             else f"{self.meta_name}:{name}"
         )
+
+    @property
+    def name(self):
+        return (self._name
+            if not self.meta_name
+            else self.meta_name)
 
     @property
     def functions(self):
@@ -121,7 +123,7 @@ class extension:
         return self.__func
 
     def __repr__(self):
-        return f"Extension<{self.name or self.meta_name!r}>"
+        return f"Extension<{self._name or f'{self.meta_name}:*'!r}>"
 
 
 def require(path):
@@ -184,6 +186,7 @@ class dpl:
             return fn
         return wrap
 
+    type_checker = type_checker
 
 def luaj_import(
     frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"]
@@ -322,13 +325,13 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
     meths = {}
     for name, ext in d.items():
         if isinstance(ext, extension):
-            if ext.name in frame[-1]:
+            if ext.meta_name:
+                funcs.update(ext.functions)
+            elif ext.name in frame[-1]:
                 raise Exception(f"Name clashing! For name {ext.name!r}")
             elif ext.name:
                 varproc.rset(frame[-1], ext.name, (temp := {}))
                 temp.update(ext.functions)
-            else:
-                funcs.update(ext.functions)
             meths.update(ext.methods)
     frame[-1].update(funcs)
     argproc.methods.update(meths)
