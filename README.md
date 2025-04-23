@@ -145,6 +145,12 @@ Most recent at top.
 
 # 1.4.7
 
+## Cythonizing and bloat
+
+DPL no longer has built in support for cythonizing.
+This comes along with the effort to reducing bloat in the DPL
+repo.
+
 ## DPL now has type checking and new stuff.
 
 DPL now has type checking!
@@ -157,9 +163,6 @@ and hides variables starting with underscores ("_").
 
 The syntax for indexing has now been changed from `[:object->index]`
 to `[:object[index]]`
-
-Variables ending with a question mark ("?") regardless of the debug options
-will orint their values.
 
 ## DFPM
 

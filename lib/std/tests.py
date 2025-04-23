@@ -39,7 +39,7 @@ def pprint(d, l=0, seen=None):
         else:
             print(f"{name!r} = {value!r}")
 
-@ext.add_func("assert")
+@ext.add_func("assert", "$$ :: any\n$$[2] :: any str")
 def _(frame, _, condition, message='Not provided.'):
     "Raises an error"
     if not condition:
@@ -48,7 +48,7 @@ def _(frame, _, condition, message='Not provided.'):
         return f"err:{ext.items['ASSERT_ERROR']}:{message}"
 
 
-@ext.add_func()
+@ext.add_func(typed="$$ :: any\n$$[2] :: any str")
 def quiet_assert(frame, _, condition, message='Not provided'):
     "Does not raise an error"
     if not condition:

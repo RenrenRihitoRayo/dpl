@@ -179,8 +179,6 @@ def rset(dct, full_name, value, sep=".", meta=True):
     "Set a variable"
     if not isinstance(full_name, str):
         return
-    if full_name[-1] == "?":
-        print(f"{full_name} => {value}")
     if "." not in full_name:
         with W_LOCK:
             if dct.get("_set_only_when_defined") and full_name not in dct:
