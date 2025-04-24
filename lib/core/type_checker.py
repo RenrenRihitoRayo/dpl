@@ -22,6 +22,12 @@ class types:
 # instruction / function types
 typed = {
 }
+alias = {
+    "bool": int,
+    "pythonBool": bool,
+    "ident": str,
+    "scope": dict
+}
 
 def match_type(types, input, ranged=False):
     ranged, types = types
@@ -51,12 +57,6 @@ def match_type(types, input, ranged=False):
 
 def parse_types(code):
     typed = {}
-    alias = {
-        "bool": int,
-        "pythonBool": bool,
-        "identifier": str,
-        "scope": dict
-    }
     # syntax
     # # comment
     # @ranged name :: targ0 targ1 targ2 ... targN ...

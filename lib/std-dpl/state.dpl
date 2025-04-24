@@ -1,4 +1,10 @@
+&use {std/text_io.py}
+
 object State
+
+if [not :_meta.debug.TC_DEFAULT_WHEN_NOT_FOUND]
+    io:println "!__file__: TC_DEDAULT_WHEN_NOT_FOUND is set to false! Using this module will produce errors!"
+end
 
 method :State new value name
     new :self tmp

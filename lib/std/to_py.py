@@ -7,7 +7,7 @@ if not dpl.info.VERSION.isLater((1, 4, None)):
 ext = dpl.extension(meta_name="to_py", alias=__alias__)
 
 
-@ext.add_func()
+@ext.add_func(typed="$$ :: str")
 def define(frame, __, body, name):
     def func(*args, **kwargs):
         dpl.varproc.nscope(frame)
@@ -20,7 +20,7 @@ def define(frame, __, body, name):
     dpl.varproc.rset(frame[-1], name, func)
 
 
-@ext.add_func()
+@ext.add_func(typed="$$ :: dict")
 def to_py(frame, _, temp):
     def func(*args):
         dpl.varproc.nscope(frame)
@@ -48,8 +48,3 @@ def to_py(frame, _, temp):
         dpl.varproc.pscope(frame)
         return res
     return (func,)
-
-
-@ext.add_func()
-def call(_, __, func, *args, **kwargs):
-    return func(*args, **kwargs)

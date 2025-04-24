@@ -40,6 +40,7 @@ IS_STILL_RUNNING = runtime.IS_STILL_RUNNING
 my_exit = runtime.my_exit
 thread_events = runtime.thread_events
 threads = runtime.threads
+clean_threads = runtime.clean_threads
 
 def get_block(code, current_p, supress=False):
     "Get a code block"

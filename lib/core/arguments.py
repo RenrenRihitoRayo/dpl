@@ -2,7 +2,6 @@
 # NOT FOR THE CLI
 
 from sys import flags
-import random
 import traceback
 
 # from requests.models import parse_header_links
@@ -257,11 +256,6 @@ def expr_runtime(frame, arg):
     if isinstance(arg, list):
         return evaluate(frame, arg)
     elif not isinstance(arg, str):
-        if chaos and random.choice([0, 0, 1]):
-            if isinstance(arg, int):
-                return random.randint(arg-1, arg+3)
-            elif isinstance(arg, float):
-                return int(arg) if random.choice([0, 0, 1]) else arg
         return arg
     elif is_fvar(arg):
         if varproc.debug["allow_automatic_global_name_resolution"]:
@@ -278,7 +272,7 @@ def expr_runtime(frame, arg):
     if is_id(arg):
         return arg
     elif arg.startswith('"') and arg.endswith('"'):
-        return arg[1:-1] if not (chaos and random.choice([0, 0, 1])) else (random.shuffle(s:=list(arg[1:-1])), ''.join(s))[-1]
+        return arg[1:-1]
     elif arg.startswith("'") and arg.endswith("'"):
         text = arg[1:-1]
         for name, value in flatten_dict(frame[-1]).items():
@@ -287,7 +281,7 @@ def expr_runtime(frame, arg):
         for name, value in flatten_dict(frame[-1]).items():
             if f"${{{name}!}}" in text:
                 text = text.replace(f"${{{name}!}}", repr(value))
-        return text if not (chaos and random.choice([0, 0, 1])) else (random.shuffle(s:=list(text)), ''.join(s))[-1]
+        return text
     elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
         return arg
     elif arg in ("?tuple", "?args", "?float", "?int", "?string", "?bytes", "?set", "?list", "nil?", "none?", "def?") or arg in sym:
@@ -419,9 +413,9 @@ def evaluate(frame, expression):
             return text
         # conditionals
         case [val1, "==", val2]:
-            return val1 == val2
+            return constants.true if val1 == val2 else constants.false
         case [val1, "!=", val2]:
-            return val1 != val2
+            return constants.true if val1 != val2 else constants.false
         case [val1, "and", val2]:
             return constants.true if val1 and val2 else constants.false
         case [val1, "or", val2]:

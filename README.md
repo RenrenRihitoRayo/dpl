@@ -145,6 +145,13 @@ Most recent at top.
 
 # 1.4.7
 
+## Finalizing...
+
+DPL 1.4.7 is finally off!
+And still no documentation...
+
+The `&whatever` directive has now been removed.
+
 ## Cythonizing and bloat
 
 DPL no longer has built in support for cythonizing.
