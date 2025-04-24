@@ -1,2 +1,3 @@
-*.dpl linguist-language=DPL
-*.cdpl linguist-language=DPL
+# test
+*.dpl linguist-language=Python
+*.cdpl linguist-language=Python
