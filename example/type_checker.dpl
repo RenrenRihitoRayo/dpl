@@ -6,8 +6,7 @@ set _meta.debug.TC_DEFAULT_WHEN_NOT_FOUND false
 
 io:println "Test"
 
-# intentionally do not register
-# tc_register "greet :: str"
+tc_register "greet :: str"
 fn greet name
     io:println [fast-format "Hello ${name}!"]
 end
