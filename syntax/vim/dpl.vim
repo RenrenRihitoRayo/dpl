@@ -12,7 +12,7 @@ syntax match dplIncludeDirective "&\(define_error\|set_name\|extend\|whatever\|f
 syntax keyword dplKeyword fn md if body match return fallthrough case with default as in is not and or end module thread enum pub export loop while ccall scall smcall scatch smcatch mcatch catch safe stop skip return sched ifmain method pass freturn help wait_for_threads DEFINE_ERROR body pause pycatch ccatch template from_template raise
 
 " Builtins
-syntax keyword dplFunction set object new exit del cmd get_time START_TIME STOP_TIME LOG_TIME dump_vars dump_scope dlopen dlclose cdef getc sexec exec new_thread_event
+syntax keyword dplFunction set object tc_register new exit del cmd get_time START_TIME STOP_TIME LOG_TIME dump_vars dump_scope dlopen dlclose cdef getc sexec exec new_thread_event
 
 " Constants
 syntax keyword dplConstant true false nil none
