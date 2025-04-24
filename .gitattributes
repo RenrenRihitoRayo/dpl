@@ -1,2 +1,2 @@
-*.dpl linguist-language=DPL
-*.cdpl linguist-language=DPL
+*.dpl text diff=DPL
+*.cdpl binary diff=CDPL
