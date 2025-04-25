@@ -1,3 +1,4 @@
+#cmd: python3 /storage/emulated/0/dpl/dpl.py -init-time -skip-non-essential -no-cffi -no-lupa -simple-run $file
 &use {std/text_io.py}
 
 set _meta.debug.type_checker true

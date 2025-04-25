@@ -3,8 +3,8 @@ from . import arguments as argproc
 from . import constants
 from . import state
 from . import varproc
-from typing import Any, Union
-from threading import Event, Lock, Thread
+from typing import Any
+from threading import Event, Thread, Lock
 
 og_isinstance = isinstance
 
@@ -49,6 +49,8 @@ def match_type(types, input, ranged=False):
             return False
     if not input or not pos:
         return True
+    if last is Any:
+        return True
     while pos < len(input):
         if not isinstance(input[pos], last):
             return False
@@ -67,7 +69,7 @@ def parse_types(code):
     # name ::
     # # but the first is cleaner
     
-    # name can have a certain nukber of args.
+    # name can have a certain number of args.
     # you can explicitly denote it with `name[args]`
     # for example loop has two syntax.
     # `loop` to denote an indefinite loop.
@@ -132,7 +134,7 @@ def parse_types(code):
                         type = type.strip()
                         if not type:
                             continue
-                        if type in ("str", "int", "float", "dict", "set", "tuple", "list"):
+                        if type in ("str", "int", "float", "dict", "set", "tuple", "list", "range"):
                             types1[i] = __builtins__[type]
                         elif type == "any":
                             types1[i] = Any
@@ -165,7 +167,7 @@ def parse_types(code):
         elif "=" in line:
             ins, type = line.split("=", 1)
             type = type.strip()
-            if type in ("str", "int", "float", "dict", "set", "tuple", "list"):
+            if type in ("str", "int", "float", "dict", "set", "tuple", "list", "range"):
                 type = __builtins__[type]
             elif type == "any":
                 type = Any
@@ -195,7 +197,7 @@ def parse_types(code):
                     type = type.strip()
                     if not type:
                         continue
-                    if type in ("str", "int", "float", "dict", "set", "tuple", "list"):
+                    if type in ("str", "int", "float", "dict", "set", "tuple", "list", "range"):
                         types1[i] = __builtins__[type]
                     elif type == "any":
                         types1[i] = Any
@@ -228,7 +230,7 @@ def parse_types(code):
 
 # builtins
 typed.update(parse_types('''
-iterable = str|list|tuple|set|dict
+iterables = str|list|tuple|set|dict|range
 
 @ranged fn :: str ...
 @ranged pub :: "fn" str ...
@@ -242,7 +244,7 @@ match :: any
 set :: str any
 export :: "set" str any
 @ranged :: str ...
-for :: str "in" iterable
+for :: str "in" iterables
 loop :: int
 %loop[0]
 while :: any
@@ -285,7 +287,7 @@ from_template :: dict
 
 %skip
 %stop
-%pass
+@ranged pass :: any ...
 %fallthrough
 @ranged pass :: any ...
 
@@ -317,15 +319,15 @@ raise[2] :: int str
 
 %dump_scope
 dump_vars :: dict
+
+tc_register :: str
 '''))
 
 def get_ins(ins, args):
     atypes = ",".join(types:=map(lambda x: type(x).__name__, args))
-    if (tmp:=f"{ins}[{atypes}]") in typed:
+    if args and (tmp:=f"{ins}[{atypes}]") in typed:
         return tuple(types)
-    elif (tmp:=f"{ins}[{len(args)}]") in typed:
-        return typed[tmp][1]
-    elif (tmp:=f"{ins}[]") in typed:
+    elif args and (tmp:=f"{ins}[{len(args)}]") in typed:
         return typed[tmp][1]
     elif ins in typed:
         return typed[ins][1]
@@ -333,9 +335,9 @@ def get_ins(ins, args):
 
 def check_ins(ins, args):
     atypes = ",".join(map(lambda x: type(x).__name__, args))
-    if (tmp:=f"{ins}[{atypes}]") in typed:
+    if args and (tmp:=f"{ins}[{atypes}]") in typed:
         return True
-    elif (tmp:=f"{ins}[{len(args)}]") in typed:
+    elif args and (tmp:=f"{ins}[{len(args)}]") in typed:
         return match_type(typed[tmp], args)
     elif ins in typed:
         return match_type(typed[ins], args)

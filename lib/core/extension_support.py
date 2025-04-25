@@ -2,9 +2,6 @@
 # This is needed for the cythonized parser and slows down the pure python impl!
 # I tried it, it still failed :)
 
-from typing import Any
-import lupa
-import types
 import itertools
 import time
 import os, sys
@@ -15,6 +12,8 @@ from . import utils
 from . import varproc
 from . import arguments as argproc
 from . import info
+if "no-lupa" not in info.program_flags:
+    import lupa
 from . import error
 from . import state
 from . import restricted
@@ -39,7 +38,6 @@ class modules:
     sys = sys
     traceback = traceback
     time = time
-    types = types
     itertools = itertools
 
 
@@ -136,8 +134,11 @@ def require(path):
     }
     if isinstance(path, (list, tuple)):
         path = os.path.join(*path)
+    path = os.path.join(info.LIBDIR, path)
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"{path!r} not found.")
     try:
-        with open(os.path.join(info.LIBDIR, path), "r") as f:
+        with open(path, "r") as f:
             exec(compile(f.read(), path, "exec"), mod)
         r = types.ModuleType(path)
         for name, value in mod.items():

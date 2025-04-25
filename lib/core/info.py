@@ -10,6 +10,8 @@ import platform
 
 unique_imports = set()
 
+program_flags = set()
+
 try:
     from . import constants
 except ImportError:
@@ -59,7 +61,7 @@ KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
     'exit',
     'skip',
     'stop',
-    'raise',
+    'raise', 'tc_register',
     'true', 'false', 'nil', 'none', '...',
     '!list', '!tuple', '!dict',
     '?str', '?int', '?float', '?list', '?tuple',
@@ -99,7 +101,7 @@ class flags:
     # If the instruction sugnature isnt found (True for Ignore False to Raise)
     TC_DEFAULT_WHEN_NOT_FOUND = True
 
-VERSION_TRIPLE = (1, 4, 7)
+VERSION_TRIPLE = (1, 4, 8)
 
 def isCompat(version, VERSION=VERSION_TRIPLE):
     major, minor, patch = version

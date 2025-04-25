@@ -7,14 +7,14 @@
 
 import lib.core.info as info
 import lib.core.cli_arguments as cli_args
-prog_flags = cli_args.flags(info.ARGV, True)
+info.program_flags = prog_flags = cli_args.flags(info.ARGV, True)
 import time
-
+import sys
 
 info.imported = set()
 info.unique_imports = 0
 og_import = __import__
-def my_import(module, globals=None, locals=None, from_list=tuple(), level=0):
+def __my_import__(module, globals=None, locals=None, from_list=tuple(), level=0):
     name = module or "???"
     if "show-imports-as-is" in prog_flags:
         print(":: import", name, flush=True)
@@ -24,9 +24,9 @@ def my_import(module, globals=None, locals=None, from_list=tuple(), level=0):
             info.imported.add(name)
     info.unique_imports += 1
     return og_import(module, globals, locals, from_list, level)
-if "show-imports" in prog_flags:
+if "show-imports" in prog_flags or "show-imports-as-is" in prog_flags:
     print("DEBUG: __import__ bypass has been set.\nExpect debug output for every import.")
-    __builtins__.__import__ = my_import
+    __builtins__.__import__ = __my_import__
 
 if "init-time" in prog_flags:
     INIT_START_TIME = time.perf_counter()
@@ -67,21 +67,69 @@ if "use-python" not in prog_flags:
 else:
     import lib.core.py_parser as parser
 import lib.core.varproc as varproc
-import lib.core.utils as utils
 
-import sys
+import dill
 
-# DANGEROUS
-sys.setrecursionlimit(10**6)
-sys.set_int_max_str_digits(10**6)
+help_str = f"""Help for DPL [v{varproc.meta['internal']['version']}]
 
-try:
-    import dill as pickle
-    has_dill = True
-except ModuleNotFoundError:
-    import pickle
-    print("Warning compiling DPL scripts may result in an error\nThe `dill` module isnt installed, python functions are not pickleable!")
-    has_dill = False
+Commands:
+dpl run [file] args...
+    Runs the given DPL script.
+dpl rc [file] args...
+    Runs the given compiled DPL script.
+dpl compile [file]
+    Compiles the given DPL script.
+    Outputs to [file].cdpl
+`dpl repr` ALSO JUST `dpl`
+    Invokes the REPL
+dpl package install <user> <repo> <branch> <include_branch_name?>
+    Install a package hosted on github.
+    Default branch is 'master'
+dpl package installto: <path_to_dest> <user> <repo> <branch> <include_branch_name?>
+    Install a package hosted on github.
+    Default branch is 'master'
+dpl package remove <package_name>
+    Delete that package.
+dpl get-docs file
+    Get the doc comments.
+
+Flags and such:
+dpl -info
+    Prints info.
+dpl -arg-test
+    Tests flag handling.
+'dpl -version' or 'dpl -v'
+    Prints version and some info.
+'dpl -profile' or 'dpl -p'
+    Profiles the code using 'time.perf_counter' for inaccurate but fast execution.
+dpl -cprofile ...
+    Profiles the code using cProfile for more accurate but slower execution.
+dpl -disable-auto-complete
+    Disable the auto complete.
+dpl -init-time
+    Show initialization time.
+dpl -show-imports
+    Show all imports done by dpl.
+    Note thay this captures the imports also done by the imported modules.
+dpl -simple-run
+    Skip any cli handling and just take the first argument it sees and treats it as a file.
+    Usage: dpl -simple-run file
+    As the name suggests it doesnt handle any other argunents.
+    This will also disble profiling.
+dpl -skip-non-essential
+    This skips any non essential imports that arent used when running files.
+    This will mess up the REPL if misused.
+dpl -use-python
+    Explicitly use the python based parser.
+    This bypasses the imports to any parser.so or parser.pyi files.
+dpl -show-parser-import
+    Prints if any errors arised while importing the non-python based parser.
+dpl -no-lupa
+    Do not import lupa components.
+dpl -no-cffi
+    Do not import cffi components.
+dpl -instant-help
+    Prints the help string without using the command matching."""
 
 def rec(this, ind=0):
     if not isinstance(this, (tuple, list)):
@@ -117,6 +165,10 @@ def ez_run(code, process=True, file="???", profile=False):
     if err:
         exit(1)
 
+if "instant-help" in prog_flags:
+    print(help_str)
+    exit(0)
+
 if "simple-run" in prog_flags:
     if "init-time" in prog_flags:
         END = time.perf_counter() - INIT_START_TIME
@@ -137,11 +189,6 @@ def handle_args():
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
                 exit(1)
-            if os.path.isfile("meta_config.cfg"):
-                with open("meta_config.cfg", "r") as f:
-                    varproc.meta = utils.parse_config(f.read(), {"meta": varproc.meta})[
-                        "meta"
-                    ]
             info.ARGV.clear()
             varproc.meta["argc"] = info.ARGC = len(info.ARGV)
             with open(file, "r") as f:
@@ -158,16 +205,11 @@ def handle_args():
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
                 exit(1)
-            if os.path.isfile("meta_config.cfg"):
-                with open("meta_config.cfg", "r") as f:
-                    varproc.meta = utils.parse_config(f.read(), {"meta": varproc.meta})[
-                        "meta"
-                    ]
             info.ARGV.clear()
             varproc.meta["argc"] = info.ARGC = len(info.ARGV)
             try:
                 with open(file, "rb") as f:
-                    code = pickle.loads(f.read())
+                    code = dill.loads(f.read())
                     varproc.meta["internal"]["main_file"] = file
                     varproc.meta["internal"]["main_path"] = (
                         os.path.dirname(os.path.abspath(file)) + os.sep
@@ -190,7 +232,7 @@ def handle_args():
             try:
                 with open(file, "r") as in_file:
                     with open(output, "wb") as f:
-                        f.write(pickle.dumps(parser.process(in_file.read())))
+                        f.write(dill.dumps(parser.process(in_file.read())))
             except Exception as e:
                 print("Something went wrong:", file)
                 print("Error:", repr(e))
@@ -258,10 +300,6 @@ def handle_args():
                         res.append(line[2:])
             print("\n".join(res))
         case ["repr"] | []:
-            if os.path.isfile(os.path.join(info.BINDIR, "start_prompt.txt")):
-                start_text = open(os.path.join(info.BINDIR, "start_prompt.txt")).read()
-            else:
-                start_text = ""
             frame = varproc.new_frame()
             cmd_hist = InMemoryHistory()
             acc = []
@@ -270,23 +308,9 @@ def handle_args():
                     acc.extend(utils.flatten_dict(f).keys())
                     acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
                     acc.extend(map(lambda x:"%"+x, utils.flatten_dict(f).keys()))
-            if "import-all" in prog_flags:
-                if "verbose" in prog_flags:
-                    print("Importing all standard modules...")
-                for pos, file in enumerate(
-                    temp := varproc.meta["internal"]["libs"]["std_libs"], 1
-                ):
-                    if "verbose" in prog_flags:
-                        print(f"[{(pos/len(temp))*100:7.2f}% ] Importing: {file}")
-                    ext_s.py_import(frame, file, "@std")
-                if "verbose" in prog_flags:
-                    print("Done importing!")
             PROMPT_CTL = frame[-1]["_meta"]["internal"]["prompt_ctl"] = {}
             PROMPT_CTL["ps1"] = ">>> "
             PROMPT_CTL["ps2"] = "... "
-            print(
-                f"DPL REPL for DPL {varproc.meta['internal']['version']}\nPython {info.PYTHON_VER}{(chr(10)+start_text) if start_text else ''}"
-            )
             START_FILE = os.path.join(info.BINDIR, "start_script.dpl")
             if os.path.isfile(START_FILE):
                 try:
@@ -294,6 +318,9 @@ def handle_args():
                         parser.run(parser.process(f.read(), name="dpl_repl-startup"))
                 except:
                     print("something went wrong while running start up script!")
+            print(
+                f"DPL REPL for DPL {varproc.meta['internal']['version']}\nPython {info.PYTHON_VER}"
+            )
             while True:
                 try:
                     act = prompt(PROMPT_CTL["ps1"], completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist).strip()
@@ -356,64 +383,7 @@ def handle_args():
                 except Exception as e:
                     print(f"Python Exception was raised while running:\n{repr(e)}")
         case ["help"]:
-            print(
-                f"""Help for DPL [v{varproc.meta['internal']['version']}]
-
-Commands:
-dpl run [file] args...
-    Runs the given DPL script.
-dpl rc [file] args...
-    Runs the given compiled DPL script.
-dpl compile [file]
-    Compiles the given DPL script.
-    Outputs to [file].cdpl
-`dpl repr` ALSO JUST `dpl`
-    Invokes the REPL
-dpl package install <user> <repo> <branch> <include_branch_name?>
-    Install a package hosted on github.
-    Default branch is 'master'
-dpl package installto: <path_to_dest> <user> <repo> <branch> <include_branch_name?>
-    Install a package hosted on github.
-    Default branch is 'master'
-dpl package remove <package_name>
-    Delete that package.
-dpl dump-comp file
-    Dump the compile data of the file (unpickled)
-dpl get-docs file
-    Get the doc comments.
-
-Flags and such:
-dpl -info
-    Prints info.
-dpl -arg-test
-    Tests flag handling.
-'dpl -version' or 'dpl -v'
-    Prints version and some info.
-'dpl -profile' or 'dpl -p'
-    Profiles the code using 'time.perf_counter' for inaccurate but fast execution.
-dpl -cprofile ...
-    Profiles the code using cProfile for more accurate but slower execution.
-dpl -disable-auto-complete
-    Disable the auto complete.
-dpl -init-time
-    Show initialization time.
-dpl -show-imports
-    Show all imports done by dpl.
-    Note thay this captures the imports also done by the imported modules.
-dpl -simple-run
-    Skip any cli handling and just take the first argument it sees and treats it as a file.
-    Usage: dpl -simple-run file
-    As the name suggests it doesnt handle any other argunents.
-    This will also disble profiling.
-dpl -skip-non-essential
-    This skips any non essential imports that arent used when running files.
-    This will mess up the REPL if misused.
-dpl -use-python
-    Explicitly use the python based parser.
-    This bypasses the imports to any parser.so or parser.pyi files.
-dpl -show-parser-import
-    Prints if any errors arised while importing the non-python based parser.
-""")
+            print(help_str)
         case _:
             print("Invalid invokation!")
             print("See 'dpl help' for more")
@@ -432,11 +402,6 @@ if "show-imports" in prog_flags and "exit-when-done-importing" in prog_flags:
 if __name__ == "__main__":
     varproc.flags.update(prog_flags)
     info.ARGC = len(info.ARGV)
-    if hasattr(info, "LINUX_DISTRO"):
-        if info.LINUX_DISTRO and "arch" in info.LINUX_DISTRO and "silence-impotence" not in flags:
-            print("I bet you say 'I use arch btw'")
-    if "remove-freedom" in prog_flags:
-        print("*Hawk screeches* The tariffs go crazy huh")
     if "cprofile" in prog_flags:
         profiler = cProfile.Profile()
         profiler.enable()
@@ -445,8 +410,8 @@ if __name__ == "__main__":
         profiler.disable()
         default = "tottime"
         order_by = None
-        for i in flags:
-            if i.startswith("order_profile="):
+        for i in prog_flags:
+            if i.startswith("order-profile="):
                 order_by = i[14:]
         print("\nProfile Result")
         stats = pstats.Stats(profiler)

@@ -1,46 +1,134 @@
 # Parser and Preprocessor
 # The heart, the interpreter of DPL
 
-import os
 import time
-import sys
 import itertools
-import traceback
-import threading
+from threading import Thread, main_thread, current_thread
 import dill
 from copy import deepcopy as copy
 
-try:
-    from . import py_argument_handler
-    arguments_handler = py_argument_handler.arguments_handler
-    from . import arguments as argproc
-    process_arg = argproc.process_arg
-    process_args = argproc.process_args
-    exprs_preruntime = argproc.exprs_preruntime
-    from . import info
-    from . import state
-    from . import error
-    from . import utils
-    from . import varproc
-    rset = varproc.rset
-    rget = varproc.rget
-    rpop = varproc.rpop
-    from . import objects
-    from . import constants
-    from . import extension_support as ext_s
-    from . import runtime
-    from . import type_checker
-    check_ins = type_checker.check_ins
-    tc_register = type_checker.register
-except ImportError:
-    print(f"Please do not run it from here.")
-    sys.exit(1)
+from . import py_argument_handler
+arguments_handler = py_argument_handler.arguments_handler
+from . import arguments as argproc
+process_arg = argproc.process_arg
+process_args = argproc.process_args
+exprs_preruntime = argproc.exprs_preruntime
+from . import error
+from . import utils
+from . import objects
+from . import extension_support as ext_s
+from . import constants
+from . import type_checker
+check_ins = type_checker.check_ins
+tc_register = type_checker.register
 
-IS_STILL_RUNNING = runtime.IS_STILL_RUNNING
-my_exit = runtime.my_exit
-thread_events = runtime.thread_events
-threads = runtime.threads
-clean_threads = runtime.clean_threads
+from . import info
+import traceback
+import threading
+import sys
+from . import varproc
+rset = varproc.rset
+rget = varproc.rget
+rpop = varproc.rpop
+vdebug = varproc.debug
+import atexit
+import os
+
+if "no-cffi" not in info.program_flags:
+    from cffi import FFI
+    ext_s.dpl.ffi = FFI()
+
+IS_STILL_RUNNING = threading.Event()
+
+threads = []
+thread_events = [] # Thread events, so any threads can be killed manually or automatically
+
+def clean_threads():  # kill all threads and wait for them to terminate
+    for i in thread_events:
+        i.set()
+    for i in threads:
+        i.join()
+
+def my_exit(code=0):
+    IS_STILL_RUNNING.set()
+    clean_threads()
+    og_exit(code)
+
+
+def my_exit_atexit(code=0):
+    if info.unique_imports:
+        print(f"\nPerformed {len(info.imported):,} non-identical imports\nPerformed {info.unique_imports:,} total imports")
+
+atexit.register(my_exit_atexit)
+
+og_exit = sys.exit
+ext_s.dpl.exit = my_exit
+sys.exit = my_exit
+exit = my_exit
+
+# setup runtime stuff. And yes on import.
+try:
+    import psutil
+
+    CUR_PROCESS = psutil.Process()
+
+    def get_memory(_, __):
+        memory_usage = CUR_PROCESS.memory_info().rss
+        return (utils.convert_bytes(memory_usage),)
+
+    varproc.meta["internal"]["HasGetMemory"] = 1
+    varproc.meta["internal"]["GetMemory"] = get_memory
+except ModuleNotFoundError as e:
+    varproc.meta["internal"]["HasGetMemory"] = 0
+    varproc.meta["internal"]["GetMemory"] = lambda _, __: (state.bstate("nil"),)
+
+varproc.meta["internal"].update(
+    {
+        "SetEnv": lambda _, __, name, value: os.putenv(name, value),
+        "GetEnv": lambda _, __, name, default=None: os.getenv(name, default),
+    }
+)
+
+varproc.meta["internal"]["os"] = {
+    "uname": info.SYS_MACH_INFO,  # uname
+    "architecture": info.SYS_ARCH,  # system architecture (commonly x86 or ARMv7 or whatever arm proc)
+    "executable_format": info.EXE_FORM,  # name is self explanatory
+    "machine": info.SYS_MACH,  # machine information
+    "information": info.SYS_INFO,  # basically the tripple
+    "processor": info.SYS_PROC,  # processor (intel and such)
+    "threads": os.cpu_count(),  # physical thread count,
+    "os_name":info.SYS_OS_NAME.lower(),
+}
+
+if info.UNIX and info.SYS_OS_NAME == "linux":
+    varproc.meta["internal"]["os"]["linux"] = {
+        "name": info.LINUX_DISTRO,
+        "version": info.LINUX_VERSION,
+        "codename": info.LINUX_CODENAME
+}
+
+
+varproc.meta["threading"] = {
+    "runtime_event": IS_STILL_RUNNING,
+    "is_still_running": lambda _, __: IS_STILL_RUNNING.is_set(),
+}
+
+varproc.meta["str_intern"] = lambda _, __, string: sys.intern(string)
+
+
+def get_size_of(_, __, object):
+    return (utils.convert_bytes(sys.getsizeof(object)),)
+
+
+try:
+    get_size_of(0, 0, 0)
+    varproc.meta["internal"]["SizeOf"] = get_size_of
+except:
+
+    def temp(_, __, ___):
+        return f"err:{error.PYTHON_ERROR}:Cannot get memory usage of an object!\nIf you are using pypy, pypy does not support this feature."
+
+    varproc.meta["internal"]["SizeOf"] = temp
 
 def get_block(code, current_p, supress=False):
     "Get a code block"
@@ -249,8 +337,6 @@ def process(fcode, name="__main__"):
                 if ext_s.py_import(nframe, file, search_path, loc=os.path.dirname(name)):
                     print(f"python: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
-            elif ins == "whatever" and argc == 0:
-                argproc.chaos = True
             elif ins == "use" and argc == 3 and args[1] == "as":
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
@@ -494,6 +580,7 @@ def process(fcode, name="__main__"):
 
 def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     "Run code generated by 'process'"
+    global check_ins
     p = 0
     end_time = start_time = 0
     if isinstance(code, str):
@@ -509,7 +596,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         frame[0].update(nframe[0])
     else:
         frame = nframe
-    while p < len(code) and not IS_STILL_RUNNING.is_set() and not thread_event.is_set():
+    tc_cache = set()
+    while p < len(code) and not thread_event.is_set():
         pos, file, ins, oargs = code[p]
         if oargs is None:
             args = []
@@ -518,6 +606,19 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 try:
                     ins = process_arg(frame, ins)
                     args = process_args(frame, oargs)
+                    argc = len(args)
+                    if vdebug["type_checker"]:
+                        if (tmp:=(pos, file, ins)) not in tc_cache:
+                            tc_cache.add(tmp)
+                            if not check_ins(ins, args):
+                                itypesr = type_checker.get_ins(ins, args)
+                                if itypesr is None and not varproc.is_debug_enabled("TC_DEFAULT_WHEN_NOT_FOUND"):
+                                    error.error(pos, file, f"Type signature for {ins} is not defined.\nUse tc_register to register your function.")
+                                    return error.TYPE_ERROR
+                                itypes = tuple(map(lambda x: getattr(x, "__name__", x), itypesr))
+                                atypes = tuple(map(lambda x: type(x).__name__, args))
+                                error.error(pos, file, f"Type mismatch [{ins}]: Expected {itypes} but got {atypes}")
+                                return error.TYPE_ERROR
                 except Exception as e:
                     error.error(
                         pos,
@@ -525,19 +626,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         f"Something went wrong when arguments were processed:\n{e}\n> {oargs!r}",
                     )
                     return error.PYTHON_ERROR
-                argc = len(args)
             else:
                 args = oargs
-            if varproc.is_debug_enabled("type_checker"):
-                if not check_ins(ins, args):
-                    itypesr = type_checker.get_ins(ins, args)
-                    if itypesr is None and not varproc.is_debug_enabled("TC_DEFAULT_WHEN_NOT_FOUND"):
-                        error.error(pos, file, f"Type signature for {ins} is not defined.\nUse tc_register to register your function.")
-                        return error.TYPE_ERROR
-                    itypes = tuple(map(lambda x: getattr(x, "__name__", x), itypesr))
-                    atypes = tuple(map(lambda x: type(x).__name__, args))
-                    error.error(pos, file, f"Type mismatch [{ins}]: Expected {itypes} but got {atypes}")
-                    return error.TYPE_ERROR
         argc = len(args)
         if ins == "fn" and argc >= 1:
             name, *params = args
@@ -755,14 +845,14 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             rset(frame[-1], args[0], objects.make_object(args[0]))
         elif ins == "new" and argc == 2:
             obj = args[0]
-            if obj == state.bstate("nil"):
+            if obj == constants.nil:
                 error.error(pos, file, f"Unknown object")
                 break
             rset(obj, "_internal.instance_name", args[1])
             rset(frame[-1], args[1], copy(obj))
         elif ins == "method" and argc >= 2:
             self, name, *params = args
-            if self == state.bstate("nil"):
+            if self == constants.nil:
                 error.error(
                     pos, file, "Cannot bind a method to a value that isnt a context!"
                 )
@@ -800,14 +890,14 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 if err := run(body, frame, thread_event):
                     raise RuntimeError(f"Thread returned an error: {err}")
 
-            th_obj = threading.Thread(target=th)
+            th_obj = Thread(target=th)
             threads.append(th_obj)
             th_obj.start()
         elif ins == "new_thread_event" and argc == 1:
-            rset(frame[-1], args[0], (temp := threading.Event()))
+            rset(frame[-1], args[0], (temp := Event()))
             thread_events.append(temp)
         elif ins == "thread" and argc == 1:
-            if not isinstance(args[0], threading.Event):
+            if not isinstance(args[0], Event):
                 error.error(pos, file, "The given thread event was invalid!")
                 return error.THREAD_ERROR
             temp = get_block(code, p)
@@ -820,13 +910,13 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 if err := run(body, frame, args[0]):
                     raise RuntimeError(f"Thread returned an error: {err}")
 
-            th_obj = threading.Thread(target=th)
+            th_obj = Thread(target=th)
             threads.append(th_obj)
             th_obj.start()
         elif ins == "exit" and argc == 0:
             my_exit()
         elif ins == "return":  # Return to the latched names
-            if not (temp := rget(frame[-1], "_returns")) != state.bstate("nil"):
+            if not (temp := rget(frame[-1], "_returns")) != constants.nil:
                 ...
             else:
                 if (
@@ -855,7 +945,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif (
             ins == "freturn"
         ):  # Return to the latched names with no memoization detection (faster)
-            if not (temp := rget(frame[-1], "_returns")) != state.bstate("nil"):
+            if not (temp := rget(frame[-1], "_returns")) != constants.nil:
                 ...
             else:
                 if (
@@ -881,7 +971,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 temp = rget(
                     args[0], "docs", default=rget(args[0], "_internal.docs")
                 )
-                if temp == state.bstate("nil"):
+                if temp == constants.nil:
                     print(f"\nHelp, line [{pos}]: No documentation was found!")
                 else:
                     print(f"\nHelp, line [{pos}]:\n{temp}")
@@ -891,16 +981,14 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             threads.clear()
         elif ins == "catch" and argc >= 2:  # catch return value of a function
             rets, func_name, *args = args
-            if (temp := rget(frame[-1], func_name)) == state.bstate(
-                "nil"
-            ) or not isinstance(temp, dict):
+            if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
             varproc.nscope(frame)
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, constants.nil)
                     else:
                         frame[-1][name] = value
             else:
@@ -938,7 +1026,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 )
             )
             if (
-                (temp := rget(frame[-1], func_name)) == state.bstate("nil")
+                (temp := rget(frame[-1], func_name)) == constants.nil
                 and isinstance(temp, dict)
                 and mem_args in temp
             ):
@@ -953,7 +1041,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, constants.nil)
                     else:
                         frame[-1][name] = value
             else:
@@ -990,7 +1078,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 )
             )
             if (
-                (temp := rget(frame[-1], func_name)) == state.bstate("nil")
+                (temp := rget(frame[-1], func_name)) == constants.nil
                 and isinstance(temp, dict)
                 and mem_args in temp
             ):
@@ -1005,7 +1093,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, constants.nil)
                     else:
                         frame[-1][name] = value
             else:
@@ -1033,16 +1121,14 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             varproc.pscope(frame)
         elif ins == "scatch" and argc >= 2 and len(args[0]) >= 1:  # catch return value of a function
             rets, func_name, *args = args
-            if (temp := rget(frame[-1], func_name)) == state.bstate(
-                "nil"
-            ) or not isinstance(temp, dict):
+            if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
             varproc.nscope(frame)
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, constants.nil)
                     else:
                         frame[-1][name] = value
             else:
@@ -1069,9 +1155,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             varproc.pscope(frame)
         elif ins == "body" and argc >= 1:  # give a code block to a python function
             name, *args = args
-            if (temp := rget(frame[-1], name)) == state.bstate(
-                "nil"
-            ) or not hasattr(temp, "__call__"):
+            if (temp := rget(frame[-1], name)) == constants.nil or not hasattr(temp, "__call__"):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 break
             try:
@@ -1118,9 +1202,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             input()
         elif ins == "pycatch" and argc >= 2:  # catch return value of a python function
             rets, name, *args = args
-            if (temp := rget(frame[-1], name)) == state.bstate(
-                "nil"
-            ) or not hasattr(temp, "__call__"):
+            if (temp := rget(frame[-1], name)) == constants.nil or not hasattr(temp, "__call__"):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 return error.NAME_ERROR
             try:
@@ -1261,7 +1343,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     frame[-1], args[0], default=rget(frame[0], args[0])
                 )
             )
-            != state.bstate("nil")
+            != constants.nil
             and isinstance(temp, dict)
             and has(["defaults", "self", "body", "args", "capture"], temp)
         ):  # Call a function
@@ -1269,7 +1351,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args[1:]):
                     if value is None:
-                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, constants.nil)
                     else:
                         frame[-1][name] = value
             else:
@@ -1290,7 +1372,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             varproc.pscope(frame)
         elif (
             (temp := rget(frame[-1], ins, default=rget(frame[0], ins)))
-            != state.bstate("nil")
+            != constants.nil
             and isinstance(temp, dict)
             and has(["defaults", "self", "body", "args", "capture"], temp)
         ):  # Call a function
@@ -1298,7 +1380,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defaults"].get(name, state.bstate("nil"))
+                        frame[-1][name] = temp["defaults"].get(name, constants.nil)
                     else:
                         frame[-1][name] = value
             else:
@@ -1322,7 +1404,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             varproc.pscope(frame)
         elif (
             temp := rget(frame[-1], ins, default=rget(frame[0], ins))
-        ) != state.bstate("nil") and hasattr(
+        ) != constants.nil and hasattr(
             temp, "__call__"
         ):  # call a python function
             try:

@@ -16,7 +16,6 @@ rget = varproc.rget
 get_debug = varproc.get_debug
 
 run_code = None  # to be set by py_parser
-chaos = False
 
 def nest_args(tokens):
     stack = [[]]
