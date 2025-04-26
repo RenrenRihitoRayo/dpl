@@ -26,7 +26,9 @@ alias = {
     "bool": int,
     "pythonBool": bool,
     "ident": str,
-    "scope": dict
+    "scope": dict,
+    "iterable":str|list|tuple|set|dict|range,
+    "code":str|list
 }
 
 def match_type(types, input, ranged=False):
@@ -103,6 +105,7 @@ def parse_types(code):
             ins, types = line.split("::", 1)
             types = types.split()
             for i, type in enumerate(types):
+                if not isinstance(type, str): continue
                 type = type.strip()
                 if not type:
                     continue
@@ -164,106 +167,32 @@ def parse_types(code):
                 elif type in alias:
                     types[i] = alias[type]
             typed[ins.strip()] = (ranged, types)
-        elif "=" in line:
-            ins, type = line.split("=", 1)
-            type = type.strip()
-            if type in ("str", "int", "float", "dict", "set", "tuple", "list", "range"):
-                type = __builtins__[type]
-            elif type == "any":
-                type = Any
-            elif type == "...":
-                type = "..."
-            elif type == "thread":
-                type = Thread
-            elif type == "thread_event":
-                type = Event
-            elif type == "thread_lock":
-                type = Lock
-            elif type == "true":
-                type = constants.true
-            elif type == "false":
-                type = constants.false
-            elif type == "none":
-                type = constants.none
-            elif type == "nil":
-                type = constants.nil
-            elif type == "dpl:any":
-                type = constants.any
-            elif type.startswith('"') and type.endswith('"'):
-                type = type[1:-1]
-            elif "|" in type:
-                types1 = type.split("|")
-                for i, type in enumerate(types1):
-                    type = type.strip()
-                    if not type:
-                        continue
-                    if type in ("str", "int", "float", "dict", "set", "tuple", "list", "range"):
-                        types1[i] = __builtins__[type]
-                    elif type == "any":
-                        types1[i] = Any
-                    elif type == "...":
-                        types1[i] = "..."
-                    elif type == "thread":
-                        types1[i] = Thread
-                    elif type == "thread_event":
-                        types1[i] = Event
-                    elif type == "thread_lock":
-                        types1[i] = Lock
-                    elif type == "true":
-                        types1[i] = constants.true
-                    elif type == "false":
-                        types1[i] = constants.false
-                    elif type == "none":
-                        types1[i] = constants.none
-                    elif type == "nil":
-                        types1[i] = constants.nil
-                    elif type == "dpl:any":
-                        types1[i] = constants.any
-                    elif type in alias:
-                        types1[i] = alias[type]
-                    type = tuple(types1)
-                type = tuple(types1)
-            alias[ins.strip()] = type
         elif line.startswith("%"):
             typed[line[1:]] = (ranged, [])
     return typed
 
 # builtins
 typed.update(parse_types('''
-iterables = str|list|tuple|set|dict|range
-
 @ranged fn :: str ...
 @ranged pub :: "fn" str ...
-%end
 match :: any
-#--
-    case, with and default are sub instructions for match,
-    thus we cant check them without modifying the "parse_match" in
-    arguments.py
---#
 set :: str any
 export :: "set" str any
 @ranged :: str ...
-for :: str "in" iterables
+for :: str "in" iterable
 loop :: int
 %loop[0]
 while :: any
-
 %pause
-
 %thread[0]
 thread[1] :: thread_event
 new_thread_event :: str
 %wait_for_threads
-
 DEFINE_ERROR[1] :: str
 DEFINE_ERROR[2] :: str int
-
 cmd :: str
 cmd[2] :: str str
-
 tc_register :: str
-
 module :: str
 @ranged ccall :: any ...
 @ranged catch :: list str any ...
@@ -273,55 +202,41 @@ module :: str
 @ranged smcatch :: list str any ...
 @ranged pycatch :: list str any ...
 @ranged body :: str ...
-
 @ranged return :: any ...
 @ranged freturn :: any ...
-
 dlopen :: str str
 dlclose :: any
 getc :: str any
 cdef :: str
-
 template :: str
 from_template :: dict
-
 %skip
 %stop
 @ranged pass :: any ...
 %fallthrough
 @ranged pass :: any ...
-
 sched[int] :: int
 sched[float] :: float
-
 if :: any
 %ifmain
 match :: any
-
-exec :: str str list
-sexec :: str str str list
-
+exec :: code str list
+sexec :: str code str list
 @ranged safe :: str any ...
 object :: str
 new :: dict str
 @ranged method :: dict str ...
-
 %START_TIME
 %STOP_TIME
 %LOG_TIME[0]
 LOG_TIME :: str
-
 exit :: int
 help :: any
-
 raise :: int
 raise[2] :: int str
-
 %dump_scope
 dump_vars :: dict
-
-tc_register :: str
-'''))
+tc_register :: str'''))
 
 def get_ins(ins, args):
     atypes = ",".join(types:=map(lambda x: type(x).__name__, args))

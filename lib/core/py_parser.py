@@ -3,7 +3,7 @@
 
 import time
 import itertools
-from threading import Thread, main_thread, current_thread
+from threading import Thread, main_thread, current_thread, Event
 import dill
 from copy import deepcopy as copy
 
@@ -24,9 +24,11 @@ tc_register = type_checker.register
 
 from . import info
 import traceback
-import threading
 import sys
 from . import varproc
+new_frame = varproc.new_frame
+pscope = varproc.pscope
+nscope = varproc.nscope
 rset = varproc.rset
 rget = varproc.rget
 rpop = varproc.rpop
@@ -38,7 +40,7 @@ if "no-cffi" not in info.program_flags:
     from cffi import FFI
     ext_s.dpl.ffi = FFI()
 
-IS_STILL_RUNNING = threading.Event()
+IS_STILL_RUNNING = Event()
 
 threads = []
 thread_events = [] # Thread events, so any threads can be killed manually or automatically
@@ -67,6 +69,8 @@ sys.exit = my_exit
 exit = my_exit
 
 # setup runtime stuff. And yes on import.
+# user will have to manually define type signatures
+# or lower the type checker strictness by setting TC_DEFAULT_WHEN_NOT_FOUND
 try:
     import psutil
 
@@ -82,12 +86,8 @@ except ModuleNotFoundError as e:
     varproc.meta["internal"]["HasGetMemory"] = 0
     varproc.meta["internal"]["GetMemory"] = lambda _, __: (state.bstate("nil"),)
 
-varproc.meta["internal"].update(
-    {
-        "SetEnv": lambda _, __, name, value: os.putenv(name, value),
-        "GetEnv": lambda _, __, name, default=None: os.getenv(name, default),
-    }
-)
+varproc.meta["internal"]["SetEnv"] = os.putenv,
+varproc.meta["internal"]["GetEnv"] = os.getenv
 
 varproc.meta["internal"]["os"] = {
     "uname": info.SYS_MACH_INFO,  # uname
@@ -110,11 +110,24 @@ if info.UNIX and info.SYS_OS_NAME == "linux":
 
 varproc.meta["threading"] = {
     "runtime_event": IS_STILL_RUNNING,
-    "is_still_running": lambda _, __: IS_STILL_RUNNING.is_set(),
+    "is_still_running": lambda: IS_STILL_RUNNING.is_set(),
 }
 
-varproc.meta["str_intern"] = lambda _, __, string: sys.intern(string)
-
+if "get-internals" in info.program_flags:
+    varproc.meta["argument_processing"] = {
+        "process_argument":process_arg,
+        "process_argumemts":process_args,
+        "preprocess_arguments":exprs_preruntime
+    }
+    
+    varproc.meta["variable_processing"] = {
+        "rset":rset,
+        "rget":rget,
+        "rpop":rpop,
+        "new_frame":new_frame,
+        "pop_scope":pscope,
+        "new_scope":nscope
+    }
 
 def get_size_of(_, __, object):
     return (utils.convert_bytes(sys.getsizeof(object)),)
@@ -201,7 +214,7 @@ def pprint(d, l=0, seen=None, hide=True):
 def process(fcode, name="__main__"):
     "Preprocess a file"
     res = []
-    nframe = varproc.new_frame()
+    nframe = new_frame()
     dead_code = info.flags.DEAD_CODE_OPT
     warnings = info.flags.WARNINGS
     define_func = False
@@ -536,15 +549,6 @@ def process(fcode, name="__main__"):
         used_names = set()
         defined_names = {}
         for p, [pos, file, ins, args] in enumerate(nres):
-#            for name in argproc.get_names(args):
-#                if "." in name or name in ("self", "_local", "_global", "_nonlocal", "_frame_stack", "_meta", "_preruntime_config"):
-#                    continue
-#                if varproc.get_debug("warn_undefined_vars") and name not in defined_names:
-#                    if varproc.get_debug("error_on_undefined_vars"):
-#                        error.error(pos, file, f"{name!r} is not defined!")
-#                        return error.PREPROCESSING_ERROR
-#                    else:
-#                        error.warn(f"File: {file}\nLine: {pos}\n{name!r} is not defined!")
             if ins in info.INC_EXT:
                 temp = get_block(nres, p, True)
                 if not temp:
@@ -566,11 +570,6 @@ def process(fcode, name="__main__"):
                         )
                         return error.PREPROCESSING_ERROR
                 np = 0
-#            elif ins in ("set", "object", "new") or (ins == "export" and args[1] == "set"):
-#                if ins in ("set", "object", "new"):
-#                    defined_names[args[0]] = pos
-#                else:
-#                    defined_names.add[args[1]] = pos
         return {
             "code": nres if dead_code and info.flags.DEAD_CODE_OPT else res,
             "frame": nframe or None,
@@ -590,7 +589,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     elif isinstance(code, int):
         return code
     else:
-        nframe = varproc.new_frame()
+        nframe = new_frame()
     sys.stdout.flush()
     if frame is not None:
         frame[0].update(nframe[0])
@@ -829,7 +828,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "module" and argc == 1:
             name = args[0]
             temp = [frame[-1]]
-            varproc.nscope(temp)
+            nscope(temp)
             temp[-1]["_export"] = {}
             btemp = get_block(code, p)
             if btemp is None:
@@ -984,7 +983,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
-            varproc.nscope(frame)
+            nscope(frame)
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
@@ -1010,7 +1009,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if err > 0:
                 error.error(pos, file, f"Error in function {ins!r}")
                 return err
-            varproc.pscope(frame)
+            pscope(frame)
         elif ins == "DEFINE_ERROR" and 0 < argc < 3:
             error.register_error(*args)
         elif ins == "mcatch" and argc >= 2:  # catch return value of a function
@@ -1037,7 +1036,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     rset(frame[-1], name, value)
                 p += 1
                 continue
-            varproc.nscope(frame)
+            nscope(frame)
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
@@ -1064,7 +1063,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if err > 0:
                 error.error(pos, file, f"Error in function {ins!r}")
                 return err
-            varproc.pscope(frame)
+            pscope(frame)
         elif ins == "smcatch" and argc >= 2 and len(args[0]) >= 1:  # safe catch return value of a function
             rets, func_name, *args = args
             mem_args = tuple(
@@ -1089,7 +1088,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     rset(frame[-1], name, value)
                 p += 1
                 continue
-            varproc.nscope(frame)
+            nscope(frame)
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
@@ -1118,13 +1117,13 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if err:
                 frame[-1][args[0][0]] = err
             error.active()
-            varproc.pscope(frame)
+            pscope(frame)
         elif ins == "scatch" and argc >= 2 and len(args[0]) >= 1:  # catch return value of a function
             rets, func_name, *args = args
             if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
-            varproc.nscope(frame)
+            nscope(frame)
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
@@ -1152,7 +1151,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if err:
                 frame[-1][args[0][0]] = err
             error.active()
-            varproc.pscope(frame)
+            pscope(frame)
         elif ins == "body" and argc >= 1:  # give a code block to a python function
             name, *args = args
             if (temp := rget(frame[-1], name)) == constants.nil or not hasattr(temp, "__call__"):
@@ -1347,7 +1346,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             and isinstance(temp, dict)
             and has(["defaults", "self", "body", "args", "capture"], temp)
         ):  # Call a function
-            varproc.nscope(frame)
+            nscope(frame)
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args[1:]):
                     if value is None:
@@ -1369,14 +1368,14 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             error.silent()
             run(temp["body"], frame)
             error.active()
-            varproc.pscope(frame)
+            pscope(frame)
         elif (
             (temp := rget(frame[-1], ins, default=rget(frame[0], ins)))
             != constants.nil
             and isinstance(temp, dict)
             and has(["defaults", "self", "body", "args", "capture"], temp)
         ):  # Call a function
-            varproc.nscope(frame)
+            nscope(frame)
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
@@ -1401,7 +1400,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if err:
                 error.error(pos, file, f"Error in function {ins!r}")
                 return err
-            varproc.pscope(frame)
+            pscope(frame)
         elif (
             temp := rget(frame[-1], ins, default=rget(frame[0], ins))
         ) != constants.nil and hasattr(

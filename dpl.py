@@ -80,7 +80,7 @@ dpl rc [file] args...
 dpl compile [file]
     Compiles the given DPL script.
     Outputs to [file].cdpl
-`dpl repr` ALSO JUST `dpl`
+`dpl repl` ALSO JUST `dpl`
     Invokes the REPL
 dpl package install <user> <repo> <branch> <include_branch_name?>
     Install a package hosted on github.
@@ -129,7 +129,13 @@ dpl -no-lupa
 dpl -no-cffi
     Do not import cffi components.
 dpl -instant-help
-    Prints the help string without using the command matching."""
+    Prints the help string without using the command matching.
+dpl -get-internals
+    Insert interpreter internals in "_meta"
+    Scopes that will be defined:
+    - "argument_processing": Functions to process arguments.
+    - "variable_processing": Functions to manipulate a frame.
+"""
 
 def rec(this, ind=0):
     if not isinstance(this, (tuple, list)):
@@ -299,7 +305,7 @@ def handle_args():
                     elif line.startswith("#:"):
                         res.append(line[2:])
             print("\n".join(res))
-        case ["repr"] | []:
+        case ["repl"] | []:
             frame = varproc.new_frame()
             cmd_hist = InMemoryHistory()
             acc = []
@@ -397,6 +403,9 @@ if "init-time" in prog_flags:
     print(f"DEBUG: Initialization time: {s}{u}")
 
 if "show-imports" in prog_flags and "exit-when-done-importing" in prog_flags:
+    exit(0)
+
+if "dry-run" in prog_flags:
     exit(0)
 
 if __name__ == "__main__":
