@@ -145,6 +145,12 @@ Most recent at top.
 
 # 1.4.8
 
+## New function definition syntax
+
+fn [!arg1 arg2 ... arg3]
+    ... body
+end
+
 ## Introduced new flags
 
 Certain flags has been added.

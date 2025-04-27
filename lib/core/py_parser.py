@@ -627,7 +627,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 args = oargs
         argc = len(args)
         if ins == "fn" and argc >= 1:
-            name, *params = args
+            name, params = args
             block = get_block(code, instruction_pointer)
             if block is None:
                 break
@@ -645,7 +645,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "_intern.jump" and argc == 2:
             if args[1]: instruction_pointer = args[0]
         elif ins == "pub" and argc >= 2 and args[0] == "fn":
-            _, name, *params = args
+            _, name, params = args
             temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
@@ -848,7 +848,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             rset(obj, "_internal.instance_name", args[1])
             rset(frame[-1], args[1], copy(obj))
         elif ins == "method" and argc >= 2:
-            self, name, *params = args
+            self, name, params = args
             if self == constants.nil:
                 error.error(
                     pos, file, "Cannot bind a method to a value that isnt a context!"

@@ -173,8 +173,8 @@ def parse_types(code):
 
 # builtins
 typed.update(parse_types('''
-@ranged fn :: str ...
-@ranged pub :: "fn" str ...
+fn :: str list
+pub :: "fn" str list
 match :: any
 set :: str any
 export :: "set" str any
@@ -225,7 +225,7 @@ sexec :: str code str list
 @ranged safe :: str any ...
 object :: str
 new :: dict str
-@ranged method :: dict str ...
+method :: dict str list
 %START_TIME
 %STOP_TIME
 %LOG_TIME[0]

@@ -3,7 +3,7 @@
 
 &use {std/text_io.py}
 
-fn memoize_fact n
+fn memoize_fact [!n]
     if [:n <= 1]
         return 1
     end
@@ -11,7 +11,7 @@ fn memoize_fact n
     return [:n * :f]
 end
 
-fn fact n
+fn fact [!n]
     if [:n <= 1]
         return 1
     end
