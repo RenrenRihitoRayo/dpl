@@ -145,6 +145,10 @@ Most recent at top.
 
 # 1.4.8
 
+## New website
+
+At [DarrenPapa.github.io](https://darrenpapa.github.com)
+
 ## New function definition syntax
 
 ```DuProL
@@ -152,6 +156,9 @@ fn [!arg1 arg2 ... arg3]
     ... body
 end
 ```
+
+Examples will be updated for the new syntax in
+the future.
 
 ## Introduced new flags
 
