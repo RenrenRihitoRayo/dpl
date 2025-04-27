@@ -147,7 +147,7 @@ Most recent at top.
 
 ## Update mappings
 
-Updateappings are now unsupported!
+Update mappings are now unsupported!
 
 ## New website
 
