@@ -147,7 +147,7 @@ Most recent at top.
 
 ## New website
 
-At [DarrenPapa.github.io](https://darrenpapa.github.com)
+At [DarrenPapa.github.io](https://darrenpapa.github.io)
 
 ## New function definition syntax
 
