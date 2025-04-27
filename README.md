@@ -147,7 +147,7 @@ Most recent at top.
 
 ## Introduced new flags
 
-Certai  flags has been added.
+Certain flags has been added.
 See `dpl help`
 
 ## The great renaming
