@@ -139,8 +139,6 @@ Why use DPL?
 
 ---
 
-<!-- CHANGE_NOTES --->
-
 # Change Notes / Dev Logs
 
 Most recent at top.
