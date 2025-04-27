@@ -123,19 +123,14 @@ io:println :res
 
 ## Reasons to use DPL
 
-> Linting? None. You are the linter now. May your choices be wise, or at least funny.
+- To suffer
+- To show off
+- To look smart-ish
 
 Why use DPL?
 * You’re tired of languages judging you.
 * You believe standards are optional. You want full control and full responsibility.
 * You enjoy chaos, minimalism, or pain.
-
-## DPL's Core Ideals
-
-> It works? Alright then DPL's works
-> Doesnt? Well it's your fault.
-> If you can only read it you're special, if no one can what the hell.
-> You know what? F*ck it, do what ever you want shove in what fits.
 
 ---
 
