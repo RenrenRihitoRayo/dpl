@@ -140,6 +140,12 @@ Most recent at top.
 
 # 1.4.8
 
+## Added CString literals
+
+```DuProL
+set my_cstring cstr?"Bytes!"
+```
+
 ## Update mappings
 
 Update mappings are now unsupported!

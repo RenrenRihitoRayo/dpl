@@ -109,7 +109,7 @@ def parse_types(code):
                 type = type.strip()
                 if not type:
                     continue
-                if type in ("str", "int", "float", "dict", "set", "tuple", "list"):
+                if type in ("str", "int", "float", "dict", "set", "tuple", "list", "range", "bytes"):
                     types[i] = __builtins__[type]
                 elif type == "any":
                     types[i] = Any
@@ -137,7 +137,7 @@ def parse_types(code):
                         type = type.strip()
                         if not type:
                             continue
-                        if type in ("str", "int", "float", "dict", "set", "tuple", "list", "range"):
+                        if type in ("str", "int", "float", "dict", "set", "tuple", "list", "range", "bytes"):
                             types1[i] = __builtins__[type]
                         elif type == "any":
                             types1[i] = Any

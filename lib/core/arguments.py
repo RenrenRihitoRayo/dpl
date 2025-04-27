@@ -21,6 +21,19 @@ simple_ops = {
     "**": operator.pow
 }
 
+chars = {
+    "\\":"\\",
+    "n": "\n",
+    "b": "\b",
+    "f": "\f",
+    "v": "\v",
+    "a": "\a",
+    "r": "\r",
+    "s": " ",
+    "t": "\t",
+    "N": "\n\r"
+}
+
 
 # from requests.models import parse_header_links
 from . import state
@@ -551,26 +564,15 @@ def group(text):
     str_tmp = []
     id_tmp = []
     this = False
+    is_bytes = False
     rq = False
     quotes = {"str": '"', "pre": "}", "str1": "'"}
     str_type = "str"
     for i in text:
         if str_tmp:
             if this:
-                if i == "n":
-                    str_tmp.append("\n")
-                elif i == "r":
-                    str_tmp.append("\r")
-                elif i == "t":
-                    str_tmp.append("\t")
-                elif i == "b":
-                    str_tmp.append("\b")
-                elif i == "f":
-                    str_tmp.append("\f")
-                elif i == "a":
-                    str_tmp.append("\a")
-                elif i == "v":
-                    str_tmp.append("\v")
+                if i in chars:
+                    str_tmp.append(chars[i])
                 else:
                     str_tmp.append(i)
                 this = False
@@ -579,7 +581,8 @@ def group(text):
                 this = True
             elif i == quotes[str_type]:
                 text = "".join(str_tmp) + quotes[str_type]
-                res.append(text)
+                res.append(text[1:-1].encode("utf-8") if is_bytes else text)
+                if is_bytes: is_bytes = False
                 str_tmp.clear()
             else:
                 str_tmp.append(i)
@@ -595,8 +598,12 @@ def group(text):
             res.append(i)
         elif i in "\"{'":
             if id_tmp:
-                res.append("".join(id_tmp))
-                id_tmp.clear()
+                if len(id_tmp) == 5 and "".join(id_tmp) == "cstr?":
+                    is_bytes = True
+                    id_tmp.clear()
+                else:
+                    res.append("".join(id_tmp))
+                    id_tmp.clear()
             str_tmp.append(i)
             if i == '"':
                 str_type = "str"
@@ -613,7 +620,9 @@ def group(text):
     nres = []
     while res:
         i = res.pop(0)
-        if res and (tmp:=i+res[0]) in sym:
+        if not isinstance(i, str):
+            nres.append(i)
+        elif res and isinstance(res[0], str) and (tmp:=i+res[0]) in sym:
             nres.append(tmp)
             res.pop(0)
         else:
