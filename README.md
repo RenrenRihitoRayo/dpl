@@ -145,6 +145,10 @@ Most recent at top.
 
 # 1.4.8
 
+## Update mappings
+
+Updateappings are now unsupported!
+
 ## New website
 
 At [DarrenPapa.github.io](https://darrenpapa.github.io) still under work!
@@ -173,4 +177,4 @@ and code clarity.
 ## More bloat removal...
 
 Removed unnecessary imports.
-Using -skip-non-essential with -simple-run yields sub 400ms init time.
+Using `-skip-non-essential` with `-simple-run` yields sub 400ms init time.

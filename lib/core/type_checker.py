@@ -236,7 +236,8 @@ raise :: int
 raise[2] :: int str
 %dump_scope
 dump_vars :: dict
-tc_register :: str'''))
+tc_register :: str
+enum :: str'''))
 
 def get_ins(ins, args):
     atypes = ",".join(types:=map(lambda x: type(x).__name__, args))

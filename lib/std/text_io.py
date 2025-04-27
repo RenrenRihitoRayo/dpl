@@ -1,3 +1,5 @@
+from io import TextIOWrapper
+
 if __name__ != "__dpl__":
     raise Exception("This must be included by a DuProL script!")
 
@@ -10,6 +12,7 @@ helper = dpl.require(["dpl_helpers", "func_helper.py"])
 ext = dpl.extension(meta_name="io", alias=__alias__)
 ext.items["output"] = modules.sys.stdout
 
+dpl.type_checker.alias["TextIOWrapper"] = TextIOWrapper
 
 @ext.add_func("print", "@ranged $$ :: any ...")
 def myPrint(_, __, *args, end="", sep=" "):
@@ -45,9 +48,8 @@ def myInput(frame, __, prompt=None, name=None):
         dpl.varproc.rset(frame[-1], name, res)
 
 
-@ext.add_func(typed="$$ :: any")
-def setOutputFile(_, __, file):
-
+@ext.add_func(typed="$$ :: TextIOWrapper")
+def setoutputfile(_, __, file):
     ext.items["output"] = file
 
 

@@ -1,7 +1,7 @@
 &use {std/text_io.py}
 
-fn greet name
-    io:println (Sum "Hello " %name "!")
+fn greet [!name]
+    io:println [Sum "Hello " :name "!"]
 end
 
 greet "Darren"

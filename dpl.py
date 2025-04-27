@@ -397,7 +397,7 @@ def handle_args():
             print("Invalid invokation!")
             print("See 'dpl help' for more")
             exit(1)
-    if "pause" in varproc.flags:
+    if "pause" in prog_flags:
         input("\n[Press Enter To Finish]")
 
 if "init-time" in prog_flags:

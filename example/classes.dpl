@@ -1,30 +1,14 @@
-#!/usr/bin/dpl-run
-
 &use {std/text_io.py}
 
 object Person
-method :Person new name age
-    new :self temp
-    set temp.name :name
-    set temp.age  :age
-    return :temp
+method  Person.new [!name]
+    new :self tmp
+    set tmp.name :name
+    return :tmp
+end
+method Person.greet [!name]
+    io:println 'Hello ${name} Im ${self.name}'
 end
 
-method :Person ch_name new_name
-    set self.name :new_name
-end
-
-method :Person ch_age  new_age
-    set self.age :new_age
-end
-
-method :Person _im_repr
-    return 'Person(${self.name}, ${self.age})'
-end
-
-catch [my_person] Person.new "Darren" 15
-io:println :my_person
-my_person.ch_name "Alex"
-io:println :my_person
-my_person.ch_age  18
-io:println :my_person
+catch [!person] Person.new "Andrew"
+person.greet "Carl"

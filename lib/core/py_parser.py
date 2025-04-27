@@ -599,7 +599,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         if oargs is None:
             args = []
         else:
-            if ins not in {"while", "lazy"}:  # Lazy evaluation
+            if ins not in {"while"}:  # Lazy evaluation
                 try:
                     ins = process_arg(frame, ins)
                     args = process_args(frame, oargs)
@@ -848,7 +848,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             rset(obj, "_internal.instance_name", args[1])
             rset(frame[-1], args[1], copy(obj))
         elif ins == "method" and argc >= 2:
-            self, name, params = args
+            name, params = args
+            self = rget(frame[-1], name.rsplit(".", 1)[0])
             if self == constants.nil:
                 error.error(
                     pos, file, "Cannot bind a method to a value that isnt a context!"
@@ -980,6 +981,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
             nscope(frame)
+            if temp["self"] != constants.nil:
+                frame[-1]["self"] = temp["self"]
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
@@ -995,9 +998,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     )
                     break
                 for name, value in itertools.zip_longest(temp["args"], args):
-                    rset(frame[-1], name, value)
-            if temp["self"] != constants.nil:
-                frame[-1]["self"] = temp["self"]
+                    frame[-1][name] = value
             if temp["capture"] != constants.nil:
                 frame[-1]["_capture"] = temp["capture"]
             frame[-1]["_returns"] = rets
@@ -1370,6 +1371,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             and has(["defaults", "self", "body", "args", "capture"], temp)
         ):  # Call a function
             nscope(frame)
+            if temp["self"] != constants.nil:
+                frame[-1]["self"] = temp["self"]
             if temp["defaults"]:
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
@@ -1386,8 +1389,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     break
                 for name, value in itertools.zip_longest(temp["args"], args):
                     rset(frame[-1], name, value)
-            if temp["self"] != constants.nil:
-                frame[-1]["self"] = temp["self"]
             if temp["capture"] != constants.nil:
                 frame[-1]["_capture"] = temp["capture"]
             err = run(temp["body"], frame)

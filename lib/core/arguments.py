@@ -293,11 +293,7 @@ def expr_runtime(frame, arg):
     elif arg.startswith("'") and arg.endswith("'"):
         text = arg[1:-1]
         for name, value in flatten_dict(frame[-1]).items():
-            if f"${{{name}}}" in text:
-                text = text.replace(f"${{{name}}}", str(value))
-        for name, value in flatten_dict(frame[-1]).items():
-            if f"${{{name}!}}" in text:
-                text = text.replace(f"${{{name}!}}", repr(value))
+            text = text.replace(f"${{{name}}}", str(value))
         return text
     elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
         return arg
@@ -340,7 +336,7 @@ def is_static(frame, code):
                 return False
         elif not isinstance(i, str):
             continue
-        elif i in ("fast-format",):
+        elif i in KEYWORDS:
             return False
         elif is_pfvar(i):
             if varproc.rget(frame[-1], i[2:], default=None, meta=False) is None:
@@ -396,6 +392,8 @@ def evaluate(frame, expression):
         v1, op, v2 = processed
         if op in simple_ops:
             return simple_ops[op](v1, v2)
+    elif processed and processed[0] == "!":
+        return processed[1:]
     match (processed):
         # operations
         case ["-", val2]:
@@ -412,6 +410,8 @@ def evaluate(frame, expression):
             return start
         case [val1, "in", val2]:
             return val1 in val2
+        case [name, "->", value]:
+            return {name: value}
         # string op
         case ["fast-format", text]:
             local = flatten_dict(frame[-1], hide=True)
@@ -434,7 +434,7 @@ def evaluate(frame, expression):
             return constants.true if val1 > val2 else constants.false
         case [name, "=", value]:
             return kwarg(name, value)
-        case [obj, [index]]:
+        case [obj, "<", index, ">"]:
             if not isinstance(obj, (tuple, list, str)):
                 return constants.nil
             if isinstance(obj, (tuple, list, str)) and index >= len(obj):
@@ -476,8 +476,6 @@ def evaluate(frame, expression):
             for i in args:
                 temp.update(i)
             return temp
-        case ["!", *vals]:
-            return vals
         # values
         case ["nil?", value]:
             return value == constants.nil
@@ -515,13 +513,6 @@ def evaluate(frame, expression):
         case ["fset", name, "=", value]:
             varproc.rset(frame[-1], name, value, meta=False)
             return constants.nil
-        # method calling
-        case ["@", obj, "-", ">", method, *args] if hasattr(
-            obj, method
-        ):  # direct python method fetching. Ex: object.attr is `[@ :object -> attr]`
-            return getattr(obj, method)
-        case ["#", ins, *args] if ins in methods:
-            return methods[ins](frame, *args)
         case ["#", ins, *args] if ins in methods:
             return ins(frame, "_", *args)[0]
         case [obj, "@", method, *args] if hasattr(
@@ -553,7 +544,7 @@ def evaluate(frame, expression):
 
 sep = " ,"
 special_sep = "@()+/*#[]π<>=!π%"
-sym = [">=", "<=", "->", "==", "!=", "**"]
+sym = [">=", "<=", "->", "==", "!=", "**", "//"]
 
 def group(text):
     res = []
