@@ -146,11 +146,11 @@ except:
 def get_block(code, current_p, supress=False):
     "Get a code block"
     pos, file, _, _ = code[current_p]
-    p = current_p + 1
+    instruction_pointer = current_p + 1
     k = 1
     res = []
-    while p < len(code):
-        _, _, ins, _ = code[p]
+    while instruction_pointer < len(code):
+        _, _, ins, _ = code[instruction_pointer]
         if ins in info.INC_EXT:
             k += 1
         elif ins in info.INC:
@@ -159,14 +159,12 @@ def get_block(code, current_p, supress=False):
             k -= 1
         if k == 0:
             break
-        else:
-            res.append(code[p])
-        p += 1
+        instruction_pointer += 1
     else:
         if not supress:
             print(f"Error in line {pos} file {file!r}\nCause: Block wasnt closed!")
         return None
-    return p, res
+    return instruction_pointer, code[current_p+1:instruction_pointer]
 
 
 def has(attrs, dct):
@@ -447,90 +445,90 @@ def process(fcode, name="__main__"):
             )
             return error.PREPROCESSING_ERROR
         if dead_code and info.flags.DEAD_CODE_OPT:
-            p = 0
+            instruction_pointer = 0
             warn_num = 0
             nres = []
-            while p < len(res):
-                line = pos, file, ins, args = res[p]
+            while instruction_pointer < len(res):
+                line = line_pos, file, ins, args = res[instruction_pointer]
                 if args is None:
                     args = []
                 if (
                     ins in {"for", "loop", "while", "thread"}
-                    and p + 1 < len(res)
-                    and res[p + 1][2] in {"end", "stop", "skip"}
+                    and instruction_pointer + 1 < len(res)
+                    and res[instruction_pointer + 1][2] in {"end", "stop", "skip"}
                 ):
                     if warnings and info.flags.WARNINGS:
                         error.warn(
-                            f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}"
+                            f"Warning: {ins!r} statement is empty!\nLine {line_pos}\nIn file {file!r}"
                         )
-                    temp = get_block(res, p)
+                    temp = get_block(res, instruction_pointer)
                     if temp:
-                        p, _ = temp
+                        instruction_pointer, _ = temp
                     else:
                         return []
                     warn_num += 1
                 elif (
                     ins in {"if", "module", "body"}
-                    and p + 1 < len(res)
-                    and res[p + 1][2] == "end"
+                    and instruction_pointer + 1 < len(res)
+                    and res[instruction_pointer + 1][2] == "end"
                 ):
                     if warnings and info.flags.WARNINGS:
                         error.warn(
-                            f"Warning: {ins!r} statement is empty!\nLine {pos}\nIn file {file!r}"
+                            f"Warning: {ins!r} statement is empty!\nLine {line_pos}\nIn file {file!r}"
                         )
-                    temp = get_block(res, p)
+                    temp = get_block(res, instruction_pointer)
                     if temp:
-                        p, _ = temp
+                        instruction_pointer, _ = temp
                     else:
                         return []
                     warn_num += 1
                 elif (
                     ins in {"case", "match", "with", "default"}
-                    and p + 1 < len(res)
-                    and res[p + 1][2] in {"end", "return"}
+                    and instruction_pointer + 1 < len(res)
+                    and res[instruction_pointer + 1][2] in {"end", "return"}
                 ):
                     if ins != "default" and len(args) == 0:
                         error.warn(
-                            f"Error: Malformed {ins!r} statement/sub-statements!\nLine {pos}\nIn file {file!r}"
+                            f"Error: Malformed {ins!r} statement/sub-statements!\nLine {line_pos}\nIn file {file!r}"
                         )
                         return error.PREPROCESSING_ERROR
                     if warnings and info.flags.WARNINGS:
                         error.warn(
-                            f"Warning: {ins!r} statement/sub-statements is empty!\nLine {pos}\nIn file {file!r}"
+                            f"Warning: {ins!r} statement/sub-statements is empty!\nLine {line_pos}\nIn file {file!r}"
                         )
-                    temp = get_block(res, p)
+                    temp = get_block(res, instruction_pointer)
                     if temp:
-                        p, _ = temp
+                        instruction_pointer, _ = temp
                     else:
                         return []
                     warn_num += 1
                 elif (
                     ins in {"fn", "method"}
-                    and p + 1 < len(res)
-                    and res[p + 1][2] in {"end", "return"}
+                    and instruction_pointer + 1 < len(res)
+                    and res[instruction_pointer + 1][2] in {"end", "return"}
                 ):
-                    if res[p + 1][2] == "return" and len(res[p + 1][3]) != 0:
+                    if res[instruction_pointer + 1][2] == "return" and len(res[instruction_pointer + 1][3]) != 0:
                         nres.append(line)
-                        p += 1
+                        instruction_pointer += 1
                         continue
                     if len(args) == 0:
                         error.warn(
-                            f"Error: Malformed function definition!\nLine {pos}\nIn file {file!r}"
+                            f"Error: Malformed function definition!\nLine {line_pos}\nIn file {file!r}"
                         )
                         return error.PREPROCESSING_ERROR
                     if warnings and info.WARNINGS:
                         error.warn(
-                            f"Warning: Function {line[3][0]!r} is empty!\nLine {pos}\nIn file {file!r}"
+                            f"Warning: Function {line[3][0]!r} is empty!\nLine {line_pos}\nIn file {file!r}"
                         )
-                    temp = get_block(res, p)
+                    temp = get_block(res, instruction_pointer)
                     if temp:
-                        p, _ = temp
+                        instruction_pointer, _ = temp
                     else:
                         return []
                     if define_func:
                         if warnings and info.flags.WARNINGS:
                             print(
-                                f'Warning: set "{line[3][0]}" none\nLine {pos}\nIn file {file!r}'
+                                f'Warning: set "{line[3][0]}" none\nLine {line_pos}\nIn file {file!r}'
                             )
                         nres.append(
                             (pos, file, "set", [f'"{line[3][0]}"', constants.none])
@@ -539,7 +537,7 @@ def process(fcode, name="__main__"):
                     warn_num += 1
                 else:
                     nres.append(line)
-                p += 1
+                instruction_pointer += 1
             if warnings and info.flags.WARNINGS and warn_num:
                 print(f"Warning Info: {warn_num:,} Total warnings.")
         else:
@@ -548,19 +546,19 @@ def process(fcode, name="__main__"):
         np = 0
         used_names = set()
         defined_names = {}
-        for p, [pos, file, ins, args] in enumerate(nres):
+        for instruction_pointer, [pos, file, ins, args] in enumerate(nres):
             if ins in info.INC_EXT:
-                temp = get_block(nres, p, True)
+                temp = get_block(nres, instruction_pointer, True)
                 if not temp:
                     error.error(pos, file, f"{ins!r} statement is unclosed!")
                     return error.PREPROCESSING_ERROR
             if ins == "match":
-                temp = get_block(nres, p, True)
+                temp = get_block(nres, instruction_pointer, True)
                 for [pos, file, ins, _] in temp[1]:
                     if ins in {"as", "end"}:
                         ...
                     elif ins in {"with", "case", "default"}:
-                        _, body = get_block(nres, p)
+                        _, body = get_block(nres, instruction_pointer)
                         np = pos + len(body)
                     elif pos > np:
                         error.pre_error(
@@ -580,7 +578,7 @@ def process(fcode, name="__main__"):
 def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     "Run code generated by 'process'"
     global check_ins
-    p = 0
+    instruction_pointer = 0
     end_time = start_time = 0
     if isinstance(code, str):
         code = process(code)
@@ -596,8 +594,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     else:
         frame = nframe
     tc_cache = set()
-    while p < len(code) and not thread_event.is_set():
-        pos, file, ins, oargs = code[p]
+    while instruction_pointer < len(code) and not thread_event.is_set():
+        pos, file, ins, oargs = code[instruction_pointer]
         if oargs is None:
             args = []
         else:
@@ -630,29 +628,29 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         argc = len(args)
         if ins == "fn" and argc >= 1:
             name, *params = args
-            temp = get_block(code, p)
-            if temp is None:
+            block = get_block(code, instruction_pointer)
+            if block is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = block
             rset(frame[-1], name, objects.make_function(name, body, params))
         elif ins == "load_config" and argc == 1 and isinstance(args[0], dict):
             varproc.debug.update(args[0])
         elif ins == "get_time" and argc == 1:
             frame[-1][args[0]] = time.time()
         elif ins == "_intern.get_index" and argc == 1:
-            frame[-1][args[0]] = p
+            frame[-1][args[0]] = instruction_pointer
         elif ins == "_intern.jump" and argc == 1:
-            p = args[0]
+            instruction_pointer = args[0]
         elif ins == "_intern.jump" and argc == 2:
-            if args[1]: p = args[0]
+            if args[1]: instruction_pointer = args[0]
         elif ins == "pub" and argc >= 2 and args[0] == "fn":
             _, name, *params = args
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             rset(
                 frame[-1], "_export." + name, (temp:=objects.make_function(name, body, params))
             )
@@ -665,11 +663,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             tc_register(args[0])
         elif ins == "for" and argc == 3 and args[1] == "in":
             name, _, iter = args
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             if body:
                 for i in iter:
                     frame[-1][name] = i
@@ -683,22 +681,22 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "enum" and argc == 1:
             name = args[0]
             names = set()
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             for _, _, ins, _ in body:
                 names.add(ins)
             tmp = frame[-1][name] = {}
             for n in names:
                 tmp[n] = f"enum:{file}:{name}:{n}"
         elif ins == "loop" and argc == 0:
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             if body:
                 while not thread_event.is_set():
                     err = run(body, frame)
@@ -713,11 +711,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "dump_vars" and argc == 1 and isinstance(args[0], dict):
             pprint(args[0], hide=False)
         elif ins == "loop" and argc == 1:
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             if body:
                 for _ in range(args[0]):
                     err = run(body, frame)
@@ -728,11 +726,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                             continue
                         return err
         elif ins == "while" and argc > 0:
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             if body:
                 while not thread_event.is_set():
                     try:
@@ -773,42 +771,42 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "skip" and argc == 0:
             return error.SKIP_RESULT
         elif ins == "sched" and argc == 1:
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             while time.time() < args[0]:
                 pass
             err = run(body, frame=frame)
             if err:
                 return err
         elif ins == "if" and argc == 1:
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             if args[0]:
                 err = run(body, frame=frame)
                 if err:
                     return err
         elif ins == "ifmain" and argc == 1:
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             if file == "__main__":
                 err = run(body, frame=frame)
                 if err:
                     return err
         elif ins == "match" and argc == 1:
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             if (err := argproc.parse_match(frame, body, args[0])) > 0:
                 return err
         elif ins == "exec" and argc == 3:
@@ -830,11 +828,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             temp = [frame[-1]]
             nscope(temp)
             temp[-1]["_export"] = {}
-            btemp = get_block(code, p)
+            btemp = get_block(code, instruction_pointer)
             if btemp is None:
                 break
             else:
-                p, body = btemp
+                instruction_pointer, body = btemp
             err = run(body, temp)
             if err:
                 return err
@@ -856,11 +854,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     pos, file, "Cannot bind a method to a value that isnt a context!"
                 )
                 return error.RUNTIME_ERROR
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             rset(self, name, objects.make_method(name, body, params, self))
         elif ins == "START_TIME" and argc == 0:
             start_time = time.perf_counter()
@@ -879,11 +877,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "pass":
             ...
         elif ins == "thread" and argc == 0:
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
 
             def th():
                 if err := run(body, frame, thread_event):
@@ -899,11 +897,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if not isinstance(args[0], Event):
                 error.error(pos, file, "The given thread event was invalid!")
                 return error.THREAD_ERROR
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
 
             def th():
                 if err := run(body, frame, args[0]):
@@ -915,9 +913,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "exit" and argc == 0:
             my_exit()
         elif ins == "return":  # Return to the latched names
-            if not (temp := rget(frame[-1], "_returns")) != constants.nil:
-                ...
-            else:
+            if (temp := rget(frame[-1], "_returns")) != constants.nil:
                 if (
                     "_safe_call" in frame[-1]
                     and frame[-1]["_safe_call"] == constants.true
@@ -1025,16 +1021,14 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 )
             )
             if (
-                (temp := rget(frame[-1], func_name)) == constants.nil
-                and isinstance(temp, dict)
-                and mem_args in temp
+                (temp := rget(frame[-1], func_name, default=None)) is None
             ):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
             if mem_args in temp["memoize"]:
                 for name, value in zip(rets, temp["memoize"][mem_args]):
                     rset(frame[-1], name, value)
-                p += 1
+                instruction_pointer += 1
                 continue
             nscope(frame)
             if temp["defaults"]:
@@ -1086,7 +1080,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if mem_args in temp["memoize"]:
                 for name, value in zip(rets, temp["memoize"][mem_args]):
                     rset(frame[-1], name, value)
-                p += 1
+                instruction_pointer += 1
                 continue
             nscope(frame)
             if temp["defaults"]:
@@ -1158,11 +1152,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 break
             try:
-                btemp = get_block(code, p)
+                btemp = get_block(code, instruction_pointer)
                 if btemp is None:
                     break
                 else:
-                    p, body = btemp
+                    instruction_pointer, body = btemp
                 if argc == 2 and isinstance(args[0], dict) and args[0].get("[KWARGS]"):
                     args[0].pop("[KWARGS]")
                     pa = args[0].pop("[PARGS]", tuple())
@@ -1263,21 +1257,21 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
         elif ins == "template" and argc == 1:
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             if argproc.parse_template(frame, args[0], body):
                 break
         elif ins == "from_template" and argc == 2:
             template = args[0]
             tname = args[1]
-            temp = get_block(code, p)
+            temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
-                p, body = temp
+                instruction_pointer, body = temp
             dct = {}
             if template != constants.none:
                 for pos, _, vname, vitem in body:
@@ -1407,16 +1401,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             temp, "__call__"
         ):  # call a python function
             try:
-                if argc == 1 and isinstance(args[0], dict) and args[0].get("[KWARGS]"):
-                    args[0].pop("[KWARGS]")
-                    pa = args[0].pop("[PARGS]", tuple())
-                    res = ext_s.call(
-                        temp, frame, varproc.meta["internal"]["main_path"], pa, args[0]
-                    )
-                else:
-                    res = ext_s.call(
-                        temp, frame, varproc.meta["internal"]["main_path"], args
-                    )
+                res = ext_s.call(
+                    temp, frame, varproc.meta["internal"]["main_path"], args
+                )
                 if isinstance(res, int) and res:
                     return res
                 elif isinstance(res, str):
@@ -1457,7 +1444,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 )
             error.error(pos, file, f"Invalid instruction {ins}")
             return error.RUNTIME_ERROR
-        p += 1
+        instruction_pointer += 1
     else:
         return 0
     error.error(pos, file, "Error was raised!")

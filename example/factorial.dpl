@@ -15,8 +15,8 @@ fn fact n
     if [:n <= 1]
         return 1
     end
-    catch [f] _global.fact (:n - 1)
-    freturn [:n * :f]
+    catch [f] _global.fact [:n - 1]
+    return [:n * :f]
 end
 
 io:println "Factorial Program\n"

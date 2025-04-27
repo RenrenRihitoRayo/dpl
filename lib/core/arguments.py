@@ -3,6 +3,24 @@
 
 from sys import flags
 import traceback
+import operator
+
+simple_ops = {
+    '+': operator.add,
+    '-': operator.sub,
+    '*': operator.mul,
+    '/': operator.truediv,
+    '//': operator.floordiv,
+    '%': operator.mod,
+    '<': lambda *x: constants.true if operator.lt(*x) else constants.false,
+    '<=': lambda *x: constants.true if operator.le(*x) else constants.false,
+    '>': lambda *x: constants.true if operator.gt(*x) else constants.false,
+    '>=': lambda *x: constants.true if operator.ge(*x) else constants.false,
+    '==': lambda *x: constants.true if operator.eq(*x) else constants.false,
+    '!=': lambda *x: constants.true if operator.ne(*x) else constants.false,
+    "**": operator.pow
+}
+
 
 # from requests.models import parse_header_links
 from . import state
@@ -373,20 +391,17 @@ class kwarg:
 
 def evaluate(frame, expression):
     "Evaluate an expression"
-    match (process_args(frame, expression)):
+    processed = process_args(frame, expression)
+    if len(processed) == 3:
+        v1, op, v2 = processed
+        if op in simple_ops:
+            return simple_ops[op](v1, v2)
+    match (processed):
         # operations
-        case [val1, "+", val2]:
-            return val1 + val2
-        case [val1, "-", val2]:
-            return val1 - val2
         case ["-", val2]:
             return - val2
         case ["~", val2]:
             return ~ val2
-        case [val1, "*", val2]:
-            return val1 * val2
-        case [val1, "/", val2]:
-            return val1 / val2
         case ["Type", item]:
             return getattr(type(item), "__name__", constants.nil)
         case ["Sum", *args]:
@@ -397,12 +412,6 @@ def evaluate(frame, expression):
             return start
         case [val1, "in", val2]:
             return val1 in val2
-        case [val1, "/", "/", val2]:
-            return val1 // val2
-        case [val1, "mod", val2]:
-            return val1 % val2
-        case [val1, "^", val2]:
-            return val1**val2
         # string op
         case ["fast-format", text]:
             local = flatten_dict(frame[-1], hide=True)
@@ -411,14 +420,6 @@ def evaluate(frame, expression):
                     text = text.replace(f"${{{name}}}", str(value)) 
             return text
         # conditionals
-        case [val1, "==", val2]:
-            return constants.true if val1 == val2 else constants.false
-        case [val1, "!=", val2]:
-            return constants.true if val1 != val2 else constants.false
-        case [val1, "and", val2]:
-            return constants.true if val1 and val2 else constants.false
-        case [val1, "or", val2]:
-            return constants.true if val1 or val2 else constants.false
         case ["not", val2]:
             return constants.true if not val2 else constants.false
         case ["if", value, "then", true_v, "else", false_v]:
@@ -551,8 +552,8 @@ def evaluate(frame, expression):
 
 
 sep = " ,"
-special_sep = "@()+/*#[]π<>=!π"
-sym = [">=", "<=", "->", "==", "!="]
+special_sep = "@()+/*#[]π<>=!π%"
+sym = [">=", "<=", "->", "==", "!=", "**"]
 
 def group(text):
     res = []
@@ -620,13 +621,13 @@ def group(text):
         res.append("".join(id_tmp))
     nres = []
     while res:
-        i = res.pop()
-        if res and (tmp:=i+res[-1]) in sym:
+        i = res.pop(0)
+        if res and (tmp:=i+res[0]) in sym:
             nres.append(tmp)
-            res.pop()
+            res.pop(0)
         else:
             nres.append(i)
-    return nres[::-1]
+    return nres
 
 
 def exprs_preruntime(args):

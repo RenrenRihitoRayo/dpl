@@ -139,11 +139,18 @@ Why use DPL?
 
 ---
 
+<!-- CHANGE_NOTES --->
+
 # Change Notes / Dev Logs
 
 Most recent at top.
 
 # 1.4.8
+
+## The great renaming
+
+Renaming every variable possible for maintainability
+and code clarity.
 
 ## More bloat removal...
 

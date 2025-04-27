@@ -213,13 +213,14 @@ def rset(dct, full_name, value, sep=".", meta=True):
                 )
                 return
             with W_LOCK:
-                if meta and name in node and "[update_mapping]" in (temp := node):
-                    names = temp["[update_mapping]"].get(name, name)
+                if meta and name in node and "[update_mapping]":
+                    names = node["[update_mapping]"].get(name, name)
                     if isinstance(names, tuple):
                         for vname in names:
-                            temp[vname] = value
+                            node[vname] = value
                     else:
-                        temp[names] = value
-                temp[name] = value
+                        node[names] = value
+                else:
+                    node[name] = value
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was set to `{value!r}`!")
