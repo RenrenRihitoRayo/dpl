@@ -147,9 +147,11 @@ Most recent at top.
 
 ## New function definition syntax
 
+```DuProL
 fn [!arg1 arg2 ... arg3]
     ... body
 end
+```
 
 ## Introduced new flags
 
