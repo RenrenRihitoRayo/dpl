@@ -145,6 +145,11 @@ Most recent at top.
 
 # 1.4.8
 
+## Introduced new flags
+
+Certai  flags has been added.
+See `dpl help`
+
 ## The great renaming
 
 Renaming every variable possible for maintainability
