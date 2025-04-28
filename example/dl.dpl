@@ -1,6 +1,5 @@
 &use {std/text_io.py}
 &use {std/dl_tools.py}
-&use {std/strings.py}
 
 --
     This is how to use the ffi api in DPL
@@ -27,7 +26,7 @@ ccatch return :hello
 # print the result
 io:println [@ dl_tools:convert_c_string :return]
 
-ccall :print_this [@ strings.encode "This text will get printed by C"]
+ccall :print_this cstr?"This text will get printed by C"
 
 
 end_ffi

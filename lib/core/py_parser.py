@@ -218,7 +218,6 @@ def process(fcode, name="__main__"):
     define_func = False
     multiline = False
     last_comment = 0
-    offset = 0
     for lpos, line in filter(
         lambda x: (
             True
@@ -374,13 +373,6 @@ def process(fcode, name="__main__"):
                 if ext_s.luaj_import(nframe, file, search_path, loc="."):
                     print(f"luaj: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
-            elif ins == "file" and argc == 1:
-                name = args[0]
-                offset = lpos
-            elif ins == "version" and argc == 1:
-                if err := info.VERSION.getDiff(args[0]):
-                    error.pre_error(lpos, name, f"{name!r}:{lpos}: {err}")
-                    return error.COMPAT_ERROR
             elif ins == "embed" and argc == 3 and args[1] == "as":
                 if args[0] == name:
                     nframe[-1][args[2]] = fcode
@@ -435,7 +427,7 @@ def process(fcode, name="__main__"):
             args = argproc.to_static(nframe,
                 args
             )  # If there are static parts in the arguments run them before runtime.
-            res.append((lpos - offset, name, ins, args if len(args) else None))
+            res.append((lpos, name, ins, args if len(args) else None))
     else:
         if multiline:
             error.pre_error(
@@ -545,6 +537,7 @@ def process(fcode, name="__main__"):
             nres = res
         # pass for switches
         res = []
+        offset = 0
         whole_offset = 0
         for instruction_pointer, [line_pos, file, ins, args] in enumerate(nres):
             if ins == "switch" and len(args) == 1:
@@ -578,34 +571,8 @@ def process(fcode, name="__main__"):
                 res.append([og_lpos, file, "_intern.switch", [body, arg_val]])
             elif offset >= whole_offset:
                 res.append([line_pos, file, ins, args])
-        nres = res
-        del res
-        # Try to catch syntax errors earlier
-        np = 0
-        for instruction_pointer, [line_pos, file, ins, args] in enumerate(nres):
-            if ins in info.INC_EXT:
-                temp = get_block(nres, instruction_pointer, True)
-                if temp is None:
-                    error.error(line_pos, file, f"{ins!r} statement is unclosed!")
-                    return error.PREPROCESSING_ERROR
-            if ins == "match":
-                temp = get_block(nres, instruction_pointer, True)
-                for [line_pos, file, ins, _] in temp[1]:
-                    if ins in {"as", "end"}:
-                        ...
-                    elif ins in {"with", "case", "default"}:
-                        _, body = get_block(nres, instruction_pointer)
-                        np = pos + len(body)
-                    elif pos > np:
-                        error.pre_error(
-                            line_pos,
-                            file,
-                            f"Only 'case', 'with', 'default' and 'as' statements are allowed in match blocks!\nGot: {ins}",
-                        )
-                        return error.PREPROCESSING_ERROR
-                np = 0
         return {
-            "code": nres,
+            "code": res,
             "frame": nframe or None,
         }
     return error.PREPROCESSING_ERROR
@@ -634,8 +601,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         pos, file, ins, oargs = code[instruction_pointer]
         if oargs is None:
             args = []
+            argc = 0
         else:
-            if ins not in {"while"}:  # Lazy evaluation
+            if ins != "while":  # Lazy evaluation
                 try:
                     ins = process_arg(frame, ins)
                     args = process_args(frame, oargs)
@@ -661,7 +629,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     return error.PYTHON_ERROR
             else:
                 args = oargs
-        argc = len(args)
         if ins == "fn" and argc >= 1:
             name, params = args
             block = get_block(code, instruction_pointer)
