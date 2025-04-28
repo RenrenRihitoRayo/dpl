@@ -143,6 +143,14 @@ Most recent at top.
 ## Tuples!
 
 Tuples are now supported using parenthesis!
+Along with the new function calling and definition!
+
+```DuProL
+fn func(arg1 arg2 ... argN)
+
+end
+func(arg1 arg2 ... argN)
+```
 
 ## New switch statements!
 
