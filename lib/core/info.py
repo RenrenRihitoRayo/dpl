@@ -53,6 +53,15 @@ INC = {"thread": 1}
 
 DEC = {"end"}
 
+RT_EXPR = {
+    "tuple", "?tuple",
+    "dict", "?dict",
+    "?int", "?float", "?str",
+    'LenOf', 'Type', 'Range', 'RawRange', 'dRange',
+    'dRawRange', 'mod', 'nil?', 'none?', 'Sum', '?bytes', 'def?',
+    "Eval"
+}
+
 KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
     'set',
     'del',
@@ -64,15 +73,8 @@ KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
     'stop',
     'raise', 'tc_register',
     'true', 'false', 'nil', 'none', '...',
-    '!list', '!tuple', '!dict',
-    '?str', '?int', '?float', '?list', '?tuple',
-    '?dict',
-    'dict',
     'export',
     'in', 'as', 'not', 'and', 'or',
-    'LenOf', 'Type', 'Range', 'RawRange', 'dRange',
-    'dRawRange', 'mod', 'nil?', 'none?', 'Sum', '?bytes', 'def?',
-    'Expr', 'lazy',
     'thread', 'wait_for_threads',
     'exec', 'sexec',
     'dlopen', 'dlclose', 'cget', 'cdef',

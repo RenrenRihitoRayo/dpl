@@ -13,6 +13,7 @@ from . import arguments as argproc
 process_arg = argproc.process_arg
 process_args = argproc.process_args
 exprs_preruntime = argproc.exprs_preruntime
+evaluate = argproc.evaluate
 from . import error
 from . import utils
 from . import objects
@@ -117,7 +118,8 @@ if "get-internals" in info.program_flags:
     varproc.meta["argument_processing"] = {
         "process_argument":process_arg,
         "process_argumemts":process_args,
-        "preprocess_arguments":exprs_preruntime
+        "preprocess_arguments":exprs_preruntime,
+        "evaluate":evaluate
     }
     
     varproc.meta["variable_processing"] = {
@@ -599,36 +601,36 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     tc_cache = set()
     while instruction_pointer < len(code) and not thread_event.is_set():
         pos, file, ins, oargs = code[instruction_pointer]
-        if oargs is None:
+        ins = process_arg(frame, ins)
+        if ins == "while":
+            args = oargs
+            argc = len(oargs)
+        elif not oargs is None:
+            try:
+                args = process_args(frame, oargs)
+                argc = len(args)
+                if vdebug["type_checker"]:
+                    if (tmp:=(pos, file, ins)) not in tc_cache:
+                        tc_cache.add(tmp)
+                        if not check_ins(ins, args):
+                            itypesr = type_checker.get_ins(ins, args)
+                            if itypesr is None and not varproc.is_debug_enabled("TC_DEFAULT_WHEN_NOT_FOUND"):
+                                error.error(pos, file, f"Type signature for {ins} is not defined.\nUse tc_register to register your function.")
+                                return error.TYPE_ERROR
+                            itypes = tuple(map(lambda x: getattr(x, "__name__", x), itypesr))
+                            atypes = tuple(map(lambda x: type(x).__name__, args))
+                            error.error(pos, file, f"Type mismatch [{ins}]: Expected {itypes} but got {atypes}")
+                            return error.TYPE_ERROR
+            except Exception as e:
+                error.error(
+                    pos,
+                    file,
+                    f"Something went wrong when arguments were processed:\n{e}\n> {oargs!r}",
+                )
+                return error.PYTHON_ERROR
+        else:
             args = []
             argc = 0
-        else:
-            if ins != "while":  # Lazy evaluation
-                try:
-                    ins = process_arg(frame, ins)
-                    args = process_args(frame, oargs)
-                    argc = len(args)
-                    if vdebug["type_checker"]:
-                        if (tmp:=(pos, file, ins)) not in tc_cache:
-                            tc_cache.add(tmp)
-                            if not check_ins(ins, args):
-                                itypesr = type_checker.get_ins(ins, args)
-                                if itypesr is None and not varproc.is_debug_enabled("TC_DEFAULT_WHEN_NOT_FOUND"):
-                                    error.error(pos, file, f"Type signature for {ins} is not defined.\nUse tc_register to register your function.")
-                                    return error.TYPE_ERROR
-                                itypes = tuple(map(lambda x: getattr(x, "__name__", x), itypesr))
-                                atypes = tuple(map(lambda x: type(x).__name__, args))
-                                error.error(pos, file, f"Type mismatch [{ins}]: Expected {itypes} but got {atypes}")
-                                return error.TYPE_ERROR
-                except Exception as e:
-                    error.error(
-                        pos,
-                        file,
-                        f"Something went wrong when arguments were processed:\n{e}\n> {oargs!r}",
-                    )
-                    return error.PYTHON_ERROR
-            else:
-                args = oargs
         if ins == "fn" and argc >= 1:
             name, params = args
             block = get_block(code, instruction_pointer)
@@ -733,25 +735,14 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         elif err == error.SKIP_RESULT:
                             continue
                         return err
-        elif ins == "while" and argc > 0:
+        elif ins == "while" and argc == 1:
             temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
                 instruction_pointer, body = temp
             if body:
-                while not thread_event.is_set():
-                    try:
-                        (res,) = argproc.process_args(frame, args)
-                        if not res:
-                            break
-                    except Exception as e:
-                        error.error(
-                            pos,
-                            file,
-                            f"Something went wrong when arguments were processed:\n{e}\n> {args!r}",
-                        )
-                        return error.RUNTIME_ERROR
+                while not thread_event.is_set() and (tmp:=evaluate(frame, args[0])):
                     err = run(body, frame)
                     if err:
                         if err == error.STOP_RESULT:
@@ -1295,9 +1286,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         )
                         return error.NAME_ERROR
                     value, = argproc.process_args(frame, vitem)
-                    if value == "$default":
+                    if value == ".default":
                         dct[vname] = template[f"value:{vname}"]
-                    elif value == "$name":
+                    elif value == ".name":
                         dct[vname] = tname
                     elif template[vname] == constants.any:
                         dct[vname] = value

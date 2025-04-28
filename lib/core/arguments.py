@@ -350,11 +350,10 @@ def is_static(frame, code):
                 return False
         elif not isinstance(i, str):
             continue
-        elif i in KEYWORDS:
+        elif i in RT_EXPR:
             return False
-        elif is_pfvar(i):
-            if varproc.rget(frame[-1], i[2:], default=None, meta=False) is None:
-                return False
+        elif is_pfvar(i) and varproc.rget(frame[-1], i[2:], default=None, meta=False) is None:
+            return False
         elif is_fvar(i):
             return False
     return True
@@ -371,8 +370,6 @@ def to_static(frame, code):
             continue
         elif is_pfvar(i) and (not (var:=varproc.rget(frame[-1], i[2:], default=None)) is None):
             code[pos] = var
-        else:
-            break
     return code
 
 
@@ -426,6 +423,8 @@ def evaluate(frame, expression):
             return val1 in val2
         case [name, "->", value]:
             return {name: value}
+        case ["Eval", expr]:
+            return evaluate(frame, expr)
         # string op
         case ["fast-format", text]:
             local = flatten_dict(frame[-1], hide=True)
@@ -458,15 +457,13 @@ def evaluate(frame, expression):
             else:
                 return obj[index]
         # types
-        case ["?list", *lst]:
-            return lst
         case ["tuple", *lst]:
             return tuple(lst)
         case ["?tuple", lst]:
             return tuple(lst)
-        case ["?set", *lst]:
+        case ["?set", lst]:
             return set(lst)
-        case ["?dict", *lst]:
+        case ["?dict", lst]:
             return dict(lst)
         case ["?string", item]:
             return str(item)

@@ -1,5 +1,5 @@
 &use {std/text_io.py}
-&use {std/types.py}
+&use {std/py_types.py}
 
 template Person
     define name as :types.str = "default_name"
@@ -8,9 +8,9 @@ template Person
 end
 
 from_template :Person Andrew
-    name $name
+    name .name
     age 15
-    data [dict [this=what]]
+    data [dict [this->what]]
 end
 
 io:println :Andrew

@@ -140,6 +140,12 @@ Most recent at top.
 
 # 1.4.8
 
+## Upcomming syntax changes!
+
+DPL 1.4.8 will try to adhere to standardized and
+common syntax. This is to facilitate accessability
+and makes learning DPL easier.
+
 ## Tuples!
 
 Tuples are now supported using parenthesis!
