@@ -444,6 +444,7 @@ def process(fcode, name="__main__"):
                 f"{name!r}:{last_comment}: Unclosed multiline comment!",
             )
             return error.PREPROCESSING_ERROR
+        nres = []
         if dead_code and info.flags.DEAD_CODE_OPT:
             instruction_pointer = 0
             warn_num = 0
@@ -542,19 +543,54 @@ def process(fcode, name="__main__"):
                 print(f"Warning Info: {warn_num:,} Total warnings.")
         else:
             nres = res
+        # pass for switches
+        res = []
+        whole_offset = 0
+        for instruction_pointer, [line_pos, file, ins, args] in enumerate(nres):
+            if ins == "switch" and len(args) == 1:
+                body = {None:[]}
+                arg_val = args[0]
+                og_lpos = line_pos
+                temp = get_block(nres, instruction_pointer)
+                if temp is None:
+                    error.error(line_pos, file, "Switch statement is invalid!")
+                    return error.PREPROCESSING_ERROR
+                offset = instruction_pointer
+                whole_offset, switch_block = temp 
+                for instruction_pointer, [line_pos, _, ins, args] in enumerate(switch_block):
+                    if ins == "case" and len(args) == 1:
+                        temp = get_block(switch_block, instruction_pointer)
+                        if temp is None:
+                            error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
+                            return error.PREPROCESSING_ERROR
+                        offset, body[args[0]] = temp
+                    elif ins == "default" and args is None:
+                        temp = get_block(switch_block, instruction_pointer)
+                        if temp is None:
+                            error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
+                            return error.PREPROCESSING_ERROR
+                        offset, body[None] = temp
+                    else:
+                        if instruction_pointer > offset:
+                            error.error(line_pos, file, "Invalid switch statement!")
+                            return error.PREPROCESSING_ERROR
+                whole_offset += len(switch_block)
+                res.append([og_lpos, file, "_intern.switch", [body, arg_val]])
+            elif offset >= whole_offset:
+                res.append([line_pos, file, ins, args])
+        nres = res
+        del res
         # Try to catch syntax errors earlier
         np = 0
-        used_names = set()
-        defined_names = {}
-        for instruction_pointer, [pos, file, ins, args] in enumerate(nres):
+        for instruction_pointer, [line_pos, file, ins, args] in enumerate(nres):
             if ins in info.INC_EXT:
                 temp = get_block(nres, instruction_pointer, True)
-                if not temp:
-                    error.error(pos, file, f"{ins!r} statement is unclosed!")
+                if temp is None:
+                    error.error(line_pos, file, f"{ins!r} statement is unclosed!")
                     return error.PREPROCESSING_ERROR
             if ins == "match":
                 temp = get_block(nres, instruction_pointer, True)
-                for [pos, file, ins, _] in temp[1]:
+                for [line_pos, file, ins, _] in temp[1]:
                     if ins in {"as", "end"}:
                         ...
                     elif ins in {"with", "case", "default"}:
@@ -562,14 +598,14 @@ def process(fcode, name="__main__"):
                         np = pos + len(body)
                     elif pos > np:
                         error.pre_error(
-                            pos,
+                            line_pos,
                             file,
                             f"Only 'case', 'with', 'default' and 'as' statements are allowed in match blocks!\nGot: {ins}",
                         )
                         return error.PREPROCESSING_ERROR
                 np = 0
         return {
-            "code": nres if dead_code and info.flags.DEAD_CODE_OPT else res,
+            "code": nres,
             "frame": nframe or None,
         }
     return error.PREPROCESSING_ERROR
@@ -691,6 +727,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             tmp = frame[-1][name] = {}
             for n in names:
                 tmp[n] = f"enum:{file}:{name}:{n}"
+        elif ins == "_intern.switch" and argc == 2:
+            body = args[0].get(args[1], args[0][None])
+            if err:=run(body, frame):
+                error.error(pos, file, f"Error in switch block '{args[1]}'")
+                return err
         elif ins == "loop" and argc == 0:
             temp = get_block(code, instruction_pointer)
             if temp is None:

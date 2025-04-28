@@ -140,6 +140,33 @@ Most recent at top.
 
 # 1.4.8
 
+## New switch statements!
+
+```DuProL
+# compiles into
+# _intern.switch {"test":..., "darren":..., None:...} :value
+# doesnt allow fallthroughs since its not a real
+# jump table.
+io:input "Name: " value
+switch :value
+    case test
+        io:println "Test!"
+    end
+    case darren
+        io:println "Hello Creator, welcome back!"
+    end
+    # also case PyNone
+    default
+        io:println 'Hello ${value}!'
+    end
+end
+# internally
+# _intern.switch is just fetching the value and running it.
+# no comparisons at the cost of no fallthroughs.
+# Switch statements only uses literals.
+# No conditions unlike the match statement.
+```
+
 ## Added CString literals
 
 ```DuProL

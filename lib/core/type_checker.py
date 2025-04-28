@@ -25,6 +25,7 @@ typed = {
 alias = {
     "bool": int,
     "pythonBool": bool,
+    "pythonNone": None,
     "ident": str,
     "scope": dict,
     "iterable":str|list|tuple|set|dict|range,
@@ -41,13 +42,17 @@ def match_type(types, input, ranged=False):
     for pos, [t, tt] in enumerate(zip(types, input)):
         if t == "...": break
         last = t
-        if isinstance(t, str) and not t == tt:
-            return False
+        if t is None:
+            if not tt is None:
+                return False
+            continue
+        elif isinstance(t, str):
+            if isinstance(t, str) and not t == tt:
+                return False
+            continue
         elif isinstance(t, state.bstate) and not t == tt:
             return False
-        if isinstance(t, str):
-            continue
-        if not isinstance(tt, t):
+        elif not isinstance(tt, t):
             return False
     if not input or not pos:
         return True
@@ -237,7 +242,10 @@ raise[2] :: int str
 %dump_scope
 dump_vars :: dict
 tc_register :: str
-enum :: str'''))
+enum :: str
+%_intern.jump[int]
+_intern.jump[2] :: int any
+_intern.switch :: dict any'''))
 
 def get_ins(ins, args):
     atypes = ",".join(types:=map(lambda x: type(x).__name__, args))

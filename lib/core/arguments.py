@@ -61,12 +61,7 @@ def nest_args(tokens):
         elif token in CLOSE_P:
             if len(stack) == 1:
                 raise ValueError("Mismatched parentheses")
-            st = False
-            if stack[-1] and stack[-1][0] == "#" and stack[-1][-1] == "#":
-                st = True
             stack.pop()
-            if st:
-                stack[-1].pop()
         else:
             stack[-1].append(token)
     if len(stack) > 1:
@@ -276,6 +271,8 @@ def expr_preruntime(arg):
         return []
     elif arg == ".set":
         return set()
+    elif arg == ".None":
+        return None
     elif arg == "π":
         return 22/7
     return arg

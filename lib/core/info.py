@@ -45,7 +45,8 @@ INC_EXT = {
     "default",
     "sched",
     "enum",
-    "ifmain"
+    "ifmain",
+    "switch"
 }
 
 INC = {"thread": 1}

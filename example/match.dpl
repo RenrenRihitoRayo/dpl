@@ -2,23 +2,44 @@
 
 io:input "Name: " name
 
-initDataFile list logged_in "logged_in.pkl"
+set users .set
 
+# Cascading with explicit control through fallthrough
 match :name
     with "admin"
         io:println "Logged in as admin"
-        ...
     end
-    as user
-    case (:name in :loged_in)
-        io:println 'Welcome ${user}'
+    case [:name in :users]
+        io:println "Welcome!"
     end
     default
         io:println 'User ${user} is not logged in!'
         io:input "Register? [y] " reg
-        if (:reg == "y")
-            io:input "Name: " name
-            pass (Append :logged_in :name)
+        if [:reg == "y"]
+            pass [:users@add :name]
         end
     end
 end
+
+# compiles into
+# _intern.switch {"test":..., "darren":..., None:...} :value
+# doesnt allow fallthroughs since its not a real
+# jump table.
+io:input "Name: " value
+switch :value
+    case test
+        io:println "Test!"
+    end
+    case darren
+        io:println "Hello Creator, welcome back!"
+    end
+    # also case PyNone
+    default
+        io:println 'Hello ${value}!'
+    end
+end
+# internally
+# _intern.switch is just fetching the value and running it.
+# no comparisons at the cost of no fallthroughs.
+# Switch statements only uses literals.
+# No conditions unlike the match statement.
