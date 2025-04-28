@@ -984,7 +984,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 i.join()
             threads.clear()
         elif ins == "catch" and argc >= 2:  # catch return value of a function
-            rets, func_name, *args = args
+            rets, func_name, args = args
             if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
@@ -1018,7 +1018,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "DEFINE_ERROR" and 0 < argc < 3:
             error.register_error(*args)
         elif ins == "mcatch" and argc >= 2:  # catch return value of a function
-            rets, func_name, *args = args
+            rets, func_name, args = args
             mem_args = tuple(
                 map(
                     lambda x: (
@@ -1068,7 +1068,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 return err
             pscope(frame)
         elif ins == "smcatch" and argc >= 2 and len(args[0]) >= 1:  # safe catch return value of a function
-            rets, func_name, *args = args
+            rets, func_name, args = args
             mem_args = tuple(
                 map(
                     lambda x: (
@@ -1122,7 +1122,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             error.active()
             pscope(frame)
         elif ins == "scatch" and argc >= 2 and len(args[0]) >= 1:  # catch return value of a function
-            rets, func_name, *args = args
+            rets, func_name, args = args
             if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
@@ -1156,7 +1156,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             error.active()
             pscope(frame)
         elif ins == "body" and argc >= 1:  # give a code block to a python function
-            name, *args = args
+            name, args = args
             if (temp := rget(frame[-1], name)) == constants.nil or not hasattr(temp, "__call__"):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 break
@@ -1203,7 +1203,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "pause" and argc == 0:
             input()
         elif ins == "pycatch" and argc >= 2:  # catch return value of a python function
-            rets, name, *args = args
+            rets, name, args = args
             if (temp := rget(frame[-1], name)) == constants.nil or not hasattr(temp, "__call__"):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 return error.NAME_ERROR
@@ -1246,7 +1246,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
         elif ins == "ccall" and argc >= 1:
-            name, *args = args
+            name, args = args
             if not name:
                 error.error(pos, file, "Function not defined!")
                 break
@@ -1256,7 +1256,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
         elif ins == "ccatch" and argc >= 1:
-            ret, name, *args = args
+            ret, name, args = args
             if not name:
                 error.error(pos, file, "Function not defined!")
                 break

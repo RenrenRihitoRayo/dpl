@@ -22,12 +22,12 @@ end
 io:println "Factorial Program\n"
 
 START_TIME
-mcatch [this] memoize_fact 28000
+mcatch [this] memoize_fact 20000
 STOP_TIME
 LOG_TIME "With memoization"
 
 START_TIME
-catch [this] fact 28000
+catch [this] fact 20000
 STOP_TIME
 LOG_TIME "Without"
 
@@ -35,11 +35,11 @@ io:println "\nSecond Pass\n"
 
 START_TIME
 # to make sure it has a cache miss when doing 28001
-mcatch [this] memoize_fact 28001
+mcatch [this] memoize_fact 20001
 STOP_TIME
 LOG_TIME "With memoization"
 
 START_TIME
-catch [this] fact 28000
+catch [this] fact 20000
 STOP_TIME
 LOG_TIME "Without"

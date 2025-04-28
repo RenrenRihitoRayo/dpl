@@ -140,6 +140,10 @@ Most recent at top.
 
 # 1.4.8
 
+## Tuples!
+
+Tuples are now supported using parenthesis!
+
 ## New switch statements!
 
 ```DuProL

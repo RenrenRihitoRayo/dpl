@@ -62,6 +62,8 @@ def nest_args(tokens):
             if len(stack) == 1:
                 raise ValueError("Mismatched parentheses")
             stack.pop()
+            if token == ")":
+                stack[-1].append(tuple(stack[-1].pop()))
         else:
             stack[-1].append(token)
     if len(stack) > 1:
@@ -282,6 +284,8 @@ def expr_runtime(frame, arg):
     "Process an argument at runtime"
     if isinstance(arg, list):
         return evaluate(frame, arg)
+    elif isinstance(arg, tuple):
+        return tuple(map(lambda arg: expr_runtime(frame, arg), arg))
     elif not isinstance(arg, str):
         return arg
     elif is_fvar(arg):

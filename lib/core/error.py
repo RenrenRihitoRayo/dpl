@@ -42,6 +42,7 @@ for pos, name in enumerate(ERRORS, 1):
 STOP_RESULT = -1
 SKIP_RESULT = -2
 FALLTHROUGH = -3
+STOP_FUNCTION = -4
 
 ERRORS_DICT = {
     globals().get(name): name for name in filter(lambda x: x.endswith("ERROR"), dir())

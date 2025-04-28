@@ -155,22 +155,15 @@ def rec(this, ind=0):
                 )
 
 
-def ez_run(code, process=True, file="???", profile=False):
+def ez_run(code, process=True, file="???"):
     "Run a DPL script in an easier way, hence ez_run"
     if process:
         code = parser.process(code)
-    if profile:
-        stime = time.perf_counter()
     if err := parser.run(code):
         print(f"\n[{file}]\nFinished with an error: {err}")
         rec(err)
-    if profile:
-        delta = time.perf_counter() - stime
     parser.IS_STILL_RUNNING.set()
     parser.clean_threads()
-    if profile:
-        s, u = utils.convert_sec(delta)
-        print(f"\nProgram Time: {s:,.2f}{u}")
     if err:
         exit(1)
 
@@ -207,8 +200,7 @@ def handle_args():
                 varproc.meta["internal"]["main_file"] = file
                 ez_run(
                     f.read(),
-                    file=file,
-                    profile="profile" in varproc.flags or "p" in varproc.flags,
+                    file=file
                 )
         case ["rc", file, *args]:
             if not os.path.isfile(file):
@@ -226,8 +218,7 @@ def handle_args():
                     ez_run(
                         code,
                         False,
-                        file,
-                        profile="profile" in varproc.flags or "p" in varproc.flags,
+                        file
                     )
             except Exception as e:
                 print("Something went wrong:", file)

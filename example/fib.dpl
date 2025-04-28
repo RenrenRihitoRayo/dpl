@@ -1,9 +1,8 @@
-
+#cmd: python3 /storage/emulated/0/dpl/dpl.py -skip-non-essential -no-cffi -no-lupa -init-time -simple-run $file
 &use {std/text_io.py}
-&use {std/math.py}
 
 # Pure DPL runs faster since we just interpret it.
-fn fib n
+fn fib (n)
     set a 1
     set b 0
     set c 0
@@ -15,18 +14,7 @@ fn fib n
     end
     return :a
 end
-
-# Slower due to calls to python methods like __add__.
-# It switches between DPL and Python contexts.
-fn fib_py n
-    set a 1
-    set b 0
-    set c 0
-    while [:n> -1]
-        set c [math.expr "a+b"]
-        set a :b
-        set b :c
-        set n [math.expr "n-1"]
-    end
-    return :a
-end
+START_TIME
+catch [!result] fib (10000)
+STOP_TIME
+LOG_TIME
