@@ -10,7 +10,7 @@ end
 from_template :Person Andrew
     name .name
     age 15
-    data [dict [this->what]]
+    data [dict [this=what] [wait=huh]]
 end
 
 io:println :Andrew

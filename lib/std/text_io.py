@@ -7,8 +7,9 @@ if __name__ != "__dpl__":
 if not dpl.info.VERSION.isLater((1, 4, None)):
     raise Exception("This is for version 1.4.x!")
 
-helper = dpl.require(["dpl_helpers", "func_helper.py"])
-
+helper = dpl.require("dpl_helpers/func_helper.py")
+if isinstance(helper, Exception):
+    raise helper
 ext = dpl.extension(meta_name="io", alias=__alias__)
 ext.items["output"] = modules.sys.stdout
 

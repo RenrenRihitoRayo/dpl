@@ -14,6 +14,7 @@ from . import arguments as argproc
 from . import info
 if "no-lupa" not in info.program_flags:
     import lupa
+from types import ModuleType
 from . import error
 from . import state
 from . import restricted
@@ -140,12 +141,12 @@ def require(path):
     try:
         with open(path, "r") as f:
             exec(compile(f.read(), path, "exec"), mod)
-        r = types.ModuleType(path)
+        r = ModuleType(path)
         for name, value in mod.items():
             setattr(r, name, value)
         return r
-    except:
-        return None
+    except Exception as e:
+        return e
 
 
 class wrap:
@@ -308,7 +309,7 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
                             return 1
             return
         else:
-            print("python: 'include.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
+            print(f"python: 'include.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
             return 1
     if varproc.is_debug_enabled("show_imports"):
         error.info(f"Imported {file!r}" if not alias else f"Imported {file!r} as {alias}")

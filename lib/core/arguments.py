@@ -18,7 +18,13 @@ simple_ops = {
     '>=': lambda *x: constants.true if operator.ge(*x) else constants.false,
     '==': lambda *x: constants.true if operator.eq(*x) else constants.false,
     '!=': lambda *x: constants.true if operator.ne(*x) else constants.false,
-    "**": operator.pow
+    'and': lambda a, b: constants.true if a and b else constants.false,
+    'or': lambda a, b: constants.true if a or b else constants.false,
+    'in': lambda a, b: constants.true if a in b else constants.false,
+    'is': lambda a, b: constants.true if a is b else constants.false,
+    "**": operator.pow,
+    "=": lambda name, value: {name: value},
+    "=>": lambda *x: kwarg(*x)
 }
 
 chars = {
@@ -153,18 +159,13 @@ def parse_match(frame, body, value):
     return 0
 
 
-def parse_template(frame, temp_name, body):
+def parse_dict(frame, temp_name, body):
     data = {}
     for p, [pos, file, ins, args] in enumerate(body):
-        args = process_args(frame, args)
         argc = len(args)
-        if ins == "define" and argc == 3 and args[1] == "as":
-            name, _, type_ = args
-            data[name] = type_
-        elif ins == "define" and argc == 5 and args[1] == "as" and args[3] == "=":
-            name, _, type_, _, value = args
-            data[name] = type_
-            data[f"value:{name}"] = value
+        if ins == "set" and argc == 3 and args[1] == "=>":
+            name, _, value = args
+            data[name] = value
         else:
             error.error(pos, file, f"Invalid statement!")
             return 1
@@ -399,10 +400,8 @@ class kwarg:
 def evaluate(frame, expression):
     "Evaluate an expression"
     processed = process_args(frame, expression)
-    if len(processed) == 3:
-        v1, op, v2 = processed
-        if op in simple_ops:
-            return simple_ops[op](v1, v2)
+    if len(processed) == 3 and isinstance(processed[1], str) and processed[1] in simple_ops:
+        return simple_ops[processed[1]](processed[0], processed[2])
     elif processed and processed[0] == "!":
         return processed[1:]
     match (processed):
@@ -419,10 +418,6 @@ def evaluate(frame, expression):
             for i in args[1:]:
                 start += t(i)
             return start
-        case [val1, "in", val2]:
-            return val1 in val2
-        case [name, "->", value]:
-            return {name: value}
         case ["Eval", expr]:
             return evaluate(frame, expr)
         # string op
@@ -437,16 +432,6 @@ def evaluate(frame, expression):
             return constants.true if not val2 else constants.false
         case ["if", value, "then", true_v, "else", false_v]:
             return true_v if value else false_v
-        case [val1, ">=", val2]:
-            return constants.true if val1 >= val2 else constants.false
-        case [val1, "<=", val2]:
-            return constants.true if val1 <= val2 else constants.false
-        case [val1, "<", val2]:
-            return constants.true if val1 < val2 else constants.false
-        case [val1, ">", val2]:
-            return constants.true if val1 > val2 else constants.false
-        case [name, "=", value]:
-            return kwarg(name, value)
         case [obj, "<", index, ">"]:
             if not isinstance(obj, (tuple, list, str)):
                 return constants.nil
@@ -555,7 +540,7 @@ def evaluate(frame, expression):
 
 sep = " ,"
 special_sep = "@()+/*#[]π<>=!π%"
-sym = [">=", "<=", "->", "==", "!=", "**", "//"]
+sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//"]
 
 def group(text):
     res = []

@@ -660,8 +660,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 frame[-1], "_export." + name, (temp:=objects.make_function(name, body, params))
             )
             rset(frame[-1], name, temp)
-        elif ins == "export" and argc == 3 and args[0] == "set":
-            _, name, value = args
+        elif ins == "export" and argc == 4 and args[0] == "set" and args[2] == "=":
+            _, name, _, value = args
             rset(frame[-1], "_export." + name, value)
             rset(frame[-1], name, value)
         elif ins == "tc_register" and argc == 1:
@@ -817,8 +817,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             error.active()
         elif ins == "fallthrough" and argc == 0:
             return error.FALLTHROUGH
-        elif ins == "set" and argc == 2:
-            rset(frame[-1], args[0], args[1])
+        elif ins == "set" and argc == 3 and args[1] == "=":
+            rset(frame[-1], args[0], args[2])
         elif ins == "del" and argc >= 1:
             for name in args:
                 rpop(frame[-1], name)
@@ -936,7 +936,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                             args,
                         )
                     )
-            return error.STOP_RESULT
+            return error.STOP_FUNCTION
         elif (
             ins == "freturn"
         ):  # Return to the latched names with no memoization detection (faster)
@@ -950,7 +950,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     args = (0, args)
                 for name, value in zip(temp, args):
                     rset(frame[-1], f"_nonlocal.{name}", value)
-            return error.STOP_RESULT
+            return error.STOP_FUNCTION
         elif ins == "help" and argc == 1:
             if not isinstance(args[0], dict) and hasattr(args[0], "__doc__"):
                 doc = getattr(args[0], "__doc__")
@@ -975,7 +975,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 i.join()
             threads.clear()
         elif ins == "catch" and argc >= 2:  # catch return value of a function
-            rets, func_name, args = args
+            rets, func_name, *args = args
             if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
@@ -1009,7 +1009,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "DEFINE_ERROR" and 0 < argc < 3:
             error.register_error(*args)
         elif ins == "mcatch" and argc >= 2:  # catch return value of a function
-            rets, func_name, args = args
+            rets, func_name, *args = args
             mem_args = tuple(
                 map(
                     lambda x: (
@@ -1059,7 +1059,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 return err
             pscope(frame)
         elif ins == "smcatch" and argc >= 2 and len(args[0]) >= 1:  # safe catch return value of a function
-            rets, func_name, args = args
+            rets, func_name, *args = args
             mem_args = tuple(
                 map(
                     lambda x: (
@@ -1113,7 +1113,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             error.active()
             pscope(frame)
         elif ins == "scatch" and argc >= 2 and len(args[0]) >= 1:  # catch return value of a function
-            rets, func_name, args = args
+            rets, func_name, *args = args
             if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
@@ -1147,7 +1147,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             error.active()
             pscope(frame)
         elif ins == "body" and argc >= 1:  # give a code block to a python function
-            name, args = args
+            name, *args = args
             if (temp := rget(frame[-1], name)) == constants.nil or not hasattr(temp, "__call__"):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 break
@@ -1191,10 +1191,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
-        elif ins == "pause" and argc == 0:
-            input()
         elif ins == "pycatch" and argc >= 2:  # catch return value of a python function
-            rets, name, args = args
+            rets, name, *args = args
             if (temp := rget(frame[-1], name)) == constants.nil or not hasattr(temp, "__call__"):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 return error.NAME_ERROR
@@ -1237,7 +1235,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
         elif ins == "ccall" and argc >= 1:
-            name, args = args
+            name, *args = args
             if not name:
                 error.error(pos, file, "Function not defined!")
                 break
@@ -1247,7 +1245,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
         elif ins == "ccatch" and argc >= 1:
-            ret, name, args = args
+            ret, name, *args = args
             if not name:
                 error.error(pos, file, "Function not defined!")
                 break
@@ -1256,57 +1254,14 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
-        elif ins == "template" and argc == 1:
+        elif ins == "dict" and argc == 1:
             temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
                 instruction_pointer, body = temp
-            if argproc.parse_template(frame, args[0], body):
+            if argproc.parse_dict(frame, args[0], body):
                 break
-        elif ins == "from_template" and argc == 2:
-            template = args[0]
-            tname = args[1]
-            temp = get_block(code, instruction_pointer)
-            if temp is None:
-                break
-            else:
-                instruction_pointer, body = temp
-            dct = {}
-            if template != constants.none:
-                for pos, _, vname, vitem in body:
-                    if vname not in template:
-                        error.error(
-                            pos, file, f"Attribute {vname!r} is not defined in template!"
-                        )
-                        return error.NAME_ERROR
-                    if vname in dct:
-                        error.error(
-                            pos, file, f"Attribute {vname!r} is already defined!"
-                        )
-                        return error.NAME_ERROR
-                    value, = argproc.process_args(frame, vitem)
-                    if value == ".default":
-                        dct[vname] = template[f"value:{vname}"]
-                    elif value == ".name":
-                        dct[vname] = tname
-                    elif template[vname] == constants.any:
-                        dct[vname] = value
-                    elif not isinstance(value, template[vname]):
-                        error.error(pos, file, f"Invalid type!\nItem {vname!r} should be type {template[vname]!r} but got {type(vitem)!r}")
-                        return error.TYPE_ERROR
-                    else:
-                        dct[vname] = value
-                for i, value in template.items():
-                    if not i.startswith("value:"):
-                        continue
-                    i = i.removeprefix('value:')
-                    if i not in dct:
-                        dct[i] = value
-            else:
-                for pos, _, vname, vitem in body:
-                    (dct[vname],) = argproc.process_args(frame, vitem)
-            rset(frame[-1], args[1], dct)
         elif ins == "raise" and isinstance(args[0], int) and argc == 2:
             error.error(pos, file, args[1])
             if (
@@ -1391,8 +1346,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if temp["capture"] != constants.nil:
                 frame[-1]["_capture"] = temp["capture"]
             err = run(temp["body"], frame)
-            if err:
-                error.error(pos, file, f"Error in function {ins!r}")
+            if err != error.STOP_FUNCTION:
+                if err > 0: error.error(pos, file, f"Error in function {ins!r}")
                 return err
             pscope(frame)
         elif (

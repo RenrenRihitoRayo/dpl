@@ -178,17 +178,16 @@ def parse_types(code):
 
 # builtins
 typed.update(parse_types('''
-fn :: str list
-pub :: "fn" str list
+fn :: str list|tuple
+pub :: "fn" str list|tuple
 match :: any
-set :: str any
-export :: "set" str any
+set :: str "=" any
+export :: "set" str "=" any
 @ranged :: str ...
 for :: str "in" iterable
 loop :: int
 %loop[0]
 while :: any
-%pause
 %thread[0]
 thread[1] :: thread_event
 new_thread_event :: str
@@ -230,7 +229,7 @@ sexec :: str code str list
 @ranged safe :: str any ...
 object :: str
 new :: dict str
-method :: dict str list
+method :: dict str list|tuple
 %START_TIME
 %STOP_TIME
 %LOG_TIME[0]

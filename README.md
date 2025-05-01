@@ -140,6 +140,28 @@ Most recent at top.
 
 # 1.4.8
 
+## Re-introduced "include-py.txt" in `lib/std`
+
+See "Including Directories" in [here](darrenpapa.github.io)
+
+## Templates
+
+Template syntax has now been removed.
+Replaced by the new dict keyword!
+```DuProL
+dict name
+    set name => value
+end
+```
+
+## `export set` and `set` syntax
+
+New syntax for setting variables
+```DuProL
+set name = value
+export set name = value
+```
+
 ## Upcomming syntax changes!
 
 DPL 1.4.8 will try to adhere to standardized and
