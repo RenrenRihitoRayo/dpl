@@ -142,7 +142,7 @@ Most recent at top.
 
 ## Re-introduced "include-py.txt" in `lib/std`
 
-See "Including Directories" in [here](darrenpapa.github.io)
+See "Including Directories" in [here](darrenpapa.github.io/learn.html#incdir)
 
 ## Templates
 
