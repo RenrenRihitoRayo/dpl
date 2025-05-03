@@ -145,11 +145,14 @@ except:
 
     varproc.meta["internal"]["SizeOf"] = temp
 
-def get_block(code, current_p, supress=False):
+def get_block(code, current_p, supress=False, start=1):
     "Get a code block"
-    pos, file, _, _ = code[current_p]
     instruction_pointer = current_p + 1
-    k = 1
+    pos, file, ins, _ = code[instruction_pointer]
+    k = start
+    if k == 0 and ins not in info.INCREAMENTS:
+        error.error(pos, file, "Expected to have started with an instruction that indents.")
+        return None
     res = []
     while instruction_pointer < len(code):
         _, _, ins, _ = code[instruction_pointer]
@@ -166,7 +169,7 @@ def get_block(code, current_p, supress=False):
         if not supress:
             print(f"Error in line {pos} file {file!r}\nCause: Block wasnt closed!")
         return None
-    return instruction_pointer, code[current_p+1:instruction_pointer]
+    return instruction_pointer, code[current_p+(2-start):instruction_pointer]
 
 
 def has(attrs, dct):
@@ -196,6 +199,8 @@ def pprint(d, l=0, seen=None, hide=True):
     elif not isinstance(d, dict):
         print("  "*l+repr(d))
         return
+    if not d:
+        print("{}")
     for name, value in d.items():
         if isinstance(name, str) and name.startswith("_") and hide:
             ...
@@ -209,7 +214,6 @@ def pprint(d, l=0, seen=None, hide=True):
             print("  "*l+"]")
         else:
             print("  "*l+f"{name!r} = {value!r}")
-
 
 def process(fcode, name="__main__"):
     "Preprocess a file"
@@ -1146,54 +1150,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 frame[-1][args[0][0]] = err
             error.active()
             pscope(frame)
-        elif ins == "body" and argc >= 1:  # give a code block to a python function
-            name, *args = args
-            if (temp := rget(frame[-1], name)) == constants.nil or not hasattr(temp, "__call__"):
-                error.error(pos, file, f"Invalid function {name!r}!")
-                break
-            try:
-                btemp = get_block(code, instruction_pointer)
-                if btemp is None:
-                    break
-                else:
-                    instruction_pointer, body = btemp
-                if argc == 2 and isinstance(args[0], dict) and args[0].get("[KWARGS]"):
-                    args[0].pop("[KWARGS]")
-                    pa = args[0].pop("[PARGS]", tuple())
-                    res = ext_s.call_w_body(
-                        temp,
-                        frame,
-                        varproc.meta["internal"]["main_path"],
-                        body,
-                        pa,
-                        args[0],
-                    )
-                else:
-                    res = ext_s.call_w_body(
-                        temp, frame, varproc.meta["internal"]["main_path"], body, args
-                    )
-                if isinstance(res, tuple):
-                    for name, value in zip(rets, res):
-                        rset(frame[-1], name, value)
-                elif isinstance(res, int) and res:
-                    return res
-                elif isinstance(res, str):
-                    if res == "err":
-                        break
-                    elif res == "stop":
-                        return error.STOP_RESULT
-                    elif res == "skip":
-                        return error.SKIP_RESULT
-                    elif res.startswith("err:"):
-                        _, ecode, message = res.split(":", 2)
-                        error.error(pos, file, message)
-                        return int(ecode)
-            except:
-                error.error(pos, file, traceback.format_exc()[:-1])
-                return error.PYTHON_ERROR
         elif ins == "pycatch" and argc >= 2:  # catch return value of a python function
             rets, name, *args = args
-            if (temp := rget(frame[-1], name)) == constants.nil or not hasattr(temp, "__call__"):
+            if (function := rget(frame[-1], name)) == constants.nil or not hasattr(function, "__call__"):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 return error.NAME_ERROR
             try:
@@ -1201,11 +1160,22 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     args[0].pop("[KWARGS]")
                     pa = args[0].pop("[PARGS]", tuple())
                     res = ext_s.call(
-                        temp, frame, varproc.meta["internal"]["main_path"], pa, args[0]
+                        function, frame, varproc.meta["internal"]["main_path"], pa, args[0]
                     )
                 else:
+                    t_args = []
+                    for i in ext_s.get_py_params(temp):
+                        if i.endswith("body"):
+                            temp = get_block(code, instruction_pointer)
+                            if temp is None:
+                                error.error(pos, file, f"Function '{function.__name__}' expected a block!")
+                                return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
+                            instruction_pointer, body = temp
+                            t_args.append(body)
+                        else:
+                            t_args.append(args.pop())
                     res = ext_s.call(
-                        temp, frame, varproc.meta["internal"]["main_path"], args
+                        function, frame, varproc.meta["internal"]["main_path"], t_args
                     )
                 if (
                     res is None
@@ -1351,13 +1321,31 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 return err
             pscope(frame)
         elif (
-            temp := rget(frame[-1], ins, default=rget(frame[0], ins))
+            function := rget(frame[-1], ins, default=rget(frame[0], ins))
         ) != constants.nil and hasattr(
-            temp, "__call__"
+            function, "__call__"
         ):  # call a python function
             try:
+                t_args = []
+                for i in ext_s.get_py_params(function)[2:]:
+                    if i.endswith("_xbody"):
+                        temp = get_block(code, instruction_pointer, start=0)
+                        if temp is None:
+                            error.error(pos, file, f"Function '{function.__name__}' expected a block!")
+                            return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
+                        instruction_pointer, body = temp
+                        t_args.append(body)
+                    elif i.endswith("_body"):
+                        temp = get_block(code, instruction_pointer)
+                        if temp is None:
+                            error.error(pos, file, f"Function '{function.__name__}' expected a block!")
+                            return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
+                        instruction_pointer, body = temp
+                        t_args.append(body)
+                    else:
+                        t_args.append(args.pop())
                 res = ext_s.call(
-                    temp, frame, varproc.meta["internal"]["main_path"], args
+                    function, frame, varproc.meta["internal"]["main_path"], t_args
                 )
                 if isinstance(res, int) and res:
                     return res
@@ -1406,6 +1394,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     return error.SYNTAX_ERROR
 
 # to avoid circular imports
+# this is classified as dark magic...
+# basically instead of an "import"
+# is equivalent to "export to"
 ext_s.register_run(run)
 ext_s.register_process(process)
 argproc.run_code = run

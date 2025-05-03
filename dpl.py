@@ -148,10 +148,11 @@ def rec(this, ind=0):
     else:
         for pos, i in enumerate(this):
             if isinstance(i, (tuple, list)):
+                print(f"{'  '*ind}Cause:")
                 rec(i, ind + 1)
             else:
                 print(
-                    f"{'  '*ind}Error Name {'(original)' if pos == 0 else '(other)'}: {error.ERRORS_DICT.get(i, f'ERROR NAME NOT FOUND <{i}>')}"
+                    f"{'  '*ind}Error Name {'(root) ' if pos == 0 else '(cause)'}: {error.ERRORS_DICT.get(i, f'ERROR NAME NOT FOUND <{i}>')}"
                 )
 
 
@@ -165,7 +166,10 @@ def ez_run(code, process=True, file="???"):
     parser.IS_STILL_RUNNING.set()
     parser.clean_threads()
     if err:
-        exit(1)
+        if isinstance(err, tuple):
+            exit(err[0])
+        else:
+            exit(err)
 
 if "instant-help" in prog_flags:
     print(help_str)

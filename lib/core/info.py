@@ -45,10 +45,13 @@ INC_EXT = {
     "sched",
     "enum",
     "ifmain",
-    "switch"
+    "switch",
+    "begin"
 }
 
-INC = {"thread": 1}
+INC = {}
+
+INCREAMENTS = set(INC.keys()) | INC_EXT
 
 DEC = {"end"}
 

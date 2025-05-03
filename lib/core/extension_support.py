@@ -190,6 +190,12 @@ class dpl:
 
     type_checker = type_checker
 
+
+def get_py_params(func):
+    co = func.__code__
+    arg_count = co.co_argcount
+    return co.co_varnames[:arg_count]
+
 def luaj_import(
     frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"]
 ):

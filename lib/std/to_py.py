@@ -8,12 +8,12 @@ ext = dpl.extension(meta_name="to_py", alias=__alias__)
 
 
 @ext.add_func(typed="$$ :: str")
-def define(frame, __, body, name):
+def define(frame, __, name, func_body):
     def func(*args, **kwargs):
         dpl.varproc.nscope(frame)
         frame[-1]["args"] = args
         frame[-1]["kwargs"] = kwargs
-        dpl.run_code(body, frame)
+        dpl.run_code(func_body, frame)
         res = dpl.varproc.rget(frame[-1], "_export", default=None)
         dpl.varproc.pscope(frame)
         return res

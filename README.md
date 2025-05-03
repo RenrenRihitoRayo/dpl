@@ -140,6 +140,65 @@ Most recent at top.
 
 # 1.4.8
 
+## Function calls
+
+To not modify the type checker, the function
+calls are still `func arg1 arg2 ... argN`.
+
+## Getting blocks in DPL in python functions.
+
+You no longer need the "block" instruction to pass blocks in DPL!
+
+Old syntax (only one block)
+```DuProL
+block ins args ...
+    ...
+end
+```
+Mew syntax (any number of blocks)
+```DuProL
+ins args ...
+    ...
+end
+
+or
+ins
+indent_ins
+    ...
+end
+```
+
+Thats just like calling a function, you say.
+Because it is! The actual change is a semantic
+definition of parameters in the function.
+
+```PyDPLE
+@add_func()
+def fn(frame, file, codr_body):
+    ...
+```
+
+The interpreter detects if the parameter
+ends with either "_body" or "_xbody".
+"_body" is inclusive meaning it starts the indent at 1.
+"_xbody" is exclusive, you have to indent (put an instruction that increaments the indent)
+for it to be valid.
+
+```DuProL
+# inclusive "_body"
+test_func
+    ...
+end
+
+# Exclusive "_xbody"
+my_if_else
+begin
+    ...
+end
+
+```
+ 
+
 ## Re-introduced "include-py.txt" in `lib/std`
 
 See "Including Directories" in [here](https://darrenpapa.github.io/learn.html#incdir)
