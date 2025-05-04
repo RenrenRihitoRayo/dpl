@@ -1,52 +1,18 @@
-#cmd: python3 /storage/emulated/0/dpl/dpl.py -skip-non-essential -no-cffi -no-lupa -init-time -simple-run $file
 &use {std/text_io.py}
 
 fn fib(n)
     set a = 1
     set b = 0
-    set c = 0
-    while (:n > -1)
+    while (:n > 0)
         set c = [:a+:b]
-        set a = :b
         set b = :c
-        set n = [:n - 1]
+        set a = :b
+        set n = [:n - 1] 
     end
     return :a
 end
 
-START_TIME
-mcatch (result) fib 10000
-STOP_TIME
-LOG_TIME "mcatch: first pass"
-START_TIME
-mcatch (result) fib 10000
-STOP_TIME
-LOG_TIME "mcatch: second pass"
-
-set cache = .dict
-set n = 10000
-START_TIME
-switch [:n in :cache]
-    case true
-        set a = [:cache<:n>]
-    end
-    default
-        local :fib
-        set 'cache.${n}' = :a
-    end
-end
-STOP_TIME
-LOG_TIME "User Defined: first pass"
-
-START_TIME
-switch [:n in :cache]
-    case true
-        set a = [:cache<:n>]
-    end
-    default
-        local :fib
-        set 'cache.${n}' = :a
-    end
-end
-STOP_TIME
-LOG_TIME "User Defined: second pass"
+catch (result) fib 5
+io:println :result
+io:input name "Name: "
+io:println 'Name is ${name}'
