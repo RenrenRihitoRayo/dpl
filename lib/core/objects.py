@@ -17,7 +17,7 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
         frame["_im_repr"] = {  # define a boring default _im_repr
             "name": 0,
             "args": [],
-            "defs": 0,
+            "defaults": 0,
             "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
@@ -33,7 +33,7 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
         frame["to_int"] = {  # define a boring default _im_repr
             "name": 0,
             "args": [],
-            "defs": 0,
+            "defaults": 0,
             "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
@@ -49,7 +49,7 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
         frame["to_float"] = {  # define a boring default _im_repr
             "name": 0,
             "args": [],
-            "defs": 0,
+            "defaults": 0,
             "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
@@ -65,7 +65,7 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
         frame["to_str"] = {  # define a boring default _im_repr
             "name": 0,
             "args": [],
-            "defs": 0,
+            "defaults": 0,
             "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
@@ -81,7 +81,7 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
         frame["to_list"] = {  # define a boring default _im_repr
             "name": 0,
             "args": [],
-            "defs": 0,
+            "defaults": 0,
             "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
@@ -97,7 +97,7 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
         frame["to_dict"] = {  # define a boring default _im_repr
             "name": 0,
             "args": [],
-            "defs": 0,
+            "defaults": 0,
             "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
@@ -113,7 +113,7 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
         frame["to_none"] = {  # define a boring default _im_repr
             "name": 0,
             "args": [],
-            "defs": 0,
+            "defaults": 0,
             "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
@@ -129,7 +129,7 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
         frame["to_nil"] = {  # define a boring default _im_repr
             "name": 0,
             "args": [],
-            "defs": 0,
+            "defaults": 0,
             "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
@@ -152,7 +152,7 @@ def make_function(name, body, params):
             "args": params,
             "self": constants.nil,
             "docs": f"Function. ({name!r})",
-            "defaults": {},
+            "defaults": constants.nil,
             "memoize": {},
             "capture":constants.nil
         },
@@ -170,7 +170,7 @@ def make_method(name, body, params, self):
             "args": params,
             "self": self,
             "docs": f"Method of {varproc.rget(self, '_internal.name')}. ({name})",
-            "defaults": {},
+            "defaults": constants.nil,
             "capture":constants.nil
         },
         name,

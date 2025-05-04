@@ -105,19 +105,19 @@ Hello, world!
 
 object MathThing
 
-method :MathThing new value1 value2
+method :MathThing new(value1 value2)
     new :self temp
-    set temp.v1 value1
-    set temp.v2 value2
+    set temp.v1 = value1
+    set temp.v2 = value2
     return :temp
 end
 
-method :MathThing add
+method :MathThing add()
     return [:self.v1 + :self.v2]
 end
 
-catch [obj] MathThing.new 5 7
-catch [res] obj.add
+catch (obj) MathThing.new 5 7
+catch (res) obj.add
 io:println :res
 ```
 
@@ -139,6 +139,80 @@ Why use DPL?
 Most recent at top.
 
 # 1.4.8
+
+## Lazy expressions have been reintroduced.
+
+Using `(expr)` will not immediately evaluate it.
+You can do `[Eval (expr)]` to evaluate it.
+
+While loops no longer automatically excludes its arguments when evaluating.
+Meaning the old syntax "while [expr]" is now invalid
+and has been changed into "while (expr)". This small overhead
+introduced a slight speed boost, although benchmarks arent available yet.
+
+## New instruction
+
+The new "local" instruction executes a function
+but has the same scope where it was called.
+
+```DuProL
+set locals = "what??"
+fn func
+    dump_scope
+    # func = ...
+    # locals = "what??"
+end
+
+local :func
+```
+
+Beware as this is strictly for functions, methods
+require a scope to insert "self", we could but it will
+polute and might overwrite the scope its called in.
+
+Special Attributes that cannot be injected or acts differently:
+* "_local" (just uses the scope its called in)
+* "_nonlocal" (relative to the scope its called in)
+* "_global" (as is)
+* "_capture" (doesnt get injected)
+* "self" for methods (doesnt get injected)
+
+FYI:
+The "_capture" variable is for closures.
+The reason it doesnt expose the variables
+in the normal way is to avoid polution of the
+scope.
+
+Use in performance critical code where scopes
+are not necessarily important.
+
+## Keyword arguments
+
+DPL now supports a more easier way of defining
+default values for parameters as well as suplying
+keyword arguments for these functions.
+
+Old Synyax
+```DuProL
+fn greet(name)
+    ...
+end
+set greet.defaults.name = "Andrew"
+
+greet
+greet "Max"
+# kw arguments not yet supported
+```
+New Syntax
+```DuProL
+fn greet([name = "Andrew"])
+    ...
+end
+
+greet
+greet "Max"
+greet [name => "Max"]
+```
 
 ## Function calls
 

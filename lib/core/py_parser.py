@@ -554,7 +554,6 @@ def process(fcode, name="__main__"):
                 if temp is None:
                     error.error(line_pos, file, "Switch statement is invalid!")
                     return error.PREPROCESSING_ERROR
-                offset = instruction_pointer
                 whole_offset, switch_block = temp 
                 for instruction_pointer, [line_pos, _, ins, args] in enumerate(switch_block):
                     if ins == "case" and len(args) == 1:
@@ -573,9 +572,9 @@ def process(fcode, name="__main__"):
                         if instruction_pointer > offset:
                             error.error(line_pos, file, "Invalid switch statement!")
                             return error.PREPROCESSING_ERROR
-                whole_offset += len(switch_block)
+                whole_offset += 1
                 res.append([og_lpos, file, "_intern.switch", [body, arg_val]])
-            elif offset >= whole_offset:
+            elif instruction_pointer >= whole_offset:
                 res.append([line_pos, file, ins, args])
         return {
             "code": res,
@@ -603,13 +602,13 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     else:
         frame = nframe
     tc_cache = set()
+    debug_ins = False
     while instruction_pointer < len(code) and not thread_event.is_set():
         pos, file, ins, oargs = code[instruction_pointer]
         ins = process_arg(frame, ins)
-        if ins == "while":
-            args = oargs
-            argc = len(oargs)
-        elif not oargs is None:
+        if debug_ins:
+            print("||", ins, len(oargs) if oargs else 0, oargs)
+        if not oargs is None:
             try:
                 args = process_args(frame, oargs)
                 argc = len(args)
@@ -635,14 +634,63 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         else:
             args = []
             argc = 0
-        if ins == "fn" and argc >= 1:
+        if debug_ins:
+            print("::", ins, argc, args)
+        if ins == "fn" and argc == 2:
             name, params = args
             block = get_block(code, instruction_pointer)
             if block is None:
                 break
             else:
                 instruction_pointer, body = block
-            rset(frame[-1], name, objects.make_function(name, body, params))
+            args = list(params)
+            func = objects.make_function(name, body, args)
+            if any(filter(lambda x: isinstance(x, dict), params)):
+                func["defaults"] = {}
+                for pos, i in filter(lambda x: isinstance(x[1], dict), enumerate(params)):
+                    func["defaults"].update(i)
+                    args[pos] = argproc.kwarg(tuple(i.items())[0][0])
+            rset(frame[-1], name, func)
+        elif ins == "break_point":
+            debug_ins = True
+        elif ins == "break_off":
+            debug_ins = False
+        elif ins == "_intern.switch" and argc == 2:
+            body = args[0].get(args[1], args[0][None])
+            if not body:
+                instruction_pointer += 1
+                continue
+            if err:=run(body, frame):
+                error.error(pos, file, f"Error in switch block '{args[1]}'")
+                return err
+        elif ins == "if" and argc == 1:
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                break
+            else:
+                instruction_pointer, body = temp
+            if args[0]:
+                err = run(body, frame=frame)
+                if err:
+                    return err
+        elif ins == "ifmain" and argc == 1:
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                break
+            else:
+                instruction_pointer, body = temp
+            if file == "__main__":
+                err = run(body, frame=frame)
+                if err:
+                    return err
+        elif ins == "match" and argc == 1:
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                break
+            else:
+                instruction_pointer, body = temp
+            if (err := argproc.parse_match(frame, body, args[0])) > 0:
+                return err
         elif ins == "load_config" and argc == 1 and isinstance(args[0], dict):
             varproc.debug.update(args[0])
         elif ins == "get_time" and argc == 1:
@@ -700,11 +748,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             tmp = frame[-1][name] = {}
             for n in names:
                 tmp[n] = f"enum:{file}:{name}:{n}"
-        elif ins == "_intern.switch" and argc == 2:
-            body = args[0].get(args[1], args[0][None])
-            if err:=run(body, frame):
-                error.error(pos, file, f"Error in switch block '{args[1]}'")
-                return err
         elif ins == "loop" and argc == 0:
             temp = get_block(code, instruction_pointer)
             if temp is None:
@@ -784,34 +827,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             err = run(body, frame=frame)
             if err:
                 return err
-        elif ins == "if" and argc == 1:
-            temp = get_block(code, instruction_pointer)
-            if temp is None:
-                break
-            else:
-                instruction_pointer, body = temp
-            if args[0]:
-                err = run(body, frame=frame)
-                if err:
-                    return err
-        elif ins == "ifmain" and argc == 1:
-            temp = get_block(code, instruction_pointer)
-            if temp is None:
-                break
-            else:
-                instruction_pointer, body = temp
-            if file == "__main__":
-                err = run(body, frame=frame)
-                if err:
-                    return err
-        elif ins == "match" and argc == 1:
-            temp = get_block(code, instruction_pointer)
-            if temp is None:
-                break
-            else:
-                instruction_pointer, body = temp
-            if (err := argproc.parse_match(frame, body, args[0])) > 0:
-                return err
         elif ins == "exec" and argc == 3:
             if err:=run(process(args[0], name=args[1]), frame=args[2]):
                 return err
@@ -863,7 +878,12 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 break
             else:
                 instruction_pointer, body = temp
-            rset(self, name, objects.make_method(name, body, params, self))
+            func = objects.make_method(name, body, params, self)
+            if any(filter(lambda x: isinstance(x, dict), params)):
+                func["defaults"] = {}
+            for i in filter(lambda x: isinstance(x, dict), params):
+                func["defaults"].update(i)
+            rset(self, name, func)
         elif ins == "START_TIME" and argc == 0:
             start_time = time.perf_counter()
         elif ins == "STOP_TIME" and argc == 0:
@@ -1156,8 +1176,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 return error.NAME_ERROR
             try:
-                if argc == 3 and isinstance(args[0], dict) and args[0].get("[KWARGS]"):
-                    args[0].pop("[KWARGS]")
+                if argc == 3 and isinstance(args[0], dict) and args[0].get("[RGS]"):
+                    args[0].pop("[RGS]")
                     pa = args[0].pop("[PARGS]", tuple())
                     res = ext_s.call(
                         function, frame, varproc.meta["internal"]["main_path"], pa, args[0]
@@ -1298,11 +1318,20 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if temp["self"] != constants.nil:
                 frame[-1]["self"] = temp["self"]
             if temp["defaults"]:
+                frame[-1].update(temp["defaults"])
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
-                        frame[-1][name] = temp["defaults"].get(name, constants.nil)
+                        continue
+                    elif isinstance(value, argproc.kwarg):
+                        frame[-1][value.name] = value.value
                     else:
-                        frame[-1][name] = value
+                        if isinstance(name, argproc.kwarg):
+                            if name.value is None:
+                                frame[-1][name.name] = value
+                            else:
+                                frame[-1][name.name] = name.value
+                        else:
+                            frame[-1][name] = value
             else:
                 if len(args) != len(temp["args"]):
                     error.error(
@@ -1316,7 +1345,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             if temp["capture"] != constants.nil:
                 frame[-1]["_capture"] = temp["capture"]
             err = run(temp["body"], frame)
-            if err != error.STOP_FUNCTION:
+            if err and err != error.STOP_FUNCTION:
                 if err > 0: error.error(pos, file, f"Error in function {ins!r}")
                 return err
             pscope(frame)
@@ -1326,24 +1355,27 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             function, "__call__"
         ):  # call a python function
             try:
-                t_args = []
-                for i in ext_s.get_py_params(function)[2:]:
-                    if i.endswith("_xbody"):
-                        temp = get_block(code, instruction_pointer, start=0)
-                        if temp is None:
-                            error.error(pos, file, f"Function '{function.__name__}' expected a block!")
-                            return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
-                        instruction_pointer, body = temp
-                        t_args.append(body)
-                    elif i.endswith("_body"):
-                        temp = get_block(code, instruction_pointer)
-                        if temp is None:
-                            error.error(pos, file, f"Function '{function.__name__}' expected a block!")
-                            return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
-                        instruction_pointer, body = temp
-                        t_args.append(body)
-                    else:
-                        t_args.append(args.pop())
+                if func_params:=ext_s.get_py_params(function)[2:]:
+                    t_args = []
+                    for i in func_params:
+                        if i.endswith("_xbody"):
+                            temp = get_block(code, instruction_pointer, start=0)
+                            if temp is None:
+                                error.error(pos, file, f"Function '{function.__name__}' expected a block!")
+                                return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
+                            instruction_pointer, body = temp
+                            t_args.append(body)
+                        elif i.endswith("_body"):
+                            temp = get_block(code, instruction_pointer)
+                            if temp is None:
+                                error.error(pos, file, f"Function '{function.__name__}' expected a block!")
+                                return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
+                            instruction_pointer, body = temp
+                            t_args.append(body)
+                        else:
+                            t_args.append(args.pop())
+                else:
+                    t_args = args
                 res = ext_s.call(
                     function, frame, varproc.meta["internal"]["main_path"], t_args
                 )
@@ -1359,6 +1391,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
+        elif ins == "local" and argc == 1:
+            run(args[0]["body"], frame)
         elif ins == "end" and argc == 0:
             error.error(pos, file, "Lingering end statement!")
             return error.SYNTAX_ERROR

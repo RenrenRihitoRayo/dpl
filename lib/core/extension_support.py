@@ -351,8 +351,6 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
 
 
 def call(func, frame, file, args):
-    if varproc.is_debug_enabled("track_time"):
-        start = time.time()
     if args and isinstance(args[0], arguments_handler):
         if args[0].args:
             args[0].args.insert(0, file)
@@ -362,34 +360,4 @@ def call(func, frame, file, args):
         ret = args[0].call(func)
     else:
         ret = func(frame, file, *args)
-    if varproc.is_debug_enabled("track_time"):
-        delta = time.time() - start
-        if delta > varproc.get_debug("time_threshold"):
-            delta_value, delta_unit = utils.convert_sec(delta)
-            error.info(
-                f"The function {func} took too long!\nPrecisely: {delta_value:,.8f}{delta_unit}"
-            )
-    return ret
-
-
-def call_w_body(func, frame, file, body, args):
-    if varproc.is_debug_enabled("track_time"):
-        start = time.time()
-    if args and isinstance(args[0], arguments_handler):
-        if args[0].args:
-            args[0].args.insert(0, body)
-            args[0].args.insert(0, file)
-            args[0].args.insert(0, frame)
-        else:
-            args[0].args = [frame, file, body]
-        ret = args[0].call(func)
-    else:
-        ret = func(frame, file, body, *args)
-    if varproc.is_debug_enabled("track_time"):
-        delta = time.time() - start
-        if delta > varproc.get_debug("time_threshold"):
-            delta_value, delta_unit = utils.convert_sec(delta)
-            error.info(
-                f"The function {func} took too long!\nPrecisely: {delta_value:,.8f}{delta_unit}"
-            )
     return ret

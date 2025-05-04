@@ -3,9 +3,9 @@
 # very readable ternary operator
 # t for truethy value
 # f for falsy value
-io:println "this:" (if ((def? this) and (nil? :this)) then "Falsely undefined" else "Truly undefined")
+io:println "this:" [if [[def? this] and [nil? :this]] then "Falsely undefined" else "Truly undefined"]
 
-set _meta.debug.disable_nil_values true
+set _meta.debug.disable_nil_values = true
 
 # raises an error
 io:println :this

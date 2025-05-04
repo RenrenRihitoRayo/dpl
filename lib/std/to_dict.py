@@ -24,6 +24,6 @@ def _to_dict(obj):
 ext = dpl.extension(meta_name="to_dict", alias=__alias__)
 
 
-@ext.add_func(types="$$ :: any")
+@ext.add_func(typed="$$ :: any")
 def to_dict(_, __, obj):
     return (_to_dict(obj),)

@@ -109,53 +109,64 @@ def parse_match(frame, body, value):
     name = None
     np = 0
     ft = False
-    for p, [pos, file, ins, args] in enumerate(body):
-        if ins == "as":
-            varproc.rset(frame[-1], process_args(frame, args)[0], value)
-        elif ft == True and ins in {"case", "with"}:
-            ft = False
-            temp = get_block(body, p)
-            if temp is None:
-                error.error(pos, file, "Expected a case block!")
-                return error.SYNTAX_ERROR
-            if name:
-                frame[-1][name] = value
-            res = run_code(temp[1], frame=frame)
-            if res != error.FALLTHROUGH:
-                return res
-            ft = True
-        elif ins == "case":
-            if (v := process_args(frame, args))[0]:
+    if value != constants.nil:
+        for p, [pos, file, ins, args] in enumerate(body):
+            if ins == "as":
+                varproc.rset(frame[-1], process_args(frame, args)[0], value)
+            elif ins == "case":
+                if (v := process_args(frame, args))[0]:
+                    temp = get_block(body, p)
+                    if temp is None:
+                        error.error(pos, file, "Expected a case block!")
+                        return error.SYNTAX_ERROR
+                    if name:
+                        frame[-1][name] = value
+                    res = run_code(temp[1], frame=frame)
+                    if res != error.FALLTHROUGH:
+                        return res
+                    ft = True
+            elif ins == "with":
+                if (v := process_args(frame, args))[0] == value:
+                    temp = get_block(body, p)
+                    if temp is None:
+                        error.error(pos, file, "Expected a case block!")
+                        return error.SYNTAX_ERROR
+                    if name:
+                        frame[-1][name] = value
+                    res = run_code(temp[1], frame=frame)
+                    if res != error.FALLTHROUGH:
+                        return res
+                    ft = True
+            elif ins == "default":
                 temp = get_block(body, p)
                 if temp is None:
                     error.error(pos, file, "Expected a case block!")
                     return error.SYNTAX_ERROR
                 if name:
                     frame[-1][name] = value
-                res = run_code(temp[1], frame=frame)
-                if res != error.FALLTHROUGH:
-                    return res
-                ft = True
-        elif ins == "with":
-            if (v := process_args(frame, args))[0] == value:
+                return run_code(temp[1], frame=frame)
+    else:
+        for p, [pos, file, ins, args] in enumerate(body):
+            if ins == "case":
+                if (v := process_args(frame, args))[0]:
+                    temp = get_block(body, p)
+                    if temp is None:
+                        error.error(pos, file, "Expected a case block!")
+                        return error.SYNTAX_ERROR
+                    if name:
+                        frame[-1][name] = value
+                    res = run_code(temp[1], frame=frame)
+                    if res != error.FALLTHROUGH:
+                        return res
+                    ft = True
+            elif ins == "default":
                 temp = get_block(body, p)
                 if temp is None:
                     error.error(pos, file, "Expected a case block!")
                     return error.SYNTAX_ERROR
                 if name:
                     frame[-1][name] = value
-                res = run_code(temp[1], frame=frame)
-                if res != error.FALLTHROUGH:
-                    return res
-                ft = True
-        elif ins == "default":
-            temp = get_block(body, p)
-            if temp is None:
-                error.error(pos, file, "Expected a case block!")
-                return error.SYNTAX_ERROR
-            if name:
-                frame[-1][name] = value
-            return run_code(temp[1], frame=frame)
+                return run_code(temp[1], frame=frame)
     return 0
 
 
@@ -285,8 +296,6 @@ def expr_runtime(frame, arg):
     "Process an argument at runtime"
     if isinstance(arg, list):
         return evaluate(frame, arg)
-    elif isinstance(arg, tuple):
-        return tuple(map(lambda arg: expr_runtime(frame, arg), arg))
     elif not isinstance(arg, str):
         return arg
     elif is_fvar(arg):
@@ -387,7 +396,7 @@ def get_names(args):
 
 
 class kwarg:
-    def __init__(self, name, value):
+    def __init__(self, name, value=None):
         self.name = name
         self.value = value
     def keys():
@@ -399,6 +408,8 @@ class kwarg:
 
 def evaluate(frame, expression):
     "Evaluate an expression"
+    if not isinstance(expression, (list, tuple)):
+        return expression
     processed = process_args(frame, expression)
     if len(processed) == 3 and isinstance(processed[1], str) and processed[1] in simple_ops:
         return simple_ops[processed[1]](processed[0], processed[2])
@@ -535,7 +546,7 @@ def evaluate(frame, expression):
                         return res
                 except:
                     raise Exception(f"Error while evaluating: {default}\n{traceback.format_exc()}") from None
-    return expression
+    return type(expression)(map(lambda x: process_arg(frame, x), expression))
 
 
 sep = " ,"
