@@ -6,9 +6,9 @@ fn fib(n)
     set c = 0
     while (:n > 0)
         set c = [:a + :b]
-        set a = :b
         set b = :c
-        set n = [:n - 1]
+        set a = :b
+        set n = [:n - 1] 
     end
     return :c
 end
