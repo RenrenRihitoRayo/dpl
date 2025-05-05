@@ -1,7 +1,0 @@
-&use {std/text_io.py}
-&use {std/file_io.py}
-
-pycatch [file] io:open :_meta.internal.main_file
-pycatch [file_c] io:read :file
-io:println :file_c
-io:close :file

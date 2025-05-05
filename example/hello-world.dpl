@@ -1,4 +1,0 @@
-# Importing the "std/text_io.py" module pre-runtime
-&use {std/text_io.py}
-# We use "io:println" defined in "text_io.py"
-io:println "Hello, World!"
