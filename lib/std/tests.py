@@ -43,8 +43,6 @@ def pprint(d, l=0, seen=None):
 def _(frame, _, condition, message='Not provided.'):
     "Raises an error"
     if not condition:
-        print("\n-- LOCAL VARIABLES DUMP --")
-        pprint(frame[-1])
         return f"err:{ext.items['ASSERT_ERROR']}:{message}"
 
 
@@ -52,6 +50,4 @@ def _(frame, _, condition, message='Not provided.'):
 def quiet_assert(frame, _, condition, message='Not provided'):
     "Does not raise an error"
     if not condition:
-        print("\n-- LOCAL VARIABLES DUMP --")
-        pprint(frame[-1])
-        print("Assert Failed:", message)
+        print("Assert Failed:", message, flush=True)

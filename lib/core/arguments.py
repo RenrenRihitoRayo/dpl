@@ -318,6 +318,7 @@ def expr_runtime(frame, arg):
         text = arg[1:-1]
         for name, value in flatten_dict(frame[-1]).items():
             text = text.replace(f"${{{name}}}", str(value))
+            if (tmp:=f"${{{name}!}}") in text: text = text.replace(tmp, repr(value))
         return text
     elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
         return arg

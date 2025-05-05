@@ -103,22 +103,16 @@ Hello, world!
 ```DuProL
 &use {std/text_io.py}
 
-object MathThing
+io:println "Hello, world!"
 
-method :MathThing new(value1 value2)
-    new :self temp
-    set temp.v1 = value1
-    set temp.v2 = value2
-    return :temp
+fn greet(name)
+    io:println 'Hello ${name}!'
+    return 420
 end
 
-method :MathThing add()
-    return [:self.v1 + :self.v2]
-end
-
-catch (obj) MathThing.new 5 7
-catch (res) obj.add
-io:println :res
+catch (result) greet Alex
+greet Andrew
+io:println :result
 ```
 
 ## Reasons to use DPL
@@ -139,6 +133,12 @@ Why use DPL?
 Most recent at top.
 
 # 1.4.8
+
+## Did some stuff
+
+* Cleaned up the examples
+* Fixed issues in Python functions
+* Fixed issues with VIM syntax highlighting.
 
 ## Lazy expressions have been reintroduced.
 

@@ -1355,7 +1355,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             function, "__call__"
         ):  # call a python function
             try:
-                if func_params:=ext_s.get_py_params(function)[2:]:
+                unc_params = ext_s.get_py_params(function)[2:]
+                if unc_params and any(map(lambda x: x.endswith("_body") or x.endswith("_xbody"), unc_params)):
                     t_args = []
                     for i in func_params:
                         if i.endswith("_xbody"):
@@ -1373,7 +1374,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                             instruction_pointer, body = temp
                             t_args.append(body)
                         else:
-                            t_args.append(args.pop())
+                            t_args.append(args.pop(0))
                 else:
                     t_args = args
                 res = ext_s.call(

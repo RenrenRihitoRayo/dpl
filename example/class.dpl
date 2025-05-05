@@ -1,0 +1,41 @@
+&use {std/text_io.py}
+
+object Person
+method Person.new(name, age)
+    new :self tmp
+    set tmp.name = :name
+    set tmp.age = :age
+    return :tmp
+end
+method Person.greet(name)
+    io:println 'Hello ${name} I am ${self.name}!'
+end
+method Person._im_repr()
+    return 'Person(${self.name!}, ${self.age!})'
+end
+
+catch (person) Person.new Andrew, 15
+-- Outputs Person('Andrew', 15) --
+io:println :person
+-- Outputs Hello Alex I am Andrew! --
+person.greet Alex
+
+-- Simple inheritance --
+-- Functionally copying the Person class --
+new :Person Employee
+method Employee.new(name, age, work_place)
+    new :self tmp
+    set tmp.name = :name
+    set tmp.age = :age
+    set tmp.work_place = :work_place
+    return :tmp
+end
+method Employee.greet(name)
+    io:println 'Hello ${name} I work at ${self.work_place}!'
+end
+
+catch (employee) Employee.new Andrew, 15, lemonade_stand
+-- Same output --
+io:println :employee
+-- Hello Alex I work at lemonade_stand! --
+employee.greet Alex
