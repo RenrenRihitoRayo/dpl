@@ -134,6 +134,54 @@ Most recent at top.
 
 # 1.4.8
 
+## New `std-dpl/ansi.dpl` module
+
+```DuProL
+&use {std/text_io.py}
+&include {std-dpl/ansi.dpl}
+
+ansi.print_color :ansi.fg.cyan
+io:println "Cyan!"
+ansi.change_style :ansi.style.reset_all
+
+ansi.print_rgb_fg 16 255 255
+io:println "Also Cyan!"
+ansi.change_style :ansi.style.reset_all
+```
+
+## Added def statement in dictionaries
+
+```DuProL
+
+# old syntax
+dict numbers
+    set one => 1
+    set two => 2
+    # mamually writing up to:
+    set twenty => 20
+end
+
+# new synyax
+dict numbers
+    set one => 1
+    def two
+    def three
+    # up to:
+    def twenty
+end
+```
+
+## Major Refurbish
+
+* Renamed expression methods to lowercase.
+* Added new expression methods (`to_ascii` and `from_ascii`)
+* Removed some scripts
+
+### New Expression Methods
+
+The two new methods "to_ascii" and "from_ascii" are methods
+to convert integers into ascii character (or unicode) and back.
+
 ## Did some stuff
 
 * Cleaned up the examples

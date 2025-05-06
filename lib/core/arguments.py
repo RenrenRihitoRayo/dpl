@@ -37,7 +37,8 @@ chars = {
     "r": "\r",
     "s": " ",
     "t": "\t",
-    "N": "\n\r"
+    "N": "\n\r",
+    "e": chr(27)
 }
 
 
@@ -172,15 +173,19 @@ def parse_match(frame, body, value):
 
 def parse_dict(frame, temp_name, body):
     data = {}
+    varproc.rset(frame[-1], temp_name, data)
     for p, [pos, file, ins, args] in enumerate(body):
         argc = len(args)
         if ins == "set" and argc == 3 and args[1] == "=>":
             name, _, value = args
             data[name] = value
+        elif ins == "def" and argc == 1:
+            name, = args
+            # TODO: check if previous item is a int
+            data[name] = tuple(data.items())[-1][1] + 1
         else:
             error.error(pos, file, f"Invalid statement!")
             return 1
-    varproc.rset(frame[-1], temp_name, data)
 
 def flatten_dict(d, parent_key="", sep=".", seen=None, hide=False):
     if seen is None:
@@ -416,32 +421,36 @@ def evaluate(frame, expression):
         return simple_ops[processed[1]](processed[0], processed[2])
     elif processed and processed[0] == "!":
         return processed[1:]
+    elif len(processed) == 2 and processed[0] == "not":
+        return constants.true if not processed[1] else constants.false
+    elif len(processed) == 2 and processed[0] == "-":
+        return -processed[1]
+    elif len(processed) == 2 and processed[0] == "~":
+        return ~processed[1]
+    elif len(processed) == 2 and processed[0] == "type":
+        return getattr(type(processed[1]), "__name__", constants.nil)
+    elif len(processed) >= 1 and processed[0] == "sum":
+        args = processed[1:]
+        t = type(args[0])
+        start = args[0]
+        for i in args[1:]:
+            start += t(i)
+        return start
+    elif len(processed) == 2 and processed[0] == "eval":
+        return evaluate(frame, processed[1])
+    elif len(processed) == 2 and processed[0] == "fast-format":
+        local = flatten_dict(frame[-1], hide=True)
+        text = processed[1]
+        for name, value in flatten_dict(frame[-1]).items():
+            if f"${{{name}}}" in text:
+                text = text.replace(f"${{{name}}}", str(value)) 
+        return text
+    elif len(processed) == 2 and processed[0] == "to_ascii":
+        return chr(processed[1])
+    elif len(processed) == 2 and processed[0] == "from_ascii":
+        return ord(processed[1])
     match (processed):
-        # operations
-        case ["-", val2]:
-            return - val2
-        case ["~", val2]:
-            return ~ val2
-        case ["Type", item]:
-            return getattr(type(item), "__name__", constants.nil)
-        case ["Sum", *args]:
-            t = type(args[0])
-            start = args[0]
-            for i in args[1:]:
-                start += t(i)
-            return start
-        case ["Eval", expr]:
-            return evaluate(frame, expr)
-        # string op
-        case ["fast-format", text]:
-            local = flatten_dict(frame[-1], hide=True)
-            for name, value in flatten_dict(frame[-1]).items():
-                if f"${{{name}}}" in text:
-                    text = text.replace(f"${{{name}}}", str(value)) 
-            return text
         # conditionals
-        case ["not", val2]:
-            return constants.true if not val2 else constants.false
         case ["if", value, "then", true_v, "else", false_v]:
             return true_v if value else false_v
         case [obj, "<", index, ">"]:
@@ -495,25 +504,23 @@ def evaluate(frame, expression):
                 return constants.false
             return constants.true
         # ranges
-        case ["RawRange", num]:
+        case ["rawrange", num]:
             return range(num)
-        case ["Range", num]:
+        case ["range", num]:
             return tuple(range(num))
-        case ["dRange", num]:
+        case ["drange", num]:
             return tuple(my_range(0, num))
-        case ["dRawRange", num]:
+        case ["drawrange", num]:
             return my_range(0, num)
-        case ["dRange", num, end]:
+        case ["drange", num, end]:
             return tuple(my_range(num, end))
-        case ["dRawRange", num, end]:
+        case ["drawrange", num, end]:
             return my_range(num, end)
-        case ["LenOf", item]:
+        case ["length", item]:
             try:
                 return len(item)
             except:
                 return 0
-        case ["Eval", expr]:
-            return process_arg(frame, expr)
         # values
         case ["set", name, "=", value]:
             varproc.rset(frame[-1], name, value)

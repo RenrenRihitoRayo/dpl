@@ -673,7 +673,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 err = run(body, frame=frame)
                 if err:
                     return err
-        elif ins == "ifmain" and argc == 1:
+        elif ins == "ifmain" and argc == 0:
             temp = get_block(code, instruction_pointer)
             if temp is None:
                 break

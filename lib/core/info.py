@@ -59,9 +59,9 @@ RT_EXPR = {
     "tuple", "?tuple",
     "dict", "?dict",
     "?int", "?float", "?str",
-    'LenOf', 'Type', 'Range', 'RawRange', 'dRange',
-    'dRawRange', 'mod', 'nil?', 'none?', 'Sum', '?bytes', 'def?',
-    "Eval"
+    "length", "type", "range", "rawrange", "drange",
+    "drawrange", 'nil?', 'none?', 'Sum', '?bytes', 'def?',
+    "eval", "to_ascii", "from_ascii"
 }
 
 KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[

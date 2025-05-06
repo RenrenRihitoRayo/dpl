@@ -349,9 +349,9 @@ def handle_args():
                 elif act == ".paste":
                     act = ""
                     while True:
-                        act += (this := input())
-                        if not this:
-                            break
+                        tmp = input()
+                        if tmp == ".done": break
+                        act += tmp + "\n"
                 elif act == "exit":
                     break
                 elif act.startswith("$"):
