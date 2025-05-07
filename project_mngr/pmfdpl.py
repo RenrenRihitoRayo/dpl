@@ -340,7 +340,7 @@ view [version] - View the message with the associated version.
 list - list all versions.
 init [name] - Initialize a new package [name]
 init - Initialize the new package in the current directory.
-run *args - runs the main script.""")
+run [...args] - runs the main script.""")
         case cmd:
             print(cmd, "is not recognized!")
             return 1
