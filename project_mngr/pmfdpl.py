@@ -3,6 +3,7 @@
 # Damn Im making my life harder...
 
 import os
+import sys
 import zipfile
 import json
 import shutil
@@ -12,6 +13,8 @@ import shlex
 import difflib
 
 from itertools import zip_longest
+
+mfile = None
 
 def compare_zip_contents(zip1_path, zip2_path):
     with zipfile.ZipFile(zip1_path) as zip1, zipfile.ZipFile(zip2_path) as zip2:
@@ -57,7 +60,7 @@ from pathlib import Path
 
 def find_upwards(name):
     curpath = os.getcwd()
-    t = 5
+    t = 50
     if os.path.exists(path:=os.path.join(curpath, name)):
         return path
     while (curpath:=os.path.dirname(curpath)) and t > 0:
@@ -111,7 +114,7 @@ def make_project(name):
 def get_pkg_meta():
     if (path:=find_upwards("pkg_meta.json")):
         try:
-            configs = json.loads(open(path).read())
+            return json.loads(open(path).read())
         except:
             print("Problem while loading pkg_meta.json")
     return {}
@@ -153,7 +156,9 @@ def configure_pkg_meta():
             "project_name":os.path.dirname(root_path),
             "author":"author_name",
             "description":"description",
-            "install_script":""
+            "install_script":"",
+            "main_script":"",
+            "flags":["-skip-non-essential"]
         }
     print("Config TUI\nhelp for more.")
     while True:
@@ -297,7 +302,7 @@ def handle_cmd(args, env=None):
             print(env.get(name, ""), end="")
         case ["vsdump"]:
             print(*env.keys(), sep=",")
-        case ["run", file]:
+        case ["exec", file]:
             with open(file) as f:
                 return run(f.read())
         case ["goto", index]:
@@ -320,10 +325,10 @@ def handle_cmd(args, env=None):
         case ["run", *args]:
             data = get_pkg_meta()
             file = data.get("main_script")
-            if not file:
-                print(':: Invalid path to main script!')
+            if (not file) or not os.path.isfile(file):
+                print(':: Invalid path to main script!', data)
                 return 1
-            return subprocess.run(["dpl", *data.get("flags", []), file, *args]).returncode
+            return subprocess.run(["python3", mfile, *data.get("flags", []), "run", file, *args]).returncode
         case ["help"]:
             print("""Basic Commands
 
@@ -341,5 +346,4 @@ run *args - runs the main script.""")
             return 1
 
 if __name__ == "__main__":
-    import sys
     sys.exit(handle_cmd(sys.argv[1:]) or 0)

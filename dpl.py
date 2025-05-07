@@ -5,11 +5,12 @@
 # To keep it lightweight, we dont need speed here.
 
 
+import sys
+_file_ = sys.argv[0]
 import lib.core.info as info
 import lib.core.cli_arguments as cli_args
 info.program_flags = prog_flags = cli_args.flags(info.ARGV, True)
 import time
-import sys
 
 info.imported = set()
 info.unique_imports = 0
@@ -243,6 +244,7 @@ def handle_args():
                 exit(1)
         case ["pm", *args]:
             import project_mngr.pmfdpl as pkg_manager
+            pkg_manager.mfile = _file_
             sys.exit(pkg_manager.handle_cmd(args))
         case ["package", *args]:
             match args:
