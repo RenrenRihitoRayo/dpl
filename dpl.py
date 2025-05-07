@@ -48,7 +48,7 @@ if "skip-non-essential" not in prog_flags:
     import shutil
     import lib.core.extension_support as ext_s
     import pstats
-    import project_mngr.pkfdpl as pkg_manager
+    import project_mngr.pmfdpl as pkg_manager
     ext_s.modules.prompt_toolkit = prompt_toolkit
     ext_s.modules.cProfile = cProfile
     ext_s.modules.pstats = pstats
