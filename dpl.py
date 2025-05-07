@@ -1,5 +1,3 @@
-#cmd: python3 $file -no-cffi -no-lupa
-
 #!/usr/bin/env python3
 
 # DPL CLI
