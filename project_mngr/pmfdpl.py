@@ -222,7 +222,7 @@ def handle_cmd(args, env=None):
             print(":: Pushed", version)
         case ["pull", version]:
             root_path = os.path.dirname(find_upwards(".root"))
-            path = os.path.join(root_path, "versions", str(version))
+            path = os.path.join(root_path, "versions", str(version)+".zip")
             if not os.path.exists(path):
                 print(":: Version", version, "doesnt exist!")
                 return 1
