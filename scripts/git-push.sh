@@ -15,7 +15,7 @@ git push origin $1 --force
 
 echo -e "\n[  git-push.sh  ]: Updating master..."
 git checkout master
-git merge origin $1
+git merge origin $1 -m "Automatic merge from $1"
 git add .
 git commit -m "Automatic merge from $1"
 git push origin master --force
