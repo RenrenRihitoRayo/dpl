@@ -243,7 +243,7 @@ def handle_args():
                 print("Error:", repr(e))
                 exit(1)
         case ["pm", *args]:
-            sys.exit(pkg_mngr.handle_cmd(args))
+            sys.exit(pkg_manager.handle_cmd(args))
         case ["package", *args]:
             match args:
                 case ["install", user, repo]:
