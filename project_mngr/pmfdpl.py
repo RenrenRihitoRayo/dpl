@@ -102,7 +102,7 @@ def make_project(name):
             "author":"author_name",
             "description":"description",
             "install_script":'',
-            "main_script":os.path.abspath(os.path.join(name, "pkg_meta.json")),
+            "main_script":os.path.abspath(os.path.join(name, "src", "main.dpl")),
             "flags":["-skip-non-essential"]
         }))
     with open(os.path.join(name, "src", "main.dpl"), "w") as f: f.write('&use {std/text_io.py}\nio:println "Hello, world!"')
