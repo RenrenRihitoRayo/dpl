@@ -8,8 +8,6 @@ import zipfile
 import shutil
 import socket
 
-import gitpyhon as git
-
 def dl_repo(user_name, repo_name, branch="master", use_branch_name=True, location="."):
     zip_url = (
         f"https://github.com/{user_name}/{repo_name}/archive/refs/heads/{branch}.zip"
