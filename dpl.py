@@ -48,7 +48,6 @@ if "skip-non-essential" not in prog_flags:
     import shutil
     import lib.core.extension_support as ext_s
     import pstats
-    import project_mngr.pmfdpl as pkg_manager
     ext_s.modules.prompt_toolkit = prompt_toolkit
     ext_s.modules.cProfile = cProfile
     ext_s.modules.pstats = pstats
@@ -243,6 +242,7 @@ def handle_args():
                 print("Error:", repr(e))
                 exit(1)
         case ["pm", *args]:
+            import project_mngr.pmfdpl as pkg_manager
             sys.exit(pkg_manager.handle_cmd(args))
         case ["package", *args]:
             match args:
