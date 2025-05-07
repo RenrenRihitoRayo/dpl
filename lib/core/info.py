@@ -51,7 +51,7 @@ INC_EXT = {
 
 INC = {}
 
-INCREAMENTS = set(INC.keys()) | INC_EXT
+INCREMENTS = set(INC.keys()) | INC_EXT
 
 DEC = {"end"}
 
@@ -64,24 +64,31 @@ RT_EXPR = {
     "eval", "to_ascii", "from_ascii"
 }
 
-KEYWORDS = list(INC_EXT)+list(INC.keys())+list(DEC)+[
-    'set',
-    'del',
-    'const',
-    'fset',
+FUNCTIONS = {
     'cmd',
     'exit',
-    'skip',
-    'stop',
-    'raise', 'tc_register',
-    'true', 'false', 'nil', 'none', '...',
-    'export',
-    'in', 'as', 'not', 'and', 'or',
-    'thread', 'wait_for_threads',
+    'wait_for_threads',
     'exec', 'sexec',
     'dlopen', 'dlclose', 'cget', 'cdef',
     'dump_vars', 'dump_scope', 'fallthrough'
-]
+}
+
+CONSTANTS = {
+    'true', 'false', 'nil', 'none', '...'
+}
+
+KEYWORDS = {
+    'skip',
+    'stop',
+    'in', 'as', 'not', 'and', 'or',
+    'raise', 'tc_register',
+    'export',
+    'set',
+    'del',
+    'wait_for_threads',
+}
+
+ALL_INTRINSICS = INC_EXT | set(INC.keys()) | DEC | KEYWORDS
 
 CHARS = {
     "\\\\": "\\[escape]",

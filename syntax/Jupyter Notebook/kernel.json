@@ -1,0 +1,5 @@
+{
+  "argv": ["python3", "kernel.py", "-f", "{connection_file}"],
+  "display_name": "DPL Kernel",
+  "language": "dpl"
+}

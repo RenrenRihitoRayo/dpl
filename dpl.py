@@ -1,3 +1,5 @@
+#cmd: python3 $file -no-cffi -no-lupa
+
 #!/usr/bin/env python3
 
 # DPL CLI
@@ -48,6 +50,7 @@ if "skip-non-essential" not in prog_flags:
     import shutil
     import lib.core.extension_support as ext_s
     import pstats
+    import pkg_mngr.pkfdpl as pkg_manager
     ext_s.modules.prompt_toolkit = prompt_toolkit
     ext_s.modules.cProfile = cProfile
     ext_s.modules.pstats = pstats
@@ -241,6 +244,8 @@ def handle_args():
                 print("Something went wrong:", file)
                 print("Error:", repr(e))
                 exit(1)
+        case ["pm", *args]:
+            sys.exit(handle_cmd(args))
         case ["package", *args]:
             match args:
                 case ["install", user, repo]:
@@ -293,10 +298,13 @@ def handle_args():
                         if line == "--":
                             get = False
                         else:
-                            if not oline.startswith('  '):
+                            if not oline:
+                                res.append("")
+                            elif not oline.startswith('  '):
                                 print(f"{file.name} [line {line_pos}]: Expected a 2-space indent!")
                                 exit(1)
-                            res.append(oline.rstrip()[2:])
+                            else:
+                                res.append(oline.rstrip()[2:])
                         continue
                     if line == "--doc":
                         get = True
@@ -308,26 +316,24 @@ def handle_args():
             cmd_hist = InMemoryHistory()
             acc = []
             if not "-disable-auto-complete" in prog_flags:
+                import lib.core.repl_syntax_highlighter as repl_conf
                 for f in frame:
                     acc.extend(utils.flatten_dict(f).keys())
                     acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
                     acc.extend(map(lambda x:"%"+x, utils.flatten_dict(f).keys()))
-            PROMPT_CTL = frame[-1]["_meta"]["internal"]["prompt_ctl"] = {}
+            PROMPT_CTL = frame[-1]["_meta"]["repl_conf"] = {}
             PROMPT_CTL["ps1"] = ">>> "
             PROMPT_CTL["ps2"] = "... "
-            START_FILE = os.path.join(info.BINDIR, "start_script.dpl")
+            START_FILE = os.path.join(info.BINDIR, "repl_conf/startup.dpl")
             if os.path.isfile(START_FILE):
                 try:
                     with open(START_FILE, "r") as f:
-                        parser.run(parser.process(f.read(), name="dpl_repl-startup"))
+                        parser.run(parser.process(f.read()), frame)
                 except:
                     print("something went wrong while running start up script!")
-            print(
-                f"DPL REPL for DPL {varproc.meta['internal']['version']}\nPython {info.PYTHON_VER}"
-            )
             while True:
                 try:
-                    act = prompt(PROMPT_CTL["ps1"], completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist).strip()
+                    act = prompt(PROMPT_CTL["ps1"], completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist, lexer=repl_conf.DPLLexer(), style=repl_conf.style).strip()
                 except (KeyboardInterrupt, EOFError):
                     exit()
                 if (

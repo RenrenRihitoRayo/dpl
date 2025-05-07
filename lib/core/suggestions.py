@@ -7,7 +7,7 @@ from re import compile as rcomp
 pattern = rcomp(r"[&\w\.\:_\%\!]+")
 import os
 
-SUGGEST = info.KEYWORDS+[
+SUGGEST = list(info.ALL_INTRINSICS) + [
     'pub fn',
     'export set'
 ]
