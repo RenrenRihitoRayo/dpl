@@ -101,8 +101,11 @@ def make_project(name):
             "project_name":name,
             "author":"author_name",
             "description":"description",
-            "install_script":''
+            "install_script":'',
+            "main_script":os.path.abspath(os.path.join(name, "pkg_meta.json")),
+            "flags":["-skip-non-essential"]
         }))
+    with open(os.path.join(name, "src", "main.dpl"), "w") as f: f.write('&use {std/text_io.py}\nio:println "Hello, world!"')
 
 
 def get_pkg_meta():
@@ -314,6 +317,13 @@ def handle_cmd(args, env=None):
                 print(':: Invalid installation file!')
                 return 1
             return subprocess.run(["bash", file, *args]).returncode
+        case ["run", *args]:
+            data = get_pkg_meta()
+            file = data.get("main_script")
+            if not file:
+                print(':: Invalid path to main script!')
+                return 1
+            return subprocess.run(["dpl", *data.get("flags", []), file, *args]).returncode
         case ["help"]:
             print("""Basic Commands
 
@@ -324,7 +334,8 @@ pull [version] - Loads the specified version.
 view [version] - View the message with the associated version.
 list - list all versions.
 init [name] - Initialize a new package [name]
-init - Initialize the new package in the current directory.""")
+init - Initialize the new package in the current directory.
+run *args - runs the main script.""")
         case cmd:
             print(cmd, "is not recognized!")
             return 1
