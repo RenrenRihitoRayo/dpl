@@ -177,6 +177,18 @@ def configure_pkg_meta():
             with open(path, "w") as f:
                 f.write(json.dumps(configs))
 
+def clear_directory(path):
+    if not os.path.isdir(path):
+        raise ValueError(f"{path} is not a valid directory.")
+    for item in os.listdir(path):
+        item_path = os.path.join(path, item)
+        try:
+            if os.path.isfile(item_path) or os.path.islink(item_path):
+                os.unlink(item_path)
+            elif os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+        except Exception as e:
+            print(f"Failed to delete {item_path}. Reason: {e}")
 
 def run(code):
     env = {".stack":[]}
@@ -228,7 +240,7 @@ def handle_cmd(args, env=None):
             if not os.path.exists(path):
                 print(":: Version", version, "doesnt exist!")
                 return 1
-            shutil.rmtree(os.path.join(root_path, "src"))
+            clear_directory(os.path.join(root_path, "src"))
             unzip_archive(path, os.path.join(root_path, "src"))
             print(":: Pulled", version)
             os.chdir(previous)
