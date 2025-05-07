@@ -134,6 +134,21 @@ Most recent at top.
 
 # 1.4.8
 
+## DPL now has a Package Manager!
+
+PMFDPL (Package Manager for DPL)
+is a simplified version handling system.
+
+```Plaintext
+[root@localhost ~/dpl]# dpl pm init my_package
+[root@localhost ~/dpl]# cd my_package/src
+... do the rest!
+```
+
+Use `dpl pm help` for more!
+
+## REPL now supports syntax highlighting!
+
 ## New `std-dpl/ansi.dpl` module
 
 ```DuProL

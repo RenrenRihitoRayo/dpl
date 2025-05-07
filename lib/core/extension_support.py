@@ -203,7 +203,7 @@ def luaj_import(
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join(
-                {"_std": varproc.meta["internal"]["lib_path"], "_loc": loc}.get(
+                {"_std": info.LINDIR, "_loc": loc}.get(
                     search_path, search_path
                 ),
                 file,
@@ -281,7 +281,7 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join(
-                {"_std": varproc.meta["internal"]["lib_path"], "_loc": loc}.get(
+                {"_std": info.LIBDIR, "_loc": loc}.get(
                     search_path, search_path
                 ),
                 file,

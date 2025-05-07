@@ -1,0 +1,52 @@
+{
+    "classes":{
+        "keywords":{
+            "style":"bold fg:magenta",
+            "words":[
+                "skip", "stop", "in", "as", "not", "and", "or",
+                "raise", "tc_register", "export", "set", "del", "wait_for_threads",
+                "match",
+                "case",
+                "fn",
+                "module",
+                "method",
+                "for",
+                "pub",
+                "loop",
+                "while",
+                "if",
+                "thread",
+                "dict",
+                "with",
+                "default",
+                "sched",
+                "enum",
+                "ifmain",
+                "switch",
+                "begin",
+                "end"
+            ]
+        },
+        "functions":{
+            "style":"bold fg:grey",
+            "words":[
+                "cmd", "exit", "wait_for_threads", "exec", "sexec",
+                "dlopen", "dlclose", "cget", "cdef", "dump_vars", "dump_scope", "fallthrough"
+            ]
+        },
+        "comments":{
+            "style":"bg:grey",
+            "startswith":"#"
+        },
+        "numbers":{
+            "style":"fg:orange",
+            "match":"-?\\d+(:?\\.\\d+)?"
+        },
+        "string":{
+            "style":"fg:green"
+        },
+        "escape":{
+            "style":"fg:purple"
+        }
+    }
+}

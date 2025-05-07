@@ -1,0 +1,24 @@
+--doc
+  Location: .../dpl/repl_conf/startup.dpl
+
+  This is the startup script for the REPL
+  Use this to customize your REPL
+  experience!
+  
+  Use `_meta.repl_conf.ps1` and `_meta.repl_conf.ps2`
+  to customize your prompt texts!
+  
+  Even the startup text!
+--
+
+&use {std/text_io.py}
+
+# This is the default start up text.
+# Upon startup you might see something like
+
+# DPL REPL for DPL v1.4.8
+# Python 3.12.0 [...]
+io:println "DPL REPL for DPL" :_meta.internal.version
+io:println "Python" :_meta.internal.python_version_string
+
+# More configurations will be available!

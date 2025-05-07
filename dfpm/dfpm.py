@@ -8,6 +8,7 @@ import zipfile
 import shutil
 import socket
 
+import gitpyhon as git
 
 def dl_repo(user_name, repo_name, branch="master", use_branch_name=True, location="."):
     zip_url = (
@@ -94,7 +95,6 @@ def main():
         repo_url, branch_name = sys.argv[1].split("=", maxsplit=1)
         dl_repo(repo_url, branch_name)
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

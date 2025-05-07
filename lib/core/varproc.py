@@ -50,7 +50,6 @@ meta = {
     "argc": info.ARGC,
     "inter_flags": flags,
     "internal": {
-        "lib_path": info.LIBDIR,
         "main_path": constants.none,
         "main_file": "__main__",
         "version": info.VERSION,
@@ -67,6 +66,17 @@ meta = {
     "type_signatures":type_checker.typed
 }
 
+
+def set_lib_path(_, __, path):
+    info.LIBDIR = path
+
+def get_lib_path(_, __, path):
+    return info.LIBDIR,
+
+# Use this since programs might use
+# info.LIBDIR rather than meta["internal"]["lib_path"]
+meta["internal"]["set_lib_path"] = set_lib_path
+meta["internal"]["get_lib_path"] = get_lib_path
 
 def new_frame():
     "Generate a new scope frame"

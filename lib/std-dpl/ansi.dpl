@@ -138,14 +138,23 @@ ifmain
     io:println "Invert!"
     ansi.change_style :ansi.style.inverse_reset
     ansi.change_style :ansi.style.reset_all
-    # test rgb
-    for r in [drawrange 100 256]
-    for g in [drawrange 100 256]
-    for b in [drawrange 100 256]
-        ansi.print_rgb_fg :r :b :g
-        io:rawprint "@"
+    io:input "Press enter for a rainbow!"
+    
+    # fun thing
+    for a in [drange 30 38]
+    for b in [drange 30 38]
+    for c in [drange 30 38]
+    ansi.print_color :a
+    io:rawprint w
+    ansi.print_color :b
+    io:rawprint o
+    ansi.print_color :c
+    io:rawprint w
+    ansi.change_style :ansi.style.reset_all
+    io:rawprint "!"
     end
     end
     end
     ansi.change_style :ansi.style.reset_all
+    io:rawprintln
 end
