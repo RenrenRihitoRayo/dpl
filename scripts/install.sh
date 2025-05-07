@@ -4,7 +4,7 @@ echo "dpl.py -skip-non-essential run \$@" > dpl-run
 chmod +x dpl-run
 echo "dpl.py \$@" > dpl
 chmod +x dpl
-echo "dpl.py -no-cffi -no-lupa pm \$@" > dplpm
+echo "dpl.py -no-cffi -no-lupa -skip-non-essential pm \$@" > dplpm
 chmod +x dplpm
 
 # Check if it's already in .bashrc
