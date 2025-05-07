@@ -223,12 +223,15 @@ def handle_cmd(args, env=None):
         case ["pull", version]:
             root_path = os.path.dirname(find_upwards(".root"))
             path = os.path.join(root_path, "versions", str(version)+".zip")
+            previous = os.getcwd()
+            os.chdir(root_path)
             if not os.path.exists(path):
                 print(":: Version", version, "doesnt exist!")
                 return 1
             shutil.rmtree(os.path.join(root_path, "src"))
             unzip_archive(path, os.path.join(root_path, "src"))
             print(":: Pulled", version)
+            os.chdir(previous)
         case ["view", version]:
             root_path = os.path.dirname(find_upwards(".root"))
             if not os.path.exists(path:=os.path.join(root_path, "versions", f"msg-{version}.txt")):
