@@ -246,7 +246,7 @@ def handle_cmd(args, env=None):
         case ["pull", version]:
             path = path_from_root("versions", str(version)+".zip")
             previous = os.getcwd()
-            os.chdir(root_path)
+            os.chdir(path_from_root())
             if not os.path.exists(path):
                 print(":: Version", version, "doesnt exist!")
                 return 1
