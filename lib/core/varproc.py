@@ -23,18 +23,18 @@ debug = {
     "type_checker": 0,
     "TC_DEFAULT_WHEN_NOT_FOUND": 1,
     "allow_automatic_global_name_resolution":1, # set to false to get variables faster
-    "show_scope_updates": 0,
-    "show_value_updates": 0,
-    "show_imports": 0,
-    "warn_no_return": 0,
-    "log_events": 0,
+    "show_scope_updates": 0, # show when scope is popped or pushed onto
+    "show_value_updates": 0, # show when variables are read or changed
+    "show_imports": 0,       # show imoports and includes
+    "warn_no_return": 0,     # warn about cathing python functions even when theres no return value
+    "log_events": 0,         # log output (redirects to log file)
     "debug_output_file": "debug_log.txt",
-    "track_time": 0,
-    "time_threshold": 1.5,
-    "disable_nil_values": 0,
-    "error_on_undefined_vars": 0,
-    "warn_undefined_vars": 1,
-    "_set_only_when_defined": 1,  # make sure that only defined variables in this scope can be set
+    "track_time": 0,         # track function time
+    "time_threshold": 1.5,   # if track_time is on and the time passes this threshhold it primts a warning saying the function took too long
+    "disable_nil_values": 0, # raises an error when nil values are accessed. useful for debugging missing values.
+    "error_on_undefined_vars": 0, # "NameError" like errors when variables that do not exist are read.
+    "warn_undefined_vars": 1,     # Like "error_on_undefined_vars" but a warning instead.
+    "_set_only_when_defined": 1,  # make sure that only defined variables in this scope can be set.
 }
 
 flags = set()

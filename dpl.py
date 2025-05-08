@@ -246,6 +246,9 @@ def handle_args():
             import project_mngr.pmfdpl as pkg_manager
             pkg_manager.mfile = _file_
             sys.exit(pkg_manager.handle_cmd(args))
+        case ["get-bindings"]:
+            with open("dpl_py_bindings.h", "w") as f:
+                f.write(info.py_bindings)
         case ["package", *args]:
             match args:
                 case ["install", user, repo]:

@@ -12,6 +12,39 @@ unique_imports = set()
 
 program_flags = set()
 
+# provide the bindings for interacting with python
+# albeit simpler
+py_bindings = """
+#ifndef _DPL_PY_BINDINGS_H_
+#define _DPL_PY_BINDINGS_H_
+
+#include <stdint.h>
+#include <stdlib.h>
+
+typedef struct {
+    char* content;
+    char* type;
+} Expr;
+
+typedef struct {
+    char* key;
+    Expr value;
+} DictEntry;
+
+typedef struct {
+    DictEntry *items;
+    size_t length;
+    size_t cap;
+} Dict;
+
+Dict make_dict(DictEntry e[]);
+void dict_add_item(Dict *d, char* k, char* s);
+void* dict_get_item(Dict d, char* k);
+void* dict_pop_item(Dict *d, char* k);
+
+#endif // _DPL_PY_BINDINGS_H_
+"""
+
 try:
     from . import constants
 except ImportError:
