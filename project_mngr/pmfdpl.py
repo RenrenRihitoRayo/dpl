@@ -296,7 +296,7 @@ def handle_cmd(args, env=None):
         case ["config"]:
             return configure_pkg_meta()
         case ["pull", version]:
-            zip_folder(path_from_root("src"), (temp_path:=path_from_root("versions", "temporary")))
+            zip_folder(path_from_root("src"), (temp_path:=path_from_root("versions", "current")))
             path = path_from_root("versions", str(version)+".zip")
             previous = os.getcwd()
             os.chdir(path_from_root())
@@ -304,7 +304,7 @@ def handle_cmd(args, env=None):
                 print(":: Version", version, "doesnt exist!")
                 return 1
             for ziped in os.listdir(path_from_root("versions")):
-                if ziped == "temporary.zip" or not ziped.endswith(".zip"): continue
+                if ziped == "current.zip" or not ziped.endswith(".zip"): continue
                 if (t:=is_same_zip(temp_path+".zip", path_from_root("versions", ziped))):
                     break
             else:
