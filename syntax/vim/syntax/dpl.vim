@@ -37,7 +37,7 @@ syntax match dplNumber "\v<\d+(\.\d+)?>"
 " Strings
 
 syntax region dplStringI start='{' end='}' contains=dplEscape
-syntax region dplString start='\'' end='\'' contains=dplEscape contains=dplInterpolated
+syntax region dplString start='\'' end='\'' contains=dplEscape,dplInterpolated
 syntax region dplString start='"' end='"' contains=dplEscape
 syntax match dplEscape "\\[nrt\"'\\]" contained
 syntax match dplInterpolated "\v\$\\{[^\\}]+\\}" contained
