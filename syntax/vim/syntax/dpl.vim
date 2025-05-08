@@ -37,9 +37,10 @@ syntax match dplNumber "\v<\d+(\.\d+)?>"
 " Strings
 
 syntax region dplStringI start='{' end='}' contains=dplEscape
-syntax region dplString start='\'' end='\'' contains=dplEscape
+syntax region dplString start='\'' end='\'' contains=dplEscape contains=dplInterpolated
 syntax region dplString start='"' end='"' contains=dplEscape
-syntax match dplEscape "\\[nrt\"\\]" contained
+syntax match dplEscape "\\[nrt\"'\\]" contained
+syntax match dplInterpolated "\$\{[^}]+\}" contained
 
 " Comments
 syntax match dplComment "#.*$" contains=dplTodo
@@ -57,6 +58,7 @@ highlight link dplNumber Number
 highlight link dplString String
 highlight link dplStringI String
 highlight link dplEscape SpecialChar
+highlight link dplInterpolated SpecialChar
 highlight link dplComment Comment
 highlight link dplMLComment Comment
 highlight link dplTodo Todo

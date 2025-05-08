@@ -134,6 +134,18 @@ Most recent at top.
 
 # 1.4.8
 
+## New command
+
+DPL when running "install.sh" installs
+"dpl", "dpl-run", and "dplpm".
+
+* "dpl" is the cli itself.
+* "dpl-run" is an alias to "dpl run ..."
+* "dplpm" is an alias to "dpl pm ..."
+
+"dpl-run" is meant to be used for shebangs.
+I.E. `#!/usr/bin/env ...`
+
 ## DPL now has a Package Manager!
 
 PMFDPL (Package Manager for DPL)

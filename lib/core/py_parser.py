@@ -810,9 +810,13 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             else:
                 file = args[1]
             if not os.path.isfile(file):
-                error.error(pos, file, f"File {file!r} coundlt be loaded!")
+                error.error(pos, file, f"File {file!r} couldnt be loaded!")
                 return error.FILE_NOT_FOUND_ERROR
-            frame[-1][args[0]] = ext_s.dpl.ffi.dlopen(file)
+            try:
+                frame[-1][args[0]] = ext_s.dpl.ffi.dlopen(file)
+            except:
+                error.error("Dynamic library couldnt be opened!\nReasons:\n* Permissions\n* Unsupported\n* Corrupt file")
+                return error.PYTHON_ERROR
         elif ins == "dlclose" and argc == 1:
             ext_s.dpl.ffi.dlclose(args[0])
         elif ins == "getc" and argc == 2:
