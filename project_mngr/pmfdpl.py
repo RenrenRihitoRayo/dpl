@@ -304,7 +304,7 @@ def handle_cmd(args, env=None):
                 print(":: Version", version, "doesnt exist!")
                 return 1
             for ziped in os.listdir(path_from_root("versions")):
-                if zipped == "temporary.zip" or not ziped.endswith(".zip"): continue
+                if ziped == "temporary.zip" or not ziped.endswith(".zip"): continue
                 if (t:=is_same_zip(temp_path+".zip", path_from_root("versions", ziped))):
                     break
             else:
