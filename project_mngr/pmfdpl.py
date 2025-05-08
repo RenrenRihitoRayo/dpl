@@ -16,6 +16,23 @@ from itertools import zip_longest
 
 mfile = None
 
+import os
+import subprocess
+import shutil
+import tempfile
+
+def summon_editor(filepath):
+    editor = os.environ.get('EDITOR') or os.environ.get('VISUAL')
+    fallback_editors = ['nano', 'vim', 'vi', 'code', 'notepad']
+    if not editor:
+        for ed in fallback_editors:
+            if shutil.which(ed):
+                editor = ed
+                break
+    if not editor:
+        raise RuntimeError("No text editor found. Please set the $EDITOR or $VISUAL environment variable.")
+    subprocess.run([editor, filepath])
+
 def compare_zip_contents(zip1_path, zip2_path):
     with zipfile.ZipFile(zip1_path) as zip1, zipfile.ZipFile(zip2_path) as zip2:
         names1 = set(zip1.namelist())
@@ -111,13 +128,27 @@ def make_project(name):
     with open(os.path.join(name, "src", "main.dpl"), "w") as f: f.write('&use {std/text_io.py}\nio:println "Hello, world!"')
 
 
-def get_pkg_meta():
+def update_pkg_meta(*args):
     if (path:=find_upwards("pkg_meta.json")):
         try:
-            return json.loads(open(path).read())
+            with open(path) as f:
+                configs =  json.loads(f.read())
         except:
-            print("Problem while loading pkg_meta.json")
-    return {}
+            print(":: Problem while loading pkg_meta.json")
+            return 1
+    *name, value = args
+    node = configs
+    while name:
+        n = name.pop(0)
+        if len(name) != 0 and n in node and isinstance(node[n], dict):
+            node = node[n]
+        elif len(name) == 0 and n in node:
+            node[n] = value
+        else:
+            print(":: Invalid attribute!")
+            return 1
+    with open(path, "w") as f:
+        f.write(json.dumps(configs))
 
 def set_config(node, name="???"):
     print("Editing", name)
@@ -149,17 +180,11 @@ def configure_pkg_meta():
         try:
             configs = json.loads(open(path).read())
         except:
-            print("Problem while loading pkg_meta.json")
+            print(":: Problem while loading pkg_meta.json")
+            return 1
     else:
-        path = os.path.join(os.path.dirname(root_path), "pkg_meta.json")
-        configs = {
-            "project_name":os.path.dirname(root_path),
-            "author":"author_name",
-            "description":"description",
-            "install_script":"",
-            "main_script":"",
-            "flags":["-skip-non-essential"]
-        }
+        print(":: Config data not found.")
+        return 1
     print("Config TUI\nhelp for more.")
     while True:
         act = input(": ").strip()
@@ -237,12 +262,7 @@ def handle_cmd(args, env=None):
         case ["init"]:
             make_project(".")
         case ["config"]:
-            configure_pkg_meta()
-        case ["push", version, message]:
-            zip_folder(path_from_root("src"), path_from_root("versions", str(version)))
-            with open(os.path.join(root_path, "versions", f"msg-{version}.txt"), "w") as f:
-                f.write(message)
-            print(":: Pushed", version)
+            return configure_pkg_meta()
         case ["pull", version]:
             path = path_from_root("versions", str(version)+".zip")
             previous = os.getcwd()
@@ -263,6 +283,12 @@ def handle_cmd(args, env=None):
         case ["push", version]:
             zip_folder(path_from_root("src"), path_from_root("versions", str(version)))
             print(":: Pushed", version)
+        case ["message", version]:
+            with open(path_from_root("src", "versions", f"msg-{version}.txt"), "w") as f:
+                with open(path_from_root("src", "temp.txt"), "w") as temp: temp.write("Message here!")
+                summon_editor(path_from_root("src", "temp.txt"))
+                with open(path_from_root("src", "temp.txt"), "r") as temp:
+                    f.write(temp.read())
         case ["list"]:
             v = filter(lambda x: x.endswith(".zip"), os.listdir(path_from_root("versions")))
             print(f"\nVersions [{len(v:=tuple(v)):,} total]:")
