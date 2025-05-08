@@ -40,7 +40,7 @@ syntax region dplStringI start='{' end='}' contains=dplEscape
 syntax region dplString start='\'' end='\'' contains=dplEscape,dplInterpolated
 syntax region dplString start='"' end='"' contains=dplEscape
 syntax match dplEscape "\\[nrt\"'\\]" contained
-syntax match dplInterpolated "\v\$\\{[^\\}]+\\}" contained
+syntax match dplInterpolated "\v\$\{[^\}]+\}" contained
 
 " Comments
 syntax match dplComment "#.*$" contains=dplTodo
