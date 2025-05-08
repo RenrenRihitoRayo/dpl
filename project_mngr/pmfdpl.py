@@ -268,6 +268,13 @@ def handle_cmd(args, env=None):
             print(f"\nVersions [{len(v:=tuple(v)):,} total]:")
             for ver in v:
                 print("*", ver[:-4])
+        case ["remove", version]:
+            path = path_from_root("versions", version+".zip")
+            if not os.path.isfile(path):
+                print(":: Version does not exist!")
+                return 1
+            if input("Enter yes to delete version: ") == "yes":
+                os.remove(path)
         case ["compare", version, current]:
             root_path = os.path.dirname(find_upwards(".root"))
             ver = path_from_root("versions", str(version)+".zip")
