@@ -234,7 +234,7 @@ def luaj_import(
                             return 1
             return
         else:
-            print("luaj: 'include.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
+            print("luaj: 'include-lua.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
             return 1
     if varproc.is_debug_enabled("show_imports"):
         error.info(f"Imported {file!r}")
@@ -315,7 +315,7 @@ def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_
                             return 1
             return
         else:
-            print(f"python: 'include.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
+            print(f"python: 'include-py.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
             return 1
     if varproc.is_debug_enabled("show_imports"):
         error.info(f"Imported {file!r}" if not alias else f"Imported {file!r} as {alias}")
