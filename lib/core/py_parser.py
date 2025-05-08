@@ -255,11 +255,13 @@ def process(fcode, name="__main__"):
                 else:
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
+                    else:
+                        file = os.path.join(os.getcwd(), args[0])
                 if not os.path.exists(file):
                     error.error(lpos, file, f"Not found: {file}")
                     return error.PREPROCESSING_ERROR
                 if os.path.isdir(file):
-                    if not os.path.isfile(files:=os.path.join(file, "include-dpl.txt")):
+                    if os.path.isfile(files:=os.path.join(file, "include-dpl.txt")):
                         with open(files) as f:
                             for line in f:
                                 line = line.strip()
@@ -271,12 +273,16 @@ def process(fcode, name="__main__"):
                                     continue
                                 elif line.startswith("#") or not line:
                                     continue
+                                line = os.path.join(file, line)
                                 with open(line, "r") as f:
                                     if isinstance(err:=process(f.read(), name=line), int):
                                         return err
                                     res.extend(err["code"])
                                     if not err["frame"] is None: nframe[0].update(err["frame"][0])
                                 varproc.meta["dependencies"]["dpl"].add(os.path.realpath(line))
+                    else:
+                        error.error(lpos, name, f"While including the directory {file!r} the include-dpl.txt file wasnt found!")
+                        return error.PREPROCESSING_ERROR
                 else:
                     with open(file, "r") as f:
                         if isinstance(err:=process(f.read(), name=file), int):
@@ -299,7 +305,7 @@ def process(fcode, name="__main__"):
                     error.error(lpos, file, f"Not found: {file}")
                     return error.PREPROCESSING_ERROR
                 if os.path.isdir(file):
-                    if not os.path.isfile(files:=os.path.join(file, "include-cdpl.txt")):
+                    if os.path.isfile(files:=os.path.join(file, "include-cdpl.txt")):
                         with open(files) as f:
                             for line in f:
                                 line = line.strip()
