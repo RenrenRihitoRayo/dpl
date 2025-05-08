@@ -20,6 +20,7 @@ import os
 import subprocess
 import shutil
 import tempfile
+from traceback import format_exc
 
 def summon_editor(filepath):
     editor = os.environ.get('EDITOR') or os.environ.get('VISUAL')
@@ -71,9 +72,29 @@ def compare_zip_contents(zip1_path, zip2_path):
                     print(f"  {name}")
 
 
-from traceback import format_exc
 
-from pathlib import Path
+def is_same_zip(zip1_path, zip2_path):
+    with zipfile.ZipFile(zip1_path) as zip1, zipfile.ZipFile(zip2_path) as zip2:
+        names1 = set(zip1.namelist())
+        names2 = set(zip2.namelist())
+        only_in_zip1 = names1 - names2
+        only_in_zip2 = names2 - names1
+        in_both = names1 & names2
+        if sorted(only_in_zip1): return False
+        if sorted(only_in_zip2): return False
+        for name in sorted(in_both):
+            with zip1.open(name) as f1, zip2.open(name) as f2:
+                content1 = f1.read()
+                content2 = f2.read()
+                if content1 != content2:
+                    return False
+        for name in sorted(in_both):
+            with zip1.open(name) as f1, zip2.open(name) as f2:
+                content1 = f1.read()
+                content2 = f2.read()
+                if content1 != content2:
+                    return False
+    return True
 
 def find_upwards(name):
     curpath = os.getcwd()
@@ -149,6 +170,17 @@ def update_pkg_meta(*args):
             return 1
     with open(path, "w") as f:
         f.write(json.dumps(configs))
+
+
+def get_pkg_meta():
+    if (path:=find_upwards("pkg_meta.json")):
+        try:
+            with open(path) as f:
+                return json.loads(f.read())
+        except:
+            print(":: Problem while loading pkg_meta.json")
+            return {}
+
 
 def set_config(node, name="???"):
     print("Editing", name)
@@ -264,12 +296,17 @@ def handle_cmd(args, env=None):
         case ["config"]:
             return configure_pkg_meta()
         case ["pull", version]:
+            zip_folder(path_from_root("src"), path_from_root("versions", "temporary"))
             path = path_from_root("versions", str(version)+".zip")
             previous = os.getcwd()
             os.chdir(path_from_root())
             if not os.path.exists(path):
                 print(":: Version", version, "doesnt exist!")
                 return 1
+            if not any(map(lambda x: is_same_zip(path_from_root("versions", "temporary.zip"), path_from_root("versions", x)), os.listdir(path_from_root("versions")))):
+                print(":: Current version isnt saved!")
+                return 1
+            os.remove(path_from_root("versions", "temporary.zip"))
             clear_directory(path_from_root("src"))
             unzip_archive(path, path_from_root("src"))
             print(":: Pulled", version)
@@ -279,7 +316,8 @@ def handle_cmd(args, env=None):
                 print("Doesnt exist!")
                 return 1
             with open(path, "r") as f:
-                print(">>", f.read())
+                print(">>", version)
+                print(f.read()+"\n")
         case ["push", version]:
             zip_folder(path_from_root("src"), path_from_root("versions", str(version)))
             print(":: Pushed", version)
