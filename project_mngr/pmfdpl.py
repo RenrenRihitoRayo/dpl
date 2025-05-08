@@ -142,8 +142,8 @@ def make_project(name):
             "project_name":name,
             "author":"author_name",
             "description":"description",
-            "install_script":'',
-            "main_script":os.path.abspath(os.path.join(name, "src", "main.dpl")),
+            "install_script":"",
+            "main_script":"main.dpl", # relative to project_root/src
             "flags":["-skip-non-essential"]
         }))
     with open(os.path.join(name, "src", "main.dpl"), "w") as f: f.write('&use {std/text_io.py}\nio:println "Hello, world!"')
@@ -403,6 +403,7 @@ def handle_cmd(args, env=None):
         case ["run", *args]:
             data = get_pkg_meta()
             file = data.get("main_script")
+            file = path_from_root("src", file)
             if (not file) or not os.path.isfile(file):
                 print(':: Invalid path to main script!', data)
                 return 1
