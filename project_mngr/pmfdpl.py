@@ -303,7 +303,7 @@ def handle_cmd(args, env=None):
             if not os.path.exists(path):
                 print(":: Version", version, "doesnt exist!")
                 return 1
-            if not any(map(lambda x: is_same_zip(path_from_root("versions", "temporary.zip"), path_from_root("versions", x)), os.listdir(path_from_root("versions")))):
+            if not any(map(lambda x: is_same_zip(path_from_root("versions", "temporary.zip"), path_from_root("versions", x)) if x.endswith(".zip") else False, os.listdir(path_from_root("versions")))):
                 print(":: Current version isnt saved!")
                 return 1
             os.remove(path_from_root("versions", "temporary.zip"))
