@@ -309,7 +309,7 @@ def handle_cmd(args, env=None):
                     break
             else:
                 print(":: Unsaved work!")
-                compare_zip_contents(path_from_root("versions", version+".zip"), temp_path)
+                compare_zip_contents(path_from_root("versions", version+".zip"), temp_path+".zip")
                 os.remove(path_from_root("versions", "temporary.zip"))
                 return 1
             os.remove(path_from_root("versions", "temporary.zip"))
