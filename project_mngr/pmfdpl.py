@@ -353,7 +353,10 @@ def handle_cmd(args, env=None):
             if not os.path.exists(ver):
                 print(f":: {version} doesnt exist!")
                 return 1
-            if not os.path.exists(cur):
+            if current == "current":
+                zip_folder(path_from_root("src"), (temp_path:=path_from_root("versions", "current")))
+                cur = path_from_root("versions", "current.zip")
+            elif not os.path.exists(cur):
                 if (input(f":: {current} hasnt been pushed yet!\nPush automatically? [y/N] ").lower()+" ")[0] == "y":
                     zip_folder(path_from_root("src"), path_from_root("versions", cur[:-4]))
                     print(":: Pushed", current)
