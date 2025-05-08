@@ -43,11 +43,11 @@ def compare_zip_contents(zip1_path, zip2_path):
         only_in_zip2 = names2 - names1
         in_both = names1 & names2
 
-        if sorted(only_in_zip1): print("Only in ZIP 1:")
+        if sorted(only_in_zip1): print("Only in", zip1_path)
         for name in sorted(only_in_zip1):
             print(f"  {name}")
 
-        if sorted(only_in_zip2): print("\nOnly in ZIP 2:")
+        if sorted(only_in_zip2): print("\nOnly in", zip2_path)
         for name in sorted(only_in_zip2):
             print(f"  {name}")
 
@@ -308,8 +308,9 @@ def handle_cmd(args, env=None):
                 if (t:=is_same_zip(temp_path+".zip", path_from_root("versions", ziped))):
                     break
             else:
-                os.remove(path_from_root("versions", "temporary.zip"))
                 print(":: Unsaved work!")
+                compare_zip_contents(path_from_root("versions", version+".zip"), temp_path)
+                os.remove(path_from_root("versions", "temporary.zip"))
                 return 1
             os.remove(path_from_root("versions", "temporary.zip"))
             clear_directory(path_from_root("src"))
