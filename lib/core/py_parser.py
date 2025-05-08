@@ -642,6 +642,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             argc = 0
         if debug_ins:
             print("::", ins, argc, args)
+            input()
         if ins == "fn" and argc == 2:
             name, params = args
             block = get_block(code, instruction_pointer)
