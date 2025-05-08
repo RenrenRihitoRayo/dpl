@@ -312,7 +312,7 @@ def handle_cmd(args, env=None):
                 compare_zip_contents(path_from_root("versions", version+".zip"), temp_path+".zip")
                 os.remove(path_from_root("versions", "temporary.zip"))
                 return 1
-            os.remove(path_from_root("versions", "temporary.zip"))
+            os.remove(path_from_root("versions", "current.zip"))
             clear_directory(path_from_root("src"))
             unzip_archive(path, path_from_root("src"))
             print(":: Pulled", version)
