@@ -43,11 +43,11 @@ def compare_zip_contents(zip1_path, zip2_path):
         only_in_zip2 = names2 - names1
         in_both = names1 & names2
 
-        if sorted(only_in_zip1): print("Only in", zip1_path)
+        if sorted(only_in_zip1): print("Only in", os.path.basename(zip1_path))
         for name in sorted(only_in_zip1):
             print(f"  {name}")
 
-        if sorted(only_in_zip2): print("\nOnly in", zip2_path)
+        if sorted(only_in_zip2): print("\nOnly in", os.path.basename(zip2_path))
         for name in sorted(only_in_zip2):
             print(f"  {name}")
 
