@@ -185,6 +185,10 @@ def configure_pkg_meta():
             with open(path, "w") as f:
                 f.write(json.dumps(configs))
 
+def path_from_root(*path):
+    root_path = os.path.dirname(find_upwards(".root"))
+    return os.path.join(root_path, *path)
+
 def clear_directory(path):
     if not os.path.isdir(path):
         raise ValueError(f"{path} is not a valid directory.")
@@ -235,52 +239,45 @@ def handle_cmd(args, env=None):
         case ["config"]:
             configure_pkg_meta()
         case ["push", version, message]:
-            root_path = os.path.dirname(find_upwards(".root"))
-            zip_folder(os.path.join(root_path, "src"), os.path.join(root_path, "versions", str(version)))
+            zip_folder(path_from_root("src"), path_from_root("versions", str(version)))
             with open(os.path.join(root_path, "versions", f"msg-{version}.txt"), "w") as f:
                 f.write(message)
             print(":: Pushed", version)
         case ["pull", version]:
-            root_path = os.path.dirname(find_upwards(".root"))
-            path = os.path.join(root_path, "versions", str(version)+".zip")
+            path = path_from_root("versions", str(version)+".zip")
             previous = os.getcwd()
             os.chdir(root_path)
             if not os.path.exists(path):
                 print(":: Version", version, "doesnt exist!")
                 return 1
-            clear_directory(os.path.join(root_path, "src"))
-            unzip_archive(path, os.path.join(root_path, "src"))
+            clear_directory(path_from_root("src"))
+            unzip_archive(path, path_from_root("src"))
             print(":: Pulled", version)
             os.chdir(previous)
         case ["view", version]:
-            root_path = os.path.dirname(find_upwards(".root"))
-            if not os.path.exists(path:=os.path.join(root_path, "versions", f"msg-{version}.txt")):
+            if not os.path.exists(path:=path_from_root("versions", f"msg-{version}.txt")):
                 print("Doesnt exist!")
                 return 1
             with open(path, "r") as f:
                 print(">>", f.read())
         case ["push", version]:
-            root_path = os.path.dirname(find_upwards(".root"))
-            zip_folder(os.path.join(root_path, "src"), os.path.join(root_path, "versions", str(version)))
+            zip_folder(path_from_root("src"), path_from_root("versions", str(version)))
             print(":: Pushed", version)
         case ["list"]:
-            v = filter(lambda x: x.endswith(".zip"), os.listdir(os.path.join(
-            os.path.dirname(find_upwards(".root")),
-            "versions"
-            )))
+            v = filter(lambda x: x.endswith(".zip"), os.listdir(path_from_root("versions")))
             print(f"\nVersions [{len(v:=tuple(v)):,} total]:")
             for ver in v:
                 print("*", ver[:-4])
         case ["compare", version, current]:
             root_path = os.path.dirname(find_upwards(".root"))
-            ver = os.path.join(root_path, "versions", str(version)+".zip")
-            cur = os.path.join(root_path, "versions", str(current)+".zip")
+            ver = path_from_root("versions", str(version)+".zip")
+            cur = path_from_root("versions", str(current)+".zip")
             if not os.path.exists(ver):
                 print(f":: {version} doesnt exist!")
                 return 1
             if not os.path.exists(cur):
                 if (input(f":: {current} hasnt been pushed yet!\nPush automatically? [y/N] ").lower()+" ")[0] == "y":
-                    zip_folder(os.path.join(root_path, "src"), os.path.join(root_path, "versions", cur[:-4]))
+                    zip_folder(path_from_root("src"), path_from_root("versions", cur[:-4]))
                     print(":: Pushed", current)
                 else:
                     return 1
