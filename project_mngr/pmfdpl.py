@@ -284,11 +284,12 @@ def handle_cmd(args, env=None):
             zip_folder(path_from_root("src"), path_from_root("versions", str(version)))
             print(":: Pushed", version)
         case ["message", version]:
-            with open(path_from_root("src", "versions", f"msg-{version}.txt"), "w") as f:
-                with open(path_from_root("src", "temp.txt"), "w") as temp: temp.write("Message here!")
-                summon_editor(path_from_root("src", "temp.txt"))
-                with open(path_from_root("src", "temp.txt"), "r") as temp:
+            with open(path_from_root("versions", f"msg-{version}.txt"), "w") as f:
+                with open(path_from_root("temp.txt"), "w") as temp: temp.write("Message here!")
+                summon_editor(path_from_root("temp.txt"))
+                with open(path_from_root("temp.txt"), "r") as temp:
                     f.write(temp.read())
+                os.remove(path_from_root("temp.txt"))
         case ["list"]:
             v = filter(lambda x: x.endswith(".zip"), os.listdir(path_from_root("versions")))
             print(f"\nVersions [{len(v:=tuple(v)):,} total]:")
