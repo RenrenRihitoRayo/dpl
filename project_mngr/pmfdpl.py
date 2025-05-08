@@ -147,6 +147,7 @@ def make_project(name):
             "flags":["-skip-non-essential"]
         }))
     with open(os.path.join(name, "src", "main.dpl"), "w") as f: f.write('&use {std/text_io.py}\nio:println "Hello, world!"')
+    with open(os.path.join(name, "include-dpl.txt"), "w") as f: f.write("# DPL detects this file when we import the package.\nsrc/main.dpl")
 
 
 def update_pkg_meta(*args):
