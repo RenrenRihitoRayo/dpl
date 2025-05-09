@@ -139,7 +139,6 @@ try:
     get_size_of(0, 0, 0)
     varproc.meta["internal"]["SizeOf"] = get_size_of
 except:
-
     def temp(_, __, ___):
         return f"err:{error.PYTHON_ERROR}:Cannot get memory usage of an object!\nIf you are using pypy, pypy does not support this feature."
 
@@ -814,8 +813,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 return error.FILE_NOT_FOUND_ERROR
             try:
                 frame[-1][args[0]] = ext_s.dpl.ffi.dlopen(file)
-            except:
-                error.error("Dynamic library couldnt be opened!\nReasons:\n* Permissions\n* Unsupported\n* Corrupt file")
+            except Exception as perror:
+                error.error(pos, file, f"Dynamic library couldnt be opened!\nError: {perror!r}\nReasons:\n* Permissions\n* Unsupported\n* Corrupt file")
                 return error.PYTHON_ERROR
         elif ins == "dlclose" and argc == 1:
             ext_s.dpl.ffi.dlclose(args[0])

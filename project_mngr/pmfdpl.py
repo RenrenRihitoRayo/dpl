@@ -3,6 +3,7 @@
 # Damn Im making my life harder...
 
 import os
+from re import sub
 import sys
 import zipfile
 import json
@@ -10,7 +11,6 @@ import shutil
 
 import subprocess
 import shlex
-import difflib
 
 from itertools import zip_longest
 
@@ -19,12 +19,10 @@ mfile = None
 import os
 import subprocess
 import shutil
-import tempfile
-from traceback import format_exc
 
 def summon_editor(filepath):
     editor = os.environ.get('EDITOR') or os.environ.get('VISUAL')
-    fallback_editors = ['nano', 'vim', 'vi', 'code', 'notepad']
+    fallback_editors = ["vim", "nvim", "subl", "vi", "nano", "notepad", "ed"]
     if not editor:
         for ed in fallback_editors:
             if shutil.which(ed):
@@ -125,8 +123,9 @@ def make_project(name):
     # | versions/
     # | src/
     # | pkg_meta.json
+    # | README.txt
+    # | include-dpl.txt
     
-    name = name if name != "." else os.path.dirname(os.getwcd()).rsplit(os.sep, 1)[1]
     print(f"Initialized package {name!r}")
     
     dirs = [
@@ -144,13 +143,34 @@ def make_project(name):
             "description":"description",
             "install_script":"",
             "main_script":"main.dpl", # relative to project_root/src
-            "flags":["-skip-non-essential"]
+            "flags":["-skip-non-essential"],
+            "current_version":"???"
         }))
+    with open(os.path.join(name, "README.txt"), "w") as f: f.write("""Welcome to DPLPM!
+
+DPLPM is not a replacement for git!
+DPLPM is merely a simple package manager specifically for DPL projects.
+DPLPM is not a full fledged tool but rather a temporary solution.
+
+DPLPM offers simplicity and functionality.
+
+Features supported by DPLPM
+* Versions (basically branches though order isnt kept)
+* Observing differences (via `dplpm compare other_version version`)
+  If '-current' is supplied as [version] it will use the current version for 'src' dir
+  basically automatically generating a temporary version in 'versions' dir
+* Running the main script (via `dplpm run ...args`)
+* Minimalistic configuration (`pkg_meta.json`)
+* Simplistic dir structure.
+* DOESNT DOWNLOAD BLOAT
+
+If youre looking for a more better alternative use
+git along with the `dpl package` command.""")
     with open(os.path.join(name, "src", "main.dpl"), "w") as f: f.write('&use {std/text_io.py}\nio:println "Hello, world!"')
     with open(os.path.join(name, "include-dpl.txt"), "w") as f: f.write("# DPL detects this file when we import the package.\nsrc/main.dpl")
 
 
-def update_pkg_meta(*args):
+def update_pkg_meta(name, value):
     if (path:=find_upwards("pkg_meta.json")):
         try:
             with open(path) as f:
@@ -158,7 +178,8 @@ def update_pkg_meta(*args):
         except:
             print(":: Problem while loading pkg_meta.json")
             return 1
-    *name, value = args
+    else:
+        configs = {}
     node = configs
     while name:
         n = name.pop(0)
@@ -181,7 +202,7 @@ def get_pkg_meta():
         except:
             print(":: Problem while loading pkg_meta.json")
             return {}
-
+    return {}
 
 def set_config(node, name="???"):
     print("Editing", name)
@@ -206,6 +227,11 @@ def set_config(node, name="???"):
                 print(f"{n} = {v!r}")
         elif act == "exit":
             return
+
+def edit_main():
+    main_path = get_pkg_meta().get("main_script")
+    if main_path: summon_editor(path_from_root("src", main_path))
+    else: print(":: Main script seems to be not specified in config!"); exit(1)
 
 def configure_pkg_meta():
     root_path = find_upwards(".root")
@@ -287,6 +313,35 @@ def run(code):
             continue
         p += 1
 
+class control:
+    @staticmethod
+    def push(version):
+        zip_folder(path_from_root("src"), path_from_root("versions", str(version)))
+        update_pkg_meta(["current_version"], version)
+    @staticmethod
+    def pull(version):
+        zip_folder(path_from_root("src"), (temp_path:=path_from_root("versions", "current")))
+        path = path_from_root("versions", str(version)+".zip")
+        if not os.path.exists(path):
+            print(":: Version", version, "doesnt exist!")
+            return 1
+        for ziped in os.listdir(path_from_root("versions")):
+            if ziped == "current.zip" or not ziped.endswith(".zip"): continue
+            if (t:=is_same_zip(temp_path+".zip", path_from_root("versions", ziped))):
+                break
+        else:
+            print(":: Unsaved work!")
+            compare_zip_contents(path_from_root("versions", version+".zip"), temp_path+".zip")
+            os.remove(path_from_root("versions", "current.zip"))
+            return 1
+        clear_directory(path_from_root("src"))
+        unzip_archive(path, path_from_root("src"))
+        print(":: Pulled", version)
+        update_pkg_meta(["current_version"], version)
+    @staticmethod
+    def get_config():
+        return get_pkg_meta()
+
 def handle_cmd(args, env=None):
     env = env if env is not None else {}
     match args:
@@ -297,27 +352,7 @@ def handle_cmd(args, env=None):
         case ["config"]:
             return configure_pkg_meta()
         case ["pull", version]:
-            zip_folder(path_from_root("src"), (temp_path:=path_from_root("versions", "current")))
-            path = path_from_root("versions", str(version)+".zip")
-            previous = os.getcwd()
-            os.chdir(path_from_root())
-            if not os.path.exists(path):
-                print(":: Version", version, "doesnt exist!")
-                return 1
-            for ziped in os.listdir(path_from_root("versions")):
-                if ziped == "current.zip" or not ziped.endswith(".zip"): continue
-                if (t:=is_same_zip(temp_path+".zip", path_from_root("versions", ziped))):
-                    break
-            else:
-                print(":: Unsaved work!")
-                compare_zip_contents(path_from_root("versions", version+".zip"), temp_path+".zip")
-                os.remove(path_from_root("versions", "current.zip"))
-                return 1
-            os.remove(path_from_root("versions", "current.zip"))
-            clear_directory(path_from_root("src"))
-            unzip_archive(path, path_from_root("src"))
-            print(":: Pulled", version)
-            os.chdir(previous)
+            control.pull(version)
         case ["view", version]:
             if not os.path.exists(path:=path_from_root("versions", f"msg-{version}.txt")):
                 print("Doesnt exist!")
@@ -325,8 +360,12 @@ def handle_cmd(args, env=None):
             with open(path, "r") as f:
                 print(">>", version)
                 print(f.read()+"\n")
+        case ["version"]:
+            print(":: "+get_pkg_meta().get("current_version", "Version couldnt be found!"))
+        case ["edit-main"]:
+            edit_main()
         case ["push", version]:
-            zip_folder(path_from_root("src"), path_from_root("versions", str(version)))
+            control.push(version)
             print(":: Pushed", version)
         case ["message", version]:
             with open(path_from_root("versions", f"msg-{version}.txt"), "w") as f:
@@ -354,7 +393,7 @@ def handle_cmd(args, env=None):
             if not os.path.exists(ver):
                 print(f":: {version} doesnt exist!")
                 return 1
-            if current == "current":
+            if current == "-current":
                 zip_folder(path_from_root("src"), (temp_path:=path_from_root("versions", "current")))
                 cur = path_from_root("versions", "current.zip")
             elif not os.path.exists(cur):
@@ -420,7 +459,8 @@ view [version] - View the message with the associated version.
 list - list all versions.
 init [name] - Initialize a new package [name]
 init - Initialize the new package in the current directory.
-run [...args] - runs the main script.""")
+run [...args] - runs the main script.
+version - prints current version""")
         case cmd:
             print(cmd, "is not recognized!")
             return 1

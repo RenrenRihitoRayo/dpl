@@ -38,6 +38,23 @@ sys.setrecursionlimit(2**30)
 import lib.core.utils as utils
 import lib.core.error as error
 import os
+
+if "use-python" not in prog_flags:
+    try:  # Try to use the .pyd or .so parser to get some kick
+        try:
+            import lib.core.parser as parser
+        except ImportError as e:
+            raise ImportError(f"Non-Python Parser had an error while importing: {e}") from e
+        except Exception as e:
+            raise Exception(f"Non-Python Parser had difficulties: {e}")
+        meta["internal"]["implementation"] = "non-python"
+    except Exception as e:  # fallback to normal python impl if it fails
+        if "show-parser-import" in prog_flags: print(e)
+        import lib.core.py_parser as parser
+else:
+    import lib.core.py_parser as parser
+import lib.core.varproc as varproc
+
 if "skip-non-essential" not in prog_flags:
     import cProfile
     from dfpm import dfpm
@@ -55,22 +72,6 @@ if "skip-non-essential" not in prog_flags:
     ext_s.shutil = shutil
     ext_s.subrocess = subprocess
     import lib.core.suggestions as suggest
-    
-if "use-python" not in prog_flags:
-    try:  # Try to use the .pyd or .so parser to get some kick
-        try:
-            import lib.core.parser as parser
-        except ImportError as e:
-            raise ImportError(f"Non-Python Parser had an error while importing: {e}") from e
-        except Exception as e:
-            raise Exception(f"Non-Python Parser had difficulties: {e}")
-        meta["internal"]["implementation"] = "non-python"
-    except Exception as e:  # fallback to normal python impl if it fails
-        if "show-parser-import" in prog_flags: print(e)
-        import lib.core.py_parser as parser
-else:
-    import lib.core.py_parser as parser
-import lib.core.varproc as varproc
 
 import dill
 

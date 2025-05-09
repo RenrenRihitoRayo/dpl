@@ -12,14 +12,9 @@ unique_imports = set()
 
 program_flags = set()
 
-# provide the bindings for interacting with python
-# albeit simpler
-py_bindings = """
-#ifndef _DPL_PY_BINDINGS_H_
-#define _DPL_PY_BINDINGS_H_
-
-#include <stdint.h>
-#include <stdlib.h>
+# turns out ffi.cdef doesnt support directives.
+# good to know...
+safe_py_bindings = """
 
 typedef struct {
     char* content;
@@ -41,7 +36,17 @@ Dict make_dict(DictEntry e[]);
 void dict_add_item(Dict *d, char* k, char* s);
 void* dict_get_item(Dict d, char* k);
 void* dict_pop_item(Dict *d, char* k);
+"""
 
+# provide the bindings for interacting with python
+# albeit simpler
+py_bindings = f"""
+#ifndef _DPL_PY_BINDINGS_H_
+#define _DPL_PY_BINDINGS_H_
+
+#include <stdint.h>
+#include <stdlib.h>
+{safe_py_bindings}
 #endif // _DPL_PY_BINDINGS_H_
 """
 
