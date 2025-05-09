@@ -804,25 +804,18 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                         elif err == error.SKIP_RESULT:
                             continue
                         return err
-        elif ins == "dlopen" and argc == 2:
-            if args[1].startswith("{") and args[1].endswith("}"):
-                file = info.get_path_with_lib(args[1][1:-1])
-            else:
-                file = args[1]
-            if not os.path.isfile(file):
-                error.error(pos, file, f"File {file!r} couldnt be loaded!")
-                return error.FILE_NOT_FOUND_ERROR
-            try:
-                frame[-1][args[0]] = ext_s.dpl.ffi.dlopen(file)
-            except:
-                error.error("Dynamic library couldnt be opened!\nReasons:\n* Permissions\n* Unsupported\n* Corrupt file")
-                return error.PYTHON_ERROR
-        elif ins == "dlclose" and argc == 1:
-            ext_s.dpl.ffi.dlclose(args[0])
-        elif ins == "getc" and argc == 2:
-            frame[-1][args[0]] = getattr(args[1], args[0], constants.none)
-        elif ins == "cdef" and argc == 1:
-            ext_s.dpl.ffi.cdef(args[0])
+        elif ins == "dlopen":
+            error.error(pos, file, "DEPRECATED AS OF 1.4.8 FFI IS TOO MESSY\nA REPLACEMENT WILL BE PUT IN AS SOON AS POSSIBLE")
+            return error.PYTHON_ERROR
+        elif ins == "dlclose":
+            error.error(pos, file, "DEPRECATED AS OF 1.4.8 FFI IS TOO MESSY\nA REPLACEMENT WILL BE PUT IN AS SOON AS POSSIBLE")
+            return error.PYTHON_ERROR
+        elif ins == "getc":
+            error.error(pos, file, "DEPRECATED AS OF 1.4.8 FFI IS TOO MESSY\nA REPLACEMENT WILL BE PUT IN AS SOON AS POSSIBLE")
+            return error.PYTHON_ERROR
+        elif ins == "cdef":
+            error.error(pos, file, "DEPRECATED AS OF 1.4.8 FFI IS TOO MESSY\nA REPLACEMENT WILL BE PUT IN AS SOON AS POSSIBLE")
+            return error.PYTHON_ERROR
         elif ins == "stop" and argc == 0:
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
