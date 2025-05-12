@@ -134,6 +134,66 @@ Most recent at top.
 
 # 1.4.8
 
+## Added syntactic meaning to "_" as a name.
+
+if "set _ = ..." is called, it ignores the value.
+Same for every variant of "catch _ ...".
+
+## Changed for loop syntax.
+
+Old syntax
+```DuProL
+for index, name in iter
+    ...
+end
+```
+
+New syntax
+```DurpProL
+
+for (index, name) in iter
+    ...
+end
+```
+
+## Concerns for threading
+
+> [!WARNING]
+> Threading may be moved to a separate module!
+> Make sure to have your code adjusted.
+> The new syntax is the same just with the new `&use {std/threads.py}` at the top.
+
+
+> [!CAUTION]
+> Reading and writing variables are no longer atomic!
+> You may need to manually use the "lock" keyword.
+
+```DuProl
+&use {std/threads.py}
+
+set g_var = 90
+thread
+    lock
+        while (_global.g_var < 1000)
+            inc _global.g_var
+        end
+    end
+end
+thread
+    lock
+        while (_global.g_var < 1000)
+            inc _global.g_var
+        end
+    end
+end
+```
+
+## Optimized "pass" instruction.
+
+"pass" no longer is seen in the bytecode,
+but unlike the "..." statement it is ignored
+by the "DEAD_CODE_OPT" optimization setting.
+
 ## New command
 
 DPL when running "install.sh" installs

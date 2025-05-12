@@ -55,6 +55,22 @@ get_debug = varproc.get_debug
 
 run_code = None  # to be set by py_parser
 
+class argt:
+    class Evaluated:
+        def __init__(self, value):
+            self.value = value
+        def unwrap(self):
+            return self.value
+        def __repr__(self):
+            return f"Evaluated({self.value!r})"
+    class NotEvaluated:
+        def __init__(self, value):
+            self.value = value
+        def unwrap(self):
+            return self.value
+        def __repr__(self):
+            return f"NotEvaluated({self.value!r})"
+
 def nest_args(tokens):
     stack = [[]]
     for token in tokens:
@@ -449,6 +465,9 @@ def evaluate(frame, expression):
         return chr(processed[1])
     elif len(processed) == 2 and processed[0] == "from_ascii":
         return ord(processed[1])
+    elif len(processed) == 3 and processed[0] == "modulo":
+        print(processed)
+        return processed[1] % processed[2]
     match (processed):
         # conditionals
         case ["if", value, "then", true_v, "else", false_v]:
@@ -528,7 +547,9 @@ def evaluate(frame, expression):
         case ["fset", name, "=", value]:
             varproc.rset(frame[-1], name, value, meta=False)
             return constants.nil
-        case ["#", ins, *args] if ins in methods:
+        case ["#", method, *args] if method in methods:
+            return methods[method](frame, *args)[0]
+        case ["##", ins, *args]:
             return ins(frame, "_", *args)[0]
         case [obj, "@", method, *args] if hasattr(
             obj, method
@@ -554,8 +575,7 @@ def evaluate(frame, expression):
                         return res
                 except:
                     raise Exception(f"Error while evaluating: {default}\n{traceback.format_exc()}") from None
-    return type(expression)(map(lambda x: process_arg(frame, x), expression))
-
+    raise Exception(f"Unknown expression: {processed!r}")
 
 sep = " ,"
 special_sep = "@()+/*#[]π<>=!π%"
