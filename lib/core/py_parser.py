@@ -6,7 +6,6 @@ import itertools
 from threading import Thread, main_thread, current_thread, Event
 import dill
 from copy import deepcopy as copy
-
 from . import py_argument_handler
 arguments_handler = py_argument_handler.arguments_handler
 from . import arguments as argproc
@@ -14,6 +13,7 @@ process_arg = argproc.process_arg
 process_args = argproc.process_args
 exprs_preruntime = argproc.exprs_preruntime
 evaluate = argproc.evaluate
+argt = argproc.argt
 from . import error
 from . import utils
 from . import objects
@@ -34,6 +34,7 @@ rset = varproc.rset
 rget = varproc.rget
 rpop = varproc.rpop
 vdebug = varproc.debug
+vpflags = varproc.preprocessing_flags
 import atexit
 import os
 
@@ -219,9 +220,6 @@ def process(fcode, name="__main__"):
     "Preprocess a file"
     res = []
     nframe = new_frame()
-    dead_code = info.flags.DEAD_CODE_OPT
-    warnings = info.flags.WARNINGS
-    define_func = False
     multiline = False
     last_comment = 0
     for lpos, line in filter(
@@ -407,27 +405,12 @@ def process(fcode, name="__main__"):
                 else:
                     print("File not found:", file)
                     return error.PREPROCESSING_ERROR
-            elif ins == "dead_code_disable" and argc == 0:
-                dead_code = False
-            elif ins == "dead_code_enable" and argc == 0:
-                dead_code = True
-            elif ins == "warn_code_disable" and argc == 0:
-                warnings = False
-            elif ins == "warn_code_enable" and argc == 0:
-                warnings = True
-            elif ins == "def_fn_disable" and argc == 0:
-                define_func = False
-            elif ins == "def_fn_enable" and argc == 0:
-                define_func = True
+            elif ins.startswith("enable:") and ins[7:] in vpflags:
+                vpflags[ins[7:]] = True
+            elif ins.startswith("disable:") and ins[8:] in vpflags:
+                vpflags[ins[8:]] = False
             elif ins == "set" and argc == 2:
                 rset(nframe[-1], args[0], args[1])
-            elif ins == "save_config" and argc == 0:
-                nframe[0]["_preruntime_config"] = {
-                    "dead_code": dead_code,
-                    "warnings": warnings,
-                    "def_fn": define_func,
-                    "debug_config": copy(varproc.debug)
-                }
             else:
                 error.pre_error(
                     lpos, name, f"{name!r}:{lpos}: Invalid directive {ins!r}"
@@ -435,10 +418,11 @@ def process(fcode, name="__main__"):
                 break
         else:
             ins, *args = argproc.group(line)
-            args = argproc.nest_args(argproc.exprs_preruntime(args))
-            args = argproc.to_static(nframe,
-                args
-            )  # If there are static parts in the arguments run them before runtime.
+            if ins != "pass":
+                args = argproc.nest_args(argproc.exprs_preruntime(args))
+                if vpflags["EXPRESSION_FOLDING"]: args = argproc.to_static(nframe,
+                    args
+                )  # If there are static parts in the arguments run them before runtime.
             res.append((lpos, name, ins, args if len(args) else None))
     else:
         if multiline:
@@ -449,7 +433,7 @@ def process(fcode, name="__main__"):
             )
             return error.PREPROCESSING_ERROR
         nres = []
-        if dead_code and info.flags.DEAD_CODE_OPT:
+        if vpflags["DEAD_CODE_OPT"]:
             instruction_pointer = 0
             warn_num = 0
             nres = []
@@ -462,10 +446,13 @@ def process(fcode, name="__main__"):
                     and instruction_pointer + 1 < len(res)
                     and res[instruction_pointer + 1][2] in {"end", "stop", "skip"}
                 ):
-                    if warnings and info.flags.WARNINGS:
-                        error.warn(
-                            f"Warning: {ins!r} statement is empty!\nLine {line_pos}\nIn file {file!r}"
+                    if vpflags["WARNINGS"]:
+                        (error.warnf if not vpflags["STRICT"] else error.error)(
+                            line_pos, file,
+                            f"{ins!r} statement is empty!"
                         )
+                        if vpflags["STRICT"]:
+                            return error.PREPROCESSING_ERROR
                     temp = get_block(res, instruction_pointer)
                     if temp:
                         instruction_pointer, _ = temp
@@ -477,10 +464,13 @@ def process(fcode, name="__main__"):
                     and instruction_pointer + 1 < len(res)
                     and res[instruction_pointer + 1][2] == "end"
                 ):
-                    if warnings and info.flags.WARNINGS:
-                        error.warn(
-                            f"Warning: {ins!r} statement is empty!\nLine {line_pos}\nIn file {file!r}"
+                    if vpflags["WARNINGS"]:
+                        (error.warnf if not vpflags["STRICT"] else error.error)(
+                            line_pos, file,
+                            f"{ins!r} statement is empty!"
                         )
+                        if vpflags["STRICT"]:
+                            return error.PREPROCESSING_ERROR
                     temp = get_block(res, instruction_pointer)
                     if temp:
                         instruction_pointer, _ = temp
@@ -493,14 +483,18 @@ def process(fcode, name="__main__"):
                     and res[instruction_pointer + 1][2] in {"end", "return"}
                 ):
                     if ins != "default" and len(args) == 0:
-                        error.warn(
+                        error.error(
+                            line_pos, file,
                             f"Error: Malformed {ins!r} statement/sub-statements!\nLine {line_pos}\nIn file {file!r}"
                         )
                         return error.PREPROCESSING_ERROR
-                    if warnings and info.flags.WARNINGS:
-                        error.warn(
-                            f"Warning: {ins!r} statement/sub-statements is empty!\nLine {line_pos}\nIn file {file!r}"
+                    if vpflags["WARNINGS"]:
+                        (error.warnf if not vpflags["STRICT"] else error.error)(
+                            line_pos, file,
+                            f"{ins!r} statement is empty!"
                         )
+                        if vpflags["STRICT"]:
+                            return error.PREPROCESSING_ERROR
                     temp = get_block(res, instruction_pointer)
                     if temp:
                         instruction_pointer, _ = temp
@@ -521,29 +515,23 @@ def process(fcode, name="__main__"):
                             f"Error: Malformed function definition!\nLine {line_pos}\nIn file {file!r}"
                         )
                         return error.PREPROCESSING_ERROR
-                    if warnings and info.WARNINGS:
-                        error.warn(
-                            f"Warning: Function {line[3][0]!r} is empty!\nLine {line_pos}\nIn file {file!r}"
+                    if vpflags["WARNINGS"]:
+                        (error.warnf if not vpflags["STRICT"] else error.error)(
+                            line_pos, file,
+                            f"{ins!r} statement is empty!"
                         )
+                        if vpflags["STRICT"]:
+                            return error.PREPROCESSING_ERROR
                     temp = get_block(res, instruction_pointer)
                     if temp:
                         instruction_pointer, _ = temp
                     else:
                         return []
-                    if define_func:
-                        if warnings and info.flags.WARNINGS:
-                            print(
-                                f'Warning: set "{line[3][0]}" none\nLine {line_pos}\nIn file {file!r}'
-                            )
-                        nres.append(
-                            (pos, file, "set", [f'"{line[3][0]}"', constants.none])
-                        )
-                        warn_num += 1
                     warn_num += 1
                 else:
                     nres.append(line)
                 instruction_pointer += 1
-            if warnings and info.flags.WARNINGS and warn_num:
+            if vpflags["WARNINGS"] and warn_num:
                 print(f"Warning Info: {warn_num:,} Total warnings.")
         else:
             nres = res
@@ -552,6 +540,8 @@ def process(fcode, name="__main__"):
         offset = 0
         whole_offset = 0
         for instruction_pointer, [line_pos, file, ins, args] in enumerate(nres):
+            # compile the switch statement
+            # this uses _intern.switch
             if ins == "switch" and len(args) == 1:
                 body = {None:[]}
                 arg_val = args[0]
@@ -580,7 +570,7 @@ def process(fcode, name="__main__"):
                             return error.PREPROCESSING_ERROR
                 whole_offset += 1
                 res.append([og_lpos, file, "_intern.switch", [body, arg_val]])
-            elif instruction_pointer >= whole_offset:
+            elif instruction_pointer >= whole_offset and ins != "pass":
                 res.append([line_pos, file, ins, args])
         return {
             "code": res,
@@ -611,6 +601,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     debug_ins = False
     while instruction_pointer < len(code) and not thread_event.is_set():
         pos, file, ins, oargs = code[instruction_pointer]
+            
         ins = process_arg(frame, ins)
         if debug_ins:
             print("||", ins, len(oargs) if oargs else 0, oargs)
@@ -643,7 +634,11 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         if debug_ins:
             print("::", ins, argc, args)
             input()
-        if ins == "fn" and argc == 2:
+        if ins == "inc" and argc == 1:
+            rset(frame[-1], args[0], rget(frame[-1], args[0], default=0) + 1)
+        elif ins == "inc" and argc == 1:
+            rset(frame[-1], args[0], rget(frame[-1], args[0], default=0) - 1)
+        elif ins == "fn" and argc == 2:
             name, params = args
             block = get_block(code, instruction_pointer)
             if block is None:
@@ -698,8 +693,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 instruction_pointer, body = temp
             if (err := argproc.parse_match(frame, body, args[0])) > 0:
                 return err
-        elif ins == "load_config" and argc == 1 and isinstance(args[0], dict):
-            varproc.debug.update(args[0])
         elif ins == "get_time" and argc == 1:
             frame[-1][args[0]] = time.time()
         elif ins == "_intern.get_index" and argc == 1:
@@ -726,14 +719,20 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "tc_register" and argc == 1:
             tc_register(args[0])
         elif ins == "for" and argc == 3 and args[1] == "in":
-            name, _, iter = args
             temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
                 instruction_pointer, body = temp
             if body:
+                name, _, iter = args
+                index = None
+                if isinstance(name, tuple):
+                    index, name = name
+                    iter = enumerate(iter)
                 for i in iter:
+                    if index is not None:
+                        frame[-1][index], i = i
                     frame[-1][name] = i
                     err = run(body, frame)
                     if err:
@@ -841,7 +840,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         elif ins == "fallthrough" and argc == 0:
             return error.FALLTHROUGH
         elif ins == "set" and argc == 3 and args[1] == "=":
-            rset(frame[-1], args[0], args[2])
+            if args[0] != "_":
+                rset(frame[-1], args[0], args[2])
         elif ins == "del" and argc >= 1:
             for name in args:
                 rpop(frame[-1], name)
@@ -1359,8 +1359,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             function, "__call__"
         ):  # call a python function
             try:
-                unc_params = ext_s.get_py_params(function)[2:]
-                if unc_params and any(map(lambda x: x.endswith("_body") or x.endswith("_xbody"), unc_params)):
+                func_params = ext_s.get_py_params(function)[2:]
+                if func_params and any(map(lambda x: x.endswith("_body") or x.endswith("_xbody"), func_params)):
                     t_args = []
                     for i in func_params:
                         if i.endswith("_xbody"):

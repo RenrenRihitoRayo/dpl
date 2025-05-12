@@ -6,11 +6,16 @@ fn fib(n)
     set c = 0
     while (:n > 0)
         set c = [:a + :b]
-        set b = :c
-        set a = :b
-        set n = [:n - 1] 
+        set b = :a
+        set a = :c
+        set n = [:n - 1]
     end
-    return :c
+    return :b
 end
 
-catch (result) fib 10
+for i in [rawrange 100]
+    if [[:i % 5] == 0]
+        catch (result) fib :i
+        io:println :i :result [:result / 5]
+    end
+end

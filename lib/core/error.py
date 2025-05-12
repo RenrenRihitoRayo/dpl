@@ -106,12 +106,15 @@ def info(text, show_date=True):
         my_print(f"   [INFO]: {text}")
 
 
+def warnf(pos, file, text):
+    my_print(f"\nWarning for line {pos} file {file!r}\n[WARNING]: {text}")
+
+
 def warn(text, show_date=True):
     if show_date:
         my_print(f"[WARNING] {datetime.datetime.now()}: {text}")
     else:
         my_print(f"[WARNING]: {text}")
-
 
 def pre_info(text, show_date=True):
     if show_date:

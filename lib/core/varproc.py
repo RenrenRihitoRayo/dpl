@@ -9,19 +9,12 @@ from . import state
 from . import error
 from . import type_checker
 
-
-# locks
-# ensures the interpreter is thread safe
-W_LOCK = threading.Lock()
-WS_LOCK = threading.Lock()
-
 dependencies = {"dpl": set(), "python": {}, "lua": {}}
 
 # debug options
-# some features here maybe separated
 debug = {
-    "type_checker": 0,
-    "TC_DEFAULT_WHEN_NOT_FOUND": 1,
+    "type_checker": 0, # type checker
+    "TC_DEFAULT_WHEN_NOT_FOUND": 1, # 1 ignores missing function signstures, 0 raises an error.
     "allow_automatic_global_name_resolution":1, # set to false to get variables faster
     "show_scope_updates": 0, # show when scope is popped or pushed onto
     "show_value_updates": 0, # show when variables are read or changed
@@ -29,12 +22,20 @@ debug = {
     "warn_no_return": 0,     # warn about cathing python functions even when theres no return value
     "log_events": 0,         # log output (redirects to log file)
     "debug_output_file": "debug_log.txt",
-    "track_time": 0,         # track function time
-    "time_threshold": 1.5,   # if track_time is on and the time passes this threshhold it primts a warning saying the function took too long
     "disable_nil_values": 0, # raises an error when nil values are accessed. useful for debugging missing values.
     "error_on_undefined_vars": 0, # "NameError" like errors when variables that do not exist are read.
     "warn_undefined_vars": 1,     # Like "error_on_undefined_vars" but a warning instead.
     "_set_only_when_defined": 1,  # make sure that only defined variables in this scope can be set.
+}
+
+# preruntime flags
+preprocessing_flags = {
+    "DEAD_CODE_OPT":constants.true, # dead code optimization
+    "EXPRESSION_FOLDING":constants.true, # expression folding
+    "IGNORE_EMPTY_FUNCTIONS":constants.false, # doesnt optimize empty functions out
+    "WARNINGS":constants.true, # display warnings
+    "STRICT":constants.false, # treat warnings as errors
+    "_set_only_when_defined": 1,
 }
 
 flags = set()
@@ -60,17 +61,20 @@ meta = {
         "_set_only_when_defined": 1,
         "implementation":"python" # python - full python impl, non-python - uses another language for parser
     },
+    "preprocessing_flags":preprocessing_flags,
     "dependencies": dependencies,
     "err": {"defined_errors": tuple()},
+    "type_signatures":type_checker.typed,
     "_set_only_when_defined": 1,
-    "type_signatures":type_checker.typed
 }
 
 
 def set_lib_path(_, __, path):
+    "Set the path where global libraries are"
     info.LIBDIR = path
 
 def get_lib_path(_, __, path):
+    "Get the path where global libraries are"
     return info.LIBDIR,
 
 # Use this since programs might use
@@ -161,8 +165,7 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=True):
 def rpop(dct, full_name, default=constants.nil, sep="."):
     "Pop a variable"
     if "." not in full_name:
-        with W_LOCK:
-            temp = dct.get(full_name, default)
+        temp = dct.get(full_name, default)
         return temp
     path = [*enumerate(full_name.split(sep), 1)][::-1]
     last = len(path)
@@ -178,8 +181,7 @@ def rpop(dct, full_name, default=constants.nil, sep="."):
         elif pos == last and name in node:
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was popped!")
-            with W_LOCK:
-                return node.pop(name)
+            return node.pop(name)
         else:
             return default
     return default
@@ -187,10 +189,11 @@ def rpop(dct, full_name, default=constants.nil, sep="."):
 
 def rset(dct, full_name, value, sep=".", meta=True):
     "Set a variable"
+    if full_name == "_":
+        return
     if not isinstance(full_name, str):
         return
     if "." not in full_name:
-        with W_LOCK:
             if dct.get("_set_only_when_defined") and full_name not in dct:
                 error.warn(
                     f"Tried to set {full_name!r} but scope was set to set only when defined."
@@ -215,7 +218,6 @@ def rset(dct, full_name, value, sep=".", meta=True):
                     f"Tried to set {full_name!r} but scope was set to set only when defined."
                 )
                 return
-            with W_LOCK:
                 node[name] = value
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was set to `{value!r}`!")

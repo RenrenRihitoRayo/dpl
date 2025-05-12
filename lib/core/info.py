@@ -93,9 +93,12 @@ RT_EXPR = {
     "dict", "?dict",
     "?int", "?float", "?str",
     "length", "type", "range", "rawrange", "drange",
-    "drawrange", 'nil?', 'none?', 'Sum', '?bytes', 'def?',
-    "eval", "to_ascii", "from_ascii"
+    "drawrange", 'nil?', 'none?', 'def?',
+    "eval",
 }
+
+def add_runtime_dependent_method(keyword):
+    RT_EXPR.add(keyword)
 
 FUNCTIONS = {
     'cmd',
@@ -141,10 +144,7 @@ CLOSE_P = ")]"
 
 class flags:
     WARNINGS = True      # Specific to warnings.
-    DEAD_CODE_OPT = True # Dead code optimizatiins
     ERRORS = True        # Logs, Warnings and Such
-    # If the instruction sugnature isnt found (True for Ignore False to Raise)
-    TC_DEFAULT_WHEN_NOT_FOUND = True
 
 VERSION_TRIPLE = (1, 4, 8)
 
