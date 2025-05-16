@@ -45,8 +45,8 @@ chars = {
 # from requests.models import parse_header_links
 from . import state
 from . import constants
-from . import error
 from . import varproc
+from . import error
 from .info import *
 from . import py_argument_handler as pah
 
@@ -320,7 +320,7 @@ def expr_runtime(frame, arg):
     elif not isinstance(arg, str):
         return arg
     elif is_fvar(arg):
-        if varproc.debug["allow_automatic_global_name_resolution"]:
+        if varproc.debug_settings["allow_automatic_global_name_resolution"]:
             v = varproc.rget(
                 frame[-1],
                 arg[1:],
@@ -331,7 +331,9 @@ def expr_runtime(frame, arg):
         if get_debug("disable_nil_values") and v == constants.nil:
             raise Exception(f"{arg!r} is nil!")
         return v
-    if is_id(arg):
+    elif arg == ".input":
+        return input()
+    elif is_id(arg):
         return arg
     elif arg.startswith('"') and arg.endswith('"'):
         return arg[1:-1]
@@ -660,3 +662,8 @@ def process_arg(frame, e):
 
 def process_args(frame, e):
     return list(map(lambda x: expr_runtime(frame, x), e))
+
+class argproc_setter:
+    def set_run(func):
+        global run_code
+        run_code = func

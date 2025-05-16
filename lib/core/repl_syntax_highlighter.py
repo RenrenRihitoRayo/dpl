@@ -3,9 +3,7 @@ import re
 import os
 from . import info
 from traceback import format_exc
-from prompt_toolkit import PromptSession
 from prompt_toolkit.lexers import Lexer
-from prompt_toolkit.formatted_text import StyleAndTextTuples
 from prompt_toolkit.styles import Style
 
 # Your JSON config as a string
@@ -46,7 +44,7 @@ class DPLLexer(Lexer):
     def lex_document(self, document):
         lines = document.lines
 
-        def get_line(i: int) -> StyleAndTextTuples:
+        def get_line(i: int):
             text = lines[i]
             tokens = []
             

@@ -134,6 +134,14 @@ Most recent at top.
 
 # 1.4.8
 
+## Updated suport for multiple parsers..
+
+DPL may now use an argument to explicitly
+point to the new parser to use.
+Basically making DPL a customozable front end.
+
+## Added Dic strings to every function...
+
 ## Added syntactic meaning to "_" as a name.
 
 if "set _ = ..." is called, it ignores the value.

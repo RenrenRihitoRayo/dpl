@@ -154,7 +154,7 @@ def make_function(name, body, params):
             "docs": f"Function. ({name!r})",
             "defaults": constants.nil,
             "memoize": {},
-            "capture":constants.nil
+            "capture": constants.nil
         },
         name,
         "builtin-function-object",

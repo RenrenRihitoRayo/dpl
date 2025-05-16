@@ -4,7 +4,7 @@
             "style":"bold fg:magenta",
             "words":[
                 "skip", "stop", "in", "as", "not", "and", "or",
-                "raise", "tc_register", "export", "set", "del", "wait_for_threads",
+                "raise", "tc_register", "export", "set", "del",
                 "match",
                 "case",
                 "fn",
@@ -15,7 +15,6 @@
                 "loop",
                 "while",
                 "if",
-                "thread",
                 "dict",
                 "with",
                 "default",
@@ -24,19 +23,25 @@
                 "ifmain",
                 "switch",
                 "begin",
-                "end"
+                "end",
+                "return"
             ]
         },
         "functions":{
             "style":"bold fg:grey",
             "words":[
-                "cmd", "exit", "wait_for_threads", "exec", "sexec",
-                "dlopen", "dlclose", "cget", "cdef", "dump_vars", "dump_scope", "fallthrough"
+                "cmd", "exit", "exec", "sexec",
+                "dlopen", "dlclose", "cget", "cdef", "dump_vars", "dump_scope", "fallthrough",
+                "inc", "dec"
             ]
         },
         "comments":{
             "style":"bg:grey",
             "startswith":"#"
+        },
+        "directives":{
+            "style":"underline",
+            "startswith":"&"
         },
         "numbers":{
             "style":"fg:orange",

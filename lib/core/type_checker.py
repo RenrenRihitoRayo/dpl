@@ -1,8 +1,6 @@
 # Simplified type checker for DPL
-from . import arguments as argproc
 from . import constants
 from . import state
-from . import varproc
 from typing import Any
 from threading import Event, Thread, Lock
 

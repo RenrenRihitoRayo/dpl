@@ -3,18 +3,11 @@
 
 import time
 import itertools
-from threading import Thread, main_thread, current_thread, Event
 import dill
 from copy import deepcopy as copy
 from . import py_argument_handler
 arguments_handler = py_argument_handler.arguments_handler
-from . import arguments as argproc
-process_arg = argproc.process_arg
-process_args = argproc.process_args
-exprs_preruntime = argproc.exprs_preruntime
-evaluate = argproc.evaluate
-argt = argproc.argt
-from . import error
+from .runtime import *
 from . import utils
 from . import objects
 from . import extension_support as ext_s
@@ -22,129 +15,10 @@ from . import constants
 from . import type_checker
 check_ins = type_checker.check_ins
 tc_register = type_checker.register
-
 from . import info
 import traceback
 import sys
-from . import varproc
-new_frame = varproc.new_frame
-pscope = varproc.pscope
-nscope = varproc.nscope
-rset = varproc.rset
-rget = varproc.rget
-rpop = varproc.rpop
-vdebug = varproc.debug
-vpflags = varproc.preprocessing_flags
-import atexit
 import os
-
-if "no-cffi" not in info.program_flags:
-    from cffi import FFI
-    ext_s.dpl.ffi = FFI()
-
-IS_STILL_RUNNING = Event()
-
-threads = []
-thread_events = [] # Thread events, so any threads can be killed manually or automatically
-
-def clean_threads():  # kill all threads and wait for them to terminate
-    for i in thread_events:
-        i.set()
-    for i in threads:
-        i.join()
-
-def my_exit(code=0):
-    IS_STILL_RUNNING.set()
-    clean_threads()
-    og_exit(code)
-
-
-def my_exit_atexit(code=0):
-    if info.unique_imports:
-        print(f"\nPerformed {len(info.imported):,} non-identical imports\nPerformed {info.unique_imports:,} total imports")
-
-atexit.register(my_exit_atexit)
-
-og_exit = sys.exit
-ext_s.dpl.exit = my_exit
-sys.exit = my_exit
-exit = my_exit
-
-# setup runtime stuff. And yes on import.
-# user will have to manually define type signatures
-# or lower the type checker strictness by setting TC_DEFAULT_WHEN_NOT_FOUND
-try:
-    import psutil
-
-    CUR_PROCESS = psutil.Process()
-
-    def get_memory(_, __):
-        memory_usage = CUR_PROCESS.memory_info().rss
-        return (utils.convert_bytes(memory_usage),)
-
-    varproc.meta["internal"]["HasGetMemory"] = 1
-    varproc.meta["internal"]["GetMemory"] = get_memory
-except ModuleNotFoundError as e:
-    varproc.meta["internal"]["HasGetMemory"] = 0
-    varproc.meta["internal"]["GetMemory"] = lambda _, __: (state.bstate("nil"),)
-
-varproc.meta["internal"]["SetEnv"] = os.putenv,
-varproc.meta["internal"]["GetEnv"] = os.getenv
-
-varproc.meta["internal"]["os"] = {
-    "uname": info.SYS_MACH_INFO,  # uname
-    "architecture": info.SYS_ARCH,  # system architecture (commonly x86 or ARMv7 or whatever arm proc)
-    "executable_format": info.EXE_FORM,  # name is self explanatory
-    "machine": info.SYS_MACH,  # machine information
-    "information": info.SYS_INFO,  # basically the tripple
-    "processor": info.SYS_PROC,  # processor (intel and such)
-    "threads": os.cpu_count(),  # physical thread count,
-    "os_name":info.SYS_OS_NAME.lower(),
-}
-
-if info.UNIX and info.SYS_OS_NAME == "linux":
-    varproc.meta["internal"]["os"]["linux"] = {
-        "name": info.LINUX_DISTRO,
-        "version": info.LINUX_VERSION,
-        "codename": info.LINUX_CODENAME
-}
-
-
-varproc.meta["threading"] = {
-    "runtime_event": IS_STILL_RUNNING,
-    "is_still_running": lambda: IS_STILL_RUNNING.is_set(),
-}
-
-if "get-internals" in info.program_flags:
-    varproc.meta["argument_processing"] = {
-        "process_argument":process_arg,
-        "process_argumemts":process_args,
-        "preprocess_arguments":exprs_preruntime,
-        "evaluate":evaluate
-    }
-    
-    varproc.meta["variable_processing"] = {
-        "rset":rset,
-        "rget":rget,
-        "rpop":rpop,
-        "new_frame":new_frame,
-        "pop_scope":pscope,
-        "new_scope":nscope
-    }
-
-def get_size_of(_, __, object):
-    return (utils.convert_bytes(sys.getsizeof(object)),)
-
-
-try:
-    get_size_of(0, 0, 0)
-    varproc.meta["internal"]["SizeOf"] = get_size_of
-except:
-
-    def temp(_, __, ___):
-        return f"err:{error.PYTHON_ERROR}:Cannot get memory usage of an object!\nIf you are using pypy, pypy does not support this feature."
-
-    varproc.meta["internal"]["SizeOf"] = temp
 
 def get_block(code, current_p, supress=False, start=1):
     "Get a code block"
@@ -240,12 +114,12 @@ def process(fcode, name="__main__"):
             last_comment = lpos
             multiline = True
             continue
-        line.replace("!__line__", str(lpos))
-        line.replace("!__file__", name if name != "__main__" else varproc.meta["internal"]["main_file"])
+        line = line.replace("!__line__", str(lpos))
+        line = line.replace("!__file__", name if name != "__main__" else meta_attributes["internal"]["main_file"])
         if line.startswith("&"):
-            ins, *args = argproc.group(line[1:].lstrip())
-            args = argproc.nest_args(argproc.exprs_preruntime(args))
-            args = argproc.process_args(nframe, args)
+            ins, *args = group(line[1:].lstrip())
+            args = nest_args(exprs_preruntime(args))
+            args = process_args(nframe, args)
             argc = len(args)
             if ins == "include" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
@@ -277,7 +151,7 @@ def process(fcode, name="__main__"):
                                         return err
                                     res.extend(err["code"])
                                     if not err["frame"] is None: nframe[0].update(err["frame"][0])
-                                varproc.meta["dependencies"]["dpl"].add(os.path.realpath(line))
+                                meta_attributes["dependencies"]["dpl"].add(os.path.realpath(line))
                     else:
                         error.error(lpos, name, f"While including the directory {file!r} the include-dpl.txt file wasnt found!")
                         return error.PREPROCESSING_ERROR
@@ -288,7 +162,7 @@ def process(fcode, name="__main__"):
                         res.extend(err["code"])
                         if not err["frame"] is None: nframe[0].update(err["frame"][0])
                     file = os.path.realpath(file)
-                    varproc.meta["dependencies"]["dpl"].add(file)
+                    meta_attributes["dependencies"]["dpl"].add(file)
             elif ins == "set_name" and argc == 1:
                 name = str(args[0])
             elif ins == "define_error" and argc == 1:
@@ -320,7 +194,7 @@ def process(fcode, name="__main__"):
                                         return err
                                     res.extend(err["code"])
                                     if not err["frame"] is None: nframe[0].update(err["frame"][0])
-                                varproc.meta["dependencies"]["dpl"].add(os.path.realpath(line))
+                                meta_attributes["dependencies"]["dpl"].add(os.path.realpath(line))
                 else:
                     with open(file, "rb") as f:
                         if isinstance(err:=process(dill.loads(f.read()), name=file), int):
@@ -328,7 +202,7 @@ def process(fcode, name="__main__"):
                         res.extend(err["code"])
                         if not err["frame"] is None: nframe[0].update(err["frame"][0])
                     file = os.path.realpath(file)
-                    varproc.meta["dependencies"]["dpl"].add(file)
+                    meta_attributes["dependencies"]["dpl"].add(file)
             elif ins == "extend" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.abspath(info.get_path_with_lib(args[0][1:-1]))
@@ -341,7 +215,7 @@ def process(fcode, name="__main__"):
                 with open(file, "r") as f:
                     res.extend(process(f.read(), name=name))
                 file = os.path.realpath(file)
-                varproc.meta["dependencies"]["dpl"].add(file)
+                meta_attributes["dependencies"]["dpl"].add(file)
             elif ins == "use" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
@@ -405,10 +279,10 @@ def process(fcode, name="__main__"):
                 else:
                     print("File not found:", file)
                     return error.PREPROCESSING_ERROR
-            elif ins.startswith("enable:") and ins[7:] in vpflags:
-                vpflags[ins[7:]] = True
-            elif ins.startswith("disable:") and ins[8:] in vpflags:
-                vpflags[ins[8:]] = False
+            elif ins.startswith("enable:") and ins[7:] in preprocessing_flags:
+                preprocessing_flags[ins[7:]] = True
+            elif ins.startswith("disable:") and ins[8:] in preprocessing_flags:
+                preprocessing_flags[ins[8:]] = False
             elif ins == "set" and argc == 2:
                 rset(nframe[-1], args[0], args[1])
             else:
@@ -417,10 +291,10 @@ def process(fcode, name="__main__"):
                 )
                 break
         else:
-            ins, *args = argproc.group(line)
+            ins, *args = group(line)
             if ins != "pass":
-                args = argproc.nest_args(argproc.exprs_preruntime(args))
-                if vpflags["EXPRESSION_FOLDING"]: args = argproc.to_static(nframe,
+                args = nest_args(exprs_preruntime(args))
+                if preprocessing_flags["EXPRESSION_FOLDING"]: args = to_static(nframe,
                     args
                 )  # If there are static parts in the arguments run them before runtime.
             res.append((lpos, name, ins, args if len(args) else None))
@@ -433,7 +307,7 @@ def process(fcode, name="__main__"):
             )
             return error.PREPROCESSING_ERROR
         nres = []
-        if vpflags["DEAD_CODE_OPT"]:
+        if preprocessing_flags["DEAD_CODE_OPT"]:
             instruction_pointer = 0
             warn_num = 0
             nres = []
@@ -442,16 +316,16 @@ def process(fcode, name="__main__"):
                 if args is None:
                     args = []
                 if (
-                    ins in {"for", "loop", "while", "thread"}
+                    ins in {"for", "loop", "while"}
                     and instruction_pointer + 1 < len(res)
                     and res[instruction_pointer + 1][2] in {"end", "stop", "skip"}
                 ):
-                    if vpflags["WARNINGS"]:
-                        (error.warnf if not vpflags["STRICT"] else error.error)(
+                    if preprocessing_flags["WARNINGS"]:
+                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
                             line_pos, file,
                             f"{ins!r} statement is empty!"
                         )
-                        if vpflags["STRICT"]:
+                        if preprocessing_flags["STRICT"]:
                             return error.PREPROCESSING_ERROR
                     temp = get_block(res, instruction_pointer)
                     if temp:
@@ -464,12 +338,12 @@ def process(fcode, name="__main__"):
                     and instruction_pointer + 1 < len(res)
                     and res[instruction_pointer + 1][2] == "end"
                 ):
-                    if vpflags["WARNINGS"]:
-                        (error.warnf if not vpflags["STRICT"] else error.error)(
+                    if preprocessing_flags["WARNINGS"]:
+                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
                             line_pos, file,
                             f"{ins!r} statement is empty!"
                         )
-                        if vpflags["STRICT"]:
+                        if preprocessing_flags["STRICT"]:
                             return error.PREPROCESSING_ERROR
                     temp = get_block(res, instruction_pointer)
                     if temp:
@@ -488,12 +362,12 @@ def process(fcode, name="__main__"):
                             f"Error: Malformed {ins!r} statement/sub-statements!\nLine {line_pos}\nIn file {file!r}"
                         )
                         return error.PREPROCESSING_ERROR
-                    if vpflags["WARNINGS"]:
-                        (error.warnf if not vpflags["STRICT"] else error.error)(
+                    if preprocessing_flags["WARNINGS"]:
+                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
                             line_pos, file,
                             f"{ins!r} statement is empty!"
                         )
-                        if vpflags["STRICT"]:
+                        if preprocessing_flags["STRICT"]:
                             return error.PREPROCESSING_ERROR
                     temp = get_block(res, instruction_pointer)
                     if temp:
@@ -515,12 +389,12 @@ def process(fcode, name="__main__"):
                             f"Error: Malformed function definition!\nLine {line_pos}\nIn file {file!r}"
                         )
                         return error.PREPROCESSING_ERROR
-                    if vpflags["WARNINGS"]:
-                        (error.warnf if not vpflags["STRICT"] else error.error)(
+                    if preprocessing_flags["WARNINGS"]:
+                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
                             line_pos, file,
                             f"{ins!r} statement is empty!"
                         )
-                        if vpflags["STRICT"]:
+                        if preprocessing_flags["STRICT"]:
                             return error.PREPROCESSING_ERROR
                     temp = get_block(res, instruction_pointer)
                     if temp:
@@ -531,7 +405,7 @@ def process(fcode, name="__main__"):
                 else:
                     nres.append(line)
                 instruction_pointer += 1
-            if vpflags["WARNINGS"] and warn_num:
+            if preprocessing_flags["WARNINGS"] and warn_num:
                 print(f"Warning Info: {warn_num:,} Total warnings.")
         else:
             nres = res
@@ -579,42 +453,36 @@ def process(fcode, name="__main__"):
     return error.PREPROCESSING_ERROR
 
 
-def run(code, frame=None, thread_event=IS_STILL_RUNNING):
+def run(code, frame=None):
     "Run code generated by 'process'"
     global check_ins
     instruction_pointer = 0
-    end_time = start_time = 0
-    if isinstance(code, str):
-        code = process(code)
+    if isinstance(code, int):
+        return code
     if isinstance(code, dict):
         code, nframe = code["code"], code["frame"]
-    elif isinstance(code, int):
-        return code
     else:
         nframe = new_frame()
-    sys.stdout.flush()
     if frame is not None:
         frame[0].update(nframe[0])
     else:
         frame = nframe
     tc_cache = set()
-    debug_ins = False
-    while instruction_pointer < len(code) and not thread_event.is_set():
+    
+    while instruction_pointer < len(code):
         pos, file, ins, oargs = code[instruction_pointer]
             
         ins = process_arg(frame, ins)
-        if debug_ins:
-            print("||", ins, len(oargs) if oargs else 0, oargs)
         if not oargs is None:
             try:
                 args = process_args(frame, oargs)
                 argc = len(args)
-                if vdebug["type_checker"]:
+                if debug_settings["type_checker"]:
                     if (tmp:=(pos, file, ins)) not in tc_cache:
                         tc_cache.add(tmp)
                         if not check_ins(ins, args):
                             itypesr = type_checker.get_ins(ins, args)
-                            if itypesr is None and not varproc.is_debug_enabled("TC_DEFAULT_WHEN_NOT_FOUND"):
+                            if itypesr is None and not is_debug_enabled("TC_DEFAULT_WHEN_NOT_FOUND"):
                                 error.error(pos, file, f"Type signature for {ins} is not defined.\nUse tc_register to register your function.")
                                 return error.TYPE_ERROR
                             itypes = tuple(map(lambda x: getattr(x, "__name__", x), itypesr))
@@ -631,12 +499,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
         else:
             args = []
             argc = 0
-        if debug_ins:
-            print("::", ins, argc, args)
-            input()
         if ins == "inc" and argc == 1:
             rset(frame[-1], args[0], rget(frame[-1], args[0], default=0) + 1)
-        elif ins == "inc" and argc == 1:
+        elif ins == "dec" and argc == 1:
             rset(frame[-1], args[0], rget(frame[-1], args[0], default=0) - 1)
         elif ins == "fn" and argc == 2:
             name, params = args
@@ -651,12 +516,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 func["defaults"] = {}
                 for pos, i in filter(lambda x: isinstance(x[1], dict), enumerate(params)):
                     func["defaults"].update(i)
-                    args[pos] = argproc.kwarg(tuple(i.items())[0][0])
+                    args[pos] = kwarg(tuple(i.items())[0][0])
             rset(frame[-1], name, func)
-        elif ins == "break_point":
-            debug_ins = True
-        elif ins == "break_off":
-            debug_ins = False
         elif ins == "_intern.switch" and argc == 2:
             body = args[0].get(args[1], args[0][None])
             if not body:
@@ -691,7 +552,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 break
             else:
                 instruction_pointer, body = temp
-            if (err := argproc.parse_match(frame, body, args[0])) > 0:
+            if (err := parse_match(frame, body, args[0])) > 0:
                 return err
         elif ins == "get_time" and argc == 1:
             frame[-1][args[0]] = time.time()
@@ -761,7 +622,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             else:
                 instruction_pointer, body = temp
             if body:
-                while not thread_event.is_set():
+                while True:
                     err = run(body, frame)
                     if err:
                         if err == error.STOP_RESULT:
@@ -795,7 +656,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             else:
                 instruction_pointer, body = temp
             if body:
-                while not thread_event.is_set() and (tmp:=evaluate(frame, args[0])):
+                while (tmp:=evaluate(frame, args[0])):
                     err = run(body, frame)
                     if err:
                         if err == error.STOP_RESULT:
@@ -904,42 +765,8 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             frame[-1][args[1]] = os.system(args[0])
         elif ins == "pass":
             ...
-        elif ins == "thread" and argc == 0:
-            temp = get_block(code, instruction_pointer)
-            if temp is None:
-                break
-            else:
-                instruction_pointer, body = temp
-
-            def th():
-                if err := run(body, frame, thread_event):
-                    raise RuntimeError(f"Thread returned an error: {err}")
-
-            th_obj = Thread(target=th)
-            threads.append(th_obj)
-            th_obj.start()
-        elif ins == "new_thread_event" and argc == 1:
-            rset(frame[-1], args[0], (temp := Event()))
-            thread_events.append(temp)
-        elif ins == "thread" and argc == 1:
-            if not isinstance(args[0], Event):
-                error.error(pos, file, "The given thread event was invalid!")
-                return error.THREAD_ERROR
-            temp = get_block(code, instruction_pointer)
-            if temp is None:
-                break
-            else:
-                instruction_pointer, body = temp
-
-            def th():
-                if err := run(body, frame, args[0]):
-                    raise RuntimeError(f"Thread returned an error: {err}")
-
-            th_obj = Thread(target=th)
-            threads.append(th_obj)
-            th_obj.start()
         elif ins == "exit" and argc == 0:
-            my_exit()
+            sys.exit()
         elif ins == "return":  # Return to the latched names
             if (temp := rget(frame[-1], "_returns")) != constants.nil:
                 if (
@@ -951,8 +778,9 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     rset(frame[-1], f"_nonlocal.{temp[0]}", args[0] if isinstance(args, (tuple, list)) and len(args) == 1 else args, meta=False)
                     #pprint(rget(frame[-1], f"_nonlocal"), hide=False)
                 else:
-                    for name, value in zip(temp, args):
-                        rset(frame[-1], f"_nonlocal.{name}", value, meta=False)
+                    if temp != "_":
+                        for name, value in zip(temp, args):
+                            rset(frame[-1], f"_nonlocal.{name}", value, meta=False)
                 if (tmp := frame[-1].get("_memoize")) not in constants.constants_false:
                     tmp[0][tmp[1]] = tuple(
                         map(
@@ -998,10 +826,6 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     print(f"\nHelp, line [{pos}]: No documentation was found!")
                 else:
                     print(f"\nHelp, line [{pos}]:\n{temp}")
-        elif ins == "wait_for_threads" and argc == 0:
-            for i in threads:
-                i.join()
-            threads.clear()
         elif ins == "catch" and argc >= 2:  # catch return value of a function
             rets, func_name, *args = args
             if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
@@ -1184,34 +1008,36 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                     args[0].pop("[RGS]")
                     pa = args[0].pop("[PARGS]", tuple())
                     res = ext_s.call(
-                        function, frame, varproc.meta["internal"]["main_path"], pa, args[0]
+                        function, frame, meta_attributes["internal"]["main_path"], pa, args[0]
                     )
                 else:
                     t_args = []
-                    for i in ext_s.get_py_params(temp):
-                        if i.endswith("body"):
-                            temp = get_block(code, instruction_pointer)
-                            if temp is None:
-                                error.error(pos, file, f"Function '{function.__name__}' expected a block!")
-                                return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
-                            instruction_pointer, body = temp
-                            t_args.append(body)
-                        else:
-                            t_args.append(args.pop())
+                    if (py_args:=ext_s.get_py_params(function)):
+                        for i in py_args:
+                            if i.endswith("body"):
+                                temp = get_block(code, instruction_pointer)
+                                if temp is None:
+                                    error.error(pos, file, f"Function '{function.__name__}' expected a block!")
+                                    return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
+                                instruction_pointer, body = temp
+                                t_args.append(body)
+                            else:
+                                t_args.append(args.pop())
                     res = ext_s.call(
-                        function, frame, varproc.meta["internal"]["main_path"], t_args
+                        function, frame, meta_attributes["internal"]["main_path"], t_args
                     )
                 if (
                     res is None
                     and info.WARNINGS
-                    and varproc.is_debug_enabled("warn_no_return")
+                    and is_debug_enabled("warn_no_return")
                 ):
                     error.warn(
                         "Function doesnt return anything. To reduce overhead please dont use pycatch.\nLine {pos}\nFile {file}"
                     )
                 if isinstance(res, tuple):
-                    for name, value in zip(rets, res):
-                        rset(frame[-1], name, value)
+                    if rets != "_":
+                        for name, value in zip(rets, res):
+                            rset(frame[-1], name, value)
                 elif isinstance(res, int) and res:
                     return res
                 elif isinstance(res, str):
@@ -1228,33 +1054,13 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
             except:
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
-        elif ins == "ccall" and argc >= 1:
-            name, *args = args
-            if not name:
-                error.error(pos, file, "Function not defined!")
-                break
-            try:
-                name(*args)
-            except:
-                error.error(pos, file, traceback.format_exc()[:-1])
-                return error.PYTHON_ERROR
-        elif ins == "ccatch" and argc >= 1:
-            ret, name, *args = args
-            if not name:
-                error.error(pos, file, "Function not defined!")
-                break
-            try:
-                frame[-1][ret] = name(*args)
-            except:
-                error.error(pos, file, traceback.format_exc()[:-1])
-                return error.PYTHON_ERROR
         elif ins == "dict" and argc == 1:
             temp = get_block(code, instruction_pointer)
             if temp is None:
                 break
             else:
                 instruction_pointer, body = temp
-            if argproc.parse_dict(frame, args[0], body):
+            if parse_dict(frame, args[0], body):
                 break
         elif ins == "raise" and isinstance(args[0], int) and argc == 2:
             error.error(pos, file, args[1])
@@ -1326,10 +1132,10 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if value is None:
                         continue
-                    elif isinstance(value, argproc.kwarg):
+                    elif isinstance(value, kwarg):
                         frame[-1][value.name] = value.value
                     else:
-                        if isinstance(name, argproc.kwarg):
+                        if isinstance(name, kwarg):
                             if name.value is None:
                                 frame[-1][name.name] = value
                             else:
@@ -1382,7 +1188,7 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
                 else:
                     t_args = args
                 res = ext_s.call(
-                    function, frame, varproc.meta["internal"]["main_path"], t_args
+                    function, frame, meta_attributes["internal"]["main_path"], t_args
                 )
                 if isinstance(res, int) and res:
                     return res
@@ -1432,10 +1238,14 @@ def run(code, frame=None, thread_event=IS_STILL_RUNNING):
     error.error(pos, file, "Error was raised!")
     return error.SYNTAX_ERROR
 
+# Doesnt use module.name = value
+# so that when we change the names
+# we dont need to go scour every file.
+
 # to avoid circular imports
 # this is classified as dark magic...
 # basically instead of an "import"
 # is equivalent to "export to"
 ext_s.register_run(run)
 ext_s.register_process(process)
-argproc.run_code = run
+argproc_setter.set_run(run)

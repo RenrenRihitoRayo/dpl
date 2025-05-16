@@ -2,8 +2,20 @@
 
 import datetime
 import os
-from .info import flags
-from . import varproc
+
+class DPLError(Exception):
+    def __init__(self, code):
+        self._code = code
+        self._name = ERRORS_DICT.get(code, '???')
+        super().__init__()
+    @property
+    def name(self): return self._name
+    @property
+    def code(self): return self._code
+    def __repr__(self):
+        return f"DPLError(code={self._code!r}, name={self._name!r})"
+    def __str__(self):
+        return self.__repr__()
 
 ERRORS = (
     "PREPROCESSING_ERROR",
@@ -19,8 +31,19 @@ ERRORS = (
     "FILE_NOT_FOUND_ERROR"
 )
 
-META_ERR = varproc.meta["err"] = {"builtins": ERRORS, "defined_errors": list(ERRORS)}
+META_ERR = None
+PREPROCESSING_FLAGS = None
 
+def error_setup_meta(scope):
+    global META_ERR, PREPROCESSING_FLAGS
+    META_ERR = scope
+    PREPROCESSING_FLAGS = scope["preprocessing_flags"]
+    scope["err"].update({"builtins": ERRORS, "defined_errors": list(ERRORS)})
+    
+    for pos, name in enumerate(ERRORS, 1):
+        globals()[name] = pos
+        META_ERR[name] = pos
+        META_ERR[pos] = name
 
 def register_error(name, value=None):
     if name in META_ERR:
@@ -33,12 +56,6 @@ def register_error(name, value=None):
     ERRORS_DICT[err_id] = name
     return err_id
 
-
-for pos, name in enumerate(ERRORS, 1):
-    globals()[name] = pos
-    META_ERR[name] = pos
-    META_ERR[pos] = name
-
 STOP_RESULT = -1
 SKIP_RESULT = -2
 FALLTHROUGH = -3
@@ -48,93 +65,66 @@ ERRORS_DICT = {
     globals().get(name): name for name in filter(lambda x: x.endswith("ERROR"), dir())
 }
 
+def my_print(*args, **kwargs):
+    if PREPROCESSING_FLAGS["RUNTIME_ERRORS"]:
+        print(*args, **kwargs)
+
 def get_error_string(name, message):
     return None if name not in ERRORS_DICT else f"err:{ERRORS_DICT.get(name)}:{message}"
 
-output = varproc.get_debug("debug_output_file")
-
-if os.path.isfile(output):
-    os.remove(output)
-
-
-def my_print(text):
-    if not flags.ERRORS:
-        return
-    if varproc.is_debug_enabled("log_events") and not os.path.isfile(output):
-        with open(output, "w") as f:
-            f.write(
-                f"""[LOG FILE]
-AUTOMATICALLY GENERATED LOG FILES BY THE INTERPRETER!
-ANY LOG OUTPUT WAS REDIRECTED TO HERE!
-Log file path: {output}
-Date of initial logs: {datetime.datetime.now()}
-Debug options:
-"""
-            )
-        with open(output, "a") as f:
-            for name, enabled in varproc.debug.items():
-                f.write(f"  value: {enabled!r} - {name!r}\n")
-    if varproc.is_debug_enabled("log_events"):
-        with open(output, "a") as f:
-            f.write(f"{text}\n")
-    else:
-        print(text)
-
-
-# pre_[name] is a preprocessing log
-
-
 def pre_error(pos, file, cause=None):
-    my_print(f"\n[Preprocessing Error]\nError in line {pos} file {file!r}")
+    og_print(f"\n[Preprocessing Error]\nError in line {pos} file {file!r}")
     if cause is not None:
-        my_print(f"Cause:\n{cause}")
+        og_print(f"Cause:\n{cause}")
 
 
 def error(pos, file, cause=None):
-    my_print(f"\nError in line {pos} file {file!r}")
+    og_print(f"\nError in line {pos} file {file!r}")
     if cause is not None:
-        my_print(f"Cause:\n{cause}")
+        og_print(f"Cause:\n{cause}")
 
 
 og_print = my_print  # Use this to always call an error even when silent
-
+is_silent = []
 
 def info(text, show_date=True):
     if show_date:
-        my_print(f"   [INFO] {datetime.datetime.now()}: {text}")
+        og_print(f"   [INFO] {datetime.datetime.now()}: {text}")
     else:
-        my_print(f"   [INFO]: {text}")
+        og_print(f"   [INFO]: {text}")
 
 
 def warnf(pos, file, text):
-    my_print(f"\nWarning for line {pos} file {file!r}\n[WARNING]: {text}")
+    og_print(f"\nWarning for line {pos} file {file!r}\n[WARNING]: {text}")
 
 
 def warn(text, show_date=True):
     if show_date:
-        my_print(f"[WARNING] {datetime.datetime.now()}: {text}")
+        og_print(f"[WARNING] {datetime.datetime.now()}: {text}")
     else:
-        my_print(f"[WARNING]: {text}")
+        og_print(f"[WARNING]: {text}")
 
 def pre_info(text, show_date=True):
     if show_date:
-        my_print(f"   [INFO PRE] {datetime.datetime.now()}: {text}")
+        og_print(f"   [INFO PRE] {datetime.datetime.now()}: {text}")
     else:
-        my_print(f"   [INFO PRE]: {text}")
+        og_print(f"   [INFO PRE]: {text}")
 
 
 def pre_warn(text, show_date=True):
     if show_date:
-        my_print(f"[WARNING PRE] {datetime.datetime.now()}: {text}")
+        og_print(f"[WARNING PRE] {datetime.datetime.now()}: {text}")
     else:
-        my_print(f"[WARNING PRE]: {text}")
+        og_print(f"[WARNING PRE]: {text}")
 
 # make the errors toggleable
 def silent():
-    global my_print
-    my_print = lambda *x, **y: ...
-
+    global print
+    og_print = lambda *x, **y: ...
+    is_silent.append(0)
 
 def active():
-    global my_print
-    my_print = og_print
+    global print
+    is_silent.pop()
+    if not is_silent:
+        og_print = my_print
