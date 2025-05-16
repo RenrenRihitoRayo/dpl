@@ -1,4 +1,4 @@
-# Used to system info and other data
+# Used for system info and other data
 # Variables are handled in varproc.py
 
 # THIS FILE SHOULD NOT IMPORT DPL MODULES AS A CIRCULAR IMPORT WILL HAPPEN
@@ -11,6 +11,7 @@ import platform
 unique_imports = set()
 
 program_flags = set()
+<<<<<<< HEAD
 
 # turns out ffi.cdef doesnt support directives.
 # good to know...
@@ -49,6 +50,9 @@ py_bindings = f"""
 {safe_py_bindings}
 #endif // _DPL_PY_BINDINGS_H_
 """
+=======
+program_vflags = {}
+>>>>>>> 1.4.8
 
 try:
     from . import constants
@@ -75,7 +79,6 @@ INC_EXT = {
     "loop",
     "while",
     "if",
-    "thread",
     "body",
     "dict",
     "with",
@@ -110,8 +113,7 @@ FUNCTIONS = {
     'exit',
     'wait_for_threads',
     'exec', 'sexec',
-    'dlopen', 'dlclose', 'cget', 'cdef',
-    'dump_vars', 'dump_scope', 'fallthrough'
+    'dump_vars', 'dump_scope', 'fallthrough',
 }
 
 CONSTANTS = {
@@ -126,7 +128,6 @@ KEYWORDS = {
     'export',
     'set',
     'del',
-    'wait_for_threads',
 }
 
 ALL_INTRINSICS = INC_EXT | set(INC.keys()) | DEC | KEYWORDS

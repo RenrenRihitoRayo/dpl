@@ -192,12 +192,14 @@ class dpl:
 
 
 def get_py_params(func):
+    if not hasattr(func, "__code__"):
+        return None
     co = func.__code__
     arg_count = co.co_argcount
     return co.co_varnames[:arg_count]
 
 def luaj_import(
-    frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"]
+    frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"]
 ):
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     if not os.path.isabs(file):
@@ -277,7 +279,7 @@ def luaj_import(
         varproc.dependencies["lua"][search_path] = {file}
 
 
-def py_import(frame, file, search_path=None, loc=varproc.meta["internal"]["main_path"], alias=None):
+def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"], alias=None):
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join(

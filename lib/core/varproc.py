@@ -12,7 +12,7 @@ from . import type_checker
 dependencies = {"dpl": set(), "python": {}, "lua": {}}
 
 # debug options
-debug = {
+debug_settings = {
     "type_checker": 0, # type checker
     "TC_DEFAULT_WHEN_NOT_FOUND": 1, # 1 ignores missing function signstures, 0 raises an error.
     "allow_automatic_global_name_resolution":1, # set to false to get variables faster
@@ -35,6 +35,7 @@ preprocessing_flags = {
     "IGNORE_EMPTY_FUNCTIONS":constants.false, # doesnt optimize empty functions out
     "WARNINGS":constants.true, # display warnings
     "STRICT":constants.false, # treat warnings as errors
+    "RUNTIME_ERRORS":1,
     "_set_only_when_defined": 1,
 }
 
@@ -45,11 +46,12 @@ flags = set()
 # this exposes as much internal data as possible
 # the interpreter must fetch its info from here
 # at least on runtime
-meta = {
-    "debug": debug,
+meta_attributes = {
+    "debug": debug_settings,
     "argv": info.ARGV,
     "argc": info.ARGC,
-    "inter_flags": flags,
+    "interpreter_flags":info.program_flags,
+    "interpreter_vflags":info.program_vflags,
     "internal": {
         "main_path": constants.none,
         "main_file": "__main__",
@@ -63,11 +65,12 @@ meta = {
     },
     "preprocessing_flags":preprocessing_flags,
     "dependencies": dependencies,
-    "err": {"defined_errors": tuple()},
+    "err": {},
     "type_signatures":type_checker.typed,
     "_set_only_when_defined": 1,
 }
 
+error.error_setup_meta(meta_attributes)
 
 def set_lib_path(_, __, path):
     "Set the path where global libraries are"
@@ -78,13 +81,13 @@ def get_lib_path(_, __, path):
     return info.LIBDIR,
 
 # Use this since programs might use
-# info.LIBDIR rather than meta["internal"]["lib_path"]
-meta["internal"]["set_lib_path"] = set_lib_path
-meta["internal"]["get_lib_path"] = get_lib_path
+# info.LIBDIR rather than meta_attributes"internal"]["lib_path"]
+meta_attributes["internal"]["set_lib_path"] = set_lib_path
+meta_attributes["internal"]["get_lib_path"] = get_lib_path
 
 def new_frame():
     "Generate a new scope frame"
-    t = {"_meta": meta}
+    t = {"_meta": meta_attributes}
     t["_global"] = t
     t["_nonlocal"] = t
     t["_local"] = t
@@ -95,37 +98,35 @@ def new_frame():
 
 def get_debug(name):
     "Get a debug option"
-    return debug.get(name, None)
+    return debug_settings.get(name, None)
 
 
 def is_debug_enabled(name):
     "Return a bool if a debug option is enabled"
-    return bool(debug.get(name))
+    return bool(debug_settings.get(name))
 
 
 def set_debug(name, value):
     "Set a debug option"
-    debug[name] = value
+    debug_settings[name] = value
 
 
 def nscope(frame):
     "New scope"
-    t = {"_meta": meta}
+    t = {"_meta": meta_attributes}
     if frame:
         t["_global"] = frame[0]
         t["_nonlocal"] = frame[-1]
         t["_local"] = t
         t["_frame_stack"] = frame
-    with WS_LOCK:
-        frame.append(t)
+    frame.append(t)
     if is_debug_enabled("show_scope_updates"):
         error.info(f"New scope created!")
 
 def pscope(frame):
     "Pop the current scope also discarding"
     if len(frame) > 1:
-        with WS_LOCK:
-            frame.pop()
+        frame.pop()
         if is_debug_enabled("show_scope_updates"):
             error.info(f"Scope discarded!")
     else:
@@ -218,6 +219,6 @@ def rset(dct, full_name, value, sep=".", meta=True):
                     f"Tried to set {full_name!r} but scope was set to set only when defined."
                 )
                 return
-                node[name] = value
+            node[name] = value
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was set to `{value!r}`!")

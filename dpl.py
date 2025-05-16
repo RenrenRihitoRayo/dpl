@@ -9,7 +9,7 @@ import sys
 _file_ = sys.argv[0]
 import lib.core.info as info
 import lib.core.cli_arguments as cli_args
-info.program_flags = prog_flags = cli_args.flags(info.ARGV, True)
+prog_flags, prog_vflags = cli_args.flags(info.ARGV, remove_first=True)
 import time
 
 info.imported = set()
@@ -64,18 +64,26 @@ if "skip-non-essential" not in prog_flags:
     WordCompleter = prompt_toolkit.completion.WordCompleter
     import subprocess
     import shutil
-    import lib.core.extension_support as ext_s
+    import lib.core.extension_suport as ext_s
     import pstats
     ext_s.modules.prompt_toolkit = prompt_toolkit
     ext_s.modules.cProfile = cProfile
     ext_s.modules.pstats = pstats
-    ext_s.shutil = shutil
-    ext_s.subrocess = subprocess
+    ext_s.modules.shutil = shutil
+    ext_s.modules.subrocess = subprocess
     import lib.core.suggestions as suggest
+<<<<<<< HEAD
+=======
+
+# removed try except flag here.
+import lib.core.py_parser as parser
+
+import lib.core.varproc as varproc
+>>>>>>> 1.4.8
 
 import dill
 
-help_str = f"""Help for DPL [v{varproc.meta['internal']['version']}]
+help_str = f"""Help for DPL [v{varproc.meta_attributes['internal']['version']}]
 
 Commands:
 dpl run [file] args...
@@ -165,8 +173,6 @@ def ez_run(code, process=True, file="???"):
     if err := parser.run(code):
         print(f"\n[{file}]\nFinished with an error: {err}")
         rec(err)
-    parser.IS_STILL_RUNNING.set()
-    parser.clean_threads()
     if err:
         if isinstance(err, tuple):
             exit(err[0])
@@ -198,12 +204,12 @@ def handle_args():
                 print("Invalid file path:", file)
                 exit(1)
             info.ARGV.clear()
-            varproc.meta["argc"] = info.ARGC = len(info.ARGV)
+            varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
             with open(file, "r") as f:
-                varproc.meta["internal"]["main_path"] = (
+                varproc.meta_attributes["internal"]["main_path"] = (
                     os.path.dirname(os.path.abspath(file)) + os.sep
                 )
-                varproc.meta["internal"]["main_file"] = file
+                varproc.meta_attributes["internal"]["main_file"] = file
                 ez_run(
                     f.read(),
                     file=file
@@ -213,12 +219,12 @@ def handle_args():
                 print("Invalid file path:", file)
                 exit(1)
             info.ARGV.clear()
-            varproc.meta["argc"] = info.ARGC = len(info.ARGV)
+            varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
             try:
                 with open(file, "rb") as f:
                     code = dill.loads(f.read())
-                    varproc.meta["internal"]["main_file"] = file
-                    varproc.meta["internal"]["main_path"] = (
+                    varproc.meta_attributes["internal"]["main_file"] = file
+                    varproc.meta_attributes["internal"]["main_path"] = (
                         os.path.dirname(os.path.abspath(file)) + os.sep
                     )
                     ez_run(

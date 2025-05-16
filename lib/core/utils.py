@@ -50,3 +50,11 @@ def convert_bytes(byte):
         return byte * 1e-12, "TB"
     else:
         return byte * 1e-15, "PB"
+
+def format_bytes(byte):
+    vv, vu = convert_bytes(byte)
+    return f"{vv:.2f}{vu}"
+
+def format_seconds(byte):
+    vv, vu = convert_sec(byte)
+    return f"{vv:.2f}{vu}"
