@@ -8,7 +8,11 @@
 import sys
 _file_ = sys.argv[0]
 import lib.core.info as info
+info.original_argv = sys.argv.copy()
 import lib.core.cli_arguments as cli_args
+import lib.core.extension_support as ext_s
+ext_s.modules.cli_arguments = cli_args
+ext_s.modules.sys = sys
 prog_flags, prog_vflags = cli_args.flags(info.ARGV, remove_first=True)
 import time
 
@@ -38,6 +42,7 @@ sys.setrecursionlimit(2**30)
 import lib.core.utils as utils
 import lib.core.error as error
 import os
+<<<<<<< HEAD
 
 if "use-python" not in prog_flags:
     try:  # Try to use the .pyd or .so parser to get some kick
@@ -55,6 +60,9 @@ else:
     import lib.core.py_parser as parser
 import lib.core.varproc as varproc
 
+=======
+ext_s.modules.os = os
+>>>>>>> 1.4.8
 if "skip-non-essential" not in prog_flags:
     import cProfile
     from dfpm import dfpm
@@ -64,7 +72,6 @@ if "skip-non-essential" not in prog_flags:
     WordCompleter = prompt_toolkit.completion.WordCompleter
     import subprocess
     import shutil
-    import lib.core.extension_suport as ext_s
     import pstats
     ext_s.modules.prompt_toolkit = prompt_toolkit
     ext_s.modules.cProfile = cProfile
@@ -204,6 +211,7 @@ def handle_args():
                 print("Invalid file path:", file)
                 exit(1)
             info.ARGV.clear()
+            info.ARGV.extend([file, *args])
             varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
             with open(file, "r") as f:
                 varproc.meta_attributes["internal"]["main_path"] = (
@@ -219,6 +227,7 @@ def handle_args():
                 print("Invalid file path:", file)
                 exit(1)
             info.ARGV.clear()
+            info.ARGV.extend([file, *args])
             varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
             try:
                 with open(file, "rb") as f:

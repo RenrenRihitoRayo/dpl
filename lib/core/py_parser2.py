@@ -19,8 +19,11 @@ def get_var(frame, name, default=constants.nil, resolve_name=False):
 
 class instruction:
     class resolved:
-        def __init__(self, name):
-            self.value = name
+        def __init__(self, name, func):
+            self.value = func
+            self.name = name
+        def __repr__(self):
+            return self.name
 
 class executor:
     "A class that can be used easily to run DPL code,\nand even your own language if modified."
@@ -51,7 +54,7 @@ class executor:
         cache = []
         for file, pos, ins, oargs in self.code:
             if ins in executor.instructions:
-                cache.append((file, pos, instruction.resolved(executor.instructions[ins]), oargs))
+                cache.append((file, pos, instruction.resolved(ins, executor.instructions[ins]), oargs))
             else:
                 cache.append((file, pos, ins, oargs))
         self.code.clear()
@@ -87,6 +90,7 @@ class executor:
                 args = []
                 argc = 0
             # Instead of O(n) we can get O(1)
+            # or at least the closest we can go.
             if not isinstance(ins, instruction.resolved):
                 if (func:=get_var(self.frame, ins)) != constants.nil \
                 and isinstance(func, dict):
@@ -281,6 +285,7 @@ def _(parser, file, pos, value):
        return error.SYNTAX_ERROR
     else:
         parser.instruction_pointer, body = temp
+        print(body)
         if not body:
             return
         while evaluate(parser.frame, value):
@@ -340,3 +345,27 @@ def _(parser, file, pos, *values):
         for name, value in zip(temp, values):
             rset(parser.frame[-1], f"_nonlocal.{name}", value)
     return error.STOP_FUNCTION
+
+@executor.add_intrinsic()
+def skip(_, __, ___):
+    return error.SKIP_RESULT
+
+@executor.add_intrinsic()
+def stop(_, __, ___):
+    return error.STOP_RESULT
+
+@executor.add_intrinsic("exit")
+def _(_, __, ___, code=0):
+    exit(code)
+
+@executor.add_intrinsic("_intern.jump")
+def _(parser, _, __, index, condition=...):
+    if condition == ...:
+        parser.instruction_pointer = index
+    else:
+        if condition:
+            parser.instruction_pointer = index
+
+@executor.add_intrinsic("_intern.get_index")
+def _(parser, _, __, name):
+    rset(parser.frame[-1], name, parser.instruction_pointer)

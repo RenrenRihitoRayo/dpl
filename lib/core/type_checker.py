@@ -186,10 +186,6 @@ for :: str "in" iterable
 loop :: int
 %loop[0]
 while :: any
-%thread[0]
-thread[1] :: thread_event
-new_thread_event :: str
-%wait_for_threads
 DEFINE_ERROR[1] :: str
 DEFINE_ERROR[2] :: str int
 cmd :: str
@@ -233,6 +229,7 @@ method :: dict str list|tuple
 %LOG_TIME[0]
 LOG_TIME :: str
 exit :: int
+%exit[0]
 help :: any
 raise :: int
 raise[2] :: int str

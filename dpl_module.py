@@ -8,11 +8,12 @@ import dpl.lib.core.arguments as argproc
 import dpl.lib.core.info as info
 import dpl.lib.core.extension_support as extension_support
 import dpl.lib.core.error as error
-import dpl.project_mngr.pmfdpl as project_manager
-import dpl.dfpm.dfpm as dfpm
 import dpl.lib.core.dpl_configure_imports as dci
 import dpl.lib.core.scanner as scanner
 import dpl.lib.core.utils as utils
+import dpl.project_mngr.pmfdpl as project_manager
+import dpl.dfpm.dfpm as dfpm
+import dpl.misc.dpl_pygments as dpl_pygments
 
 def process(*args, **kwargs):
     "Wrapper for dpl.lib.core.py_parser.process(...)"
