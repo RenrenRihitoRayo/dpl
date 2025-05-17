@@ -467,22 +467,35 @@ def evaluate(frame, expression):
         return chr(processed[1])
     elif len(processed) == 2 and processed[0] == "from_ascii":
         return ord(processed[1])
-    elif len(processed) == 3 and processed[0] == "modulo":
-        print(processed)
         return processed[1] % processed[2]
+    elif len(processed) == 2 and processed[0] == "len":
+        return len(processed[1])
+    elif len(processed) == 2 and processed[0] == "head:rest:tail":
+        head, *rest, tail = processed[1]
+        return head, rest, tail
+    elif len(processed) == 2 and processed[0] == "head:rest":
+        head, *rest = processed[1]
+        return head, rest
+    elif len(processed) == 2 and processed[0] == "rest:tail":
+        *res, tail = processed[1]
+        return rest, tail
+    elif len(processed) == 2 and processed[0] == "head":
+        return processed[1][0]
+    elif len(processed) == 2 and processed[0] == "head":
+        return processed[1][-1]
     match (processed):
         # conditionals
         case ["if", value, "then", true_v, "else", false_v]:
             return true_v if value else false_v
-        case [obj, "<", index, ">"]:
+        case [obj, tuple(index)]:
             if not isinstance(obj, (tuple, list, str)):
                 return constants.nil
-            if isinstance(obj, (tuple, list, str)) and index >= len(obj):
+            if isinstance(obj, (tuple, list, str)) and index[0] >= len(obj):
                 return constants.nil
-            elif isinstance(obj, dict) and index not in obj:
+            elif isinstance(obj, dict) and index[0] not in obj:
                 return constants.nil
             else:
-                return obj[index]
+                return obj[index[0]]
         # types
         case ["tuple", *lst]:
             return tuple(lst)

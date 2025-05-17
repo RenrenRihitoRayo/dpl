@@ -702,7 +702,11 @@ def run(code, frame=None):
             return error.FALLTHROUGH
         elif ins == "set" and argc == 3 and args[1] == "=":
             if args[0] != "_":
-                rset(frame[-1], args[0], args[2])
+                if isinstance(args[0], tuple):
+                    for name, value in zip(args[0], args[2]):
+                        rset(frame[-1], name, value)
+                else:
+                    rset(frame[-1], args[0], args[2])
         elif ins == "del" and argc >= 1:
             for name in args:
                 rpop(frame[-1], name)
@@ -767,6 +771,8 @@ def run(code, frame=None):
             ...
         elif ins == "exit" and argc == 0:
             sys.exit()
+        elif ins == "exit" and argc == 1:
+            sys.exit(args[0])
         elif ins == "return":  # Return to the latched names
             if (temp := rget(frame[-1], "_returns")) != constants.nil:
                 if (
@@ -1011,18 +1017,28 @@ def run(code, frame=None):
                         function, frame, meta_attributes["internal"]["main_path"], pa, args[0]
                     )
                 else:
-                    t_args = []
-                    if (py_args:=ext_s.get_py_params(function)):
-                        for i in py_args:
-                            if i.endswith("body"):
-                                temp = get_block(code, instruction_pointer)
+                    func_params = ext_s.get_py_params(function)[2:]
+                    if func_params and any(map(lambda x: x.endswith("_body") or x.endswith("_xbody"), func_params)):
+                        t_args = []
+                        for i, _ in zip(func_params, args):
+                            if i.endswith("_xbody"):
+                                temp = get_block(code, instruction_pointer, start=0)
                                 if temp is None:
                                     error.error(pos, file, f"Function '{function.__name__}' expected a block!")
                                     return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
                                 instruction_pointer, body = temp
                                 t_args.append(body)
+                            elif i.endswith("_body"):
+                                temp = get_block(code, instruction_pointer)
+                                if temp is None:
+                                    error.error(pos, file, f"Function '{function.__name__}' expected a block!")
+                                    return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
+                                instruction_pointer, body = temp
+                                t_args.append(body)
                             else:
-                                t_args.append(args.pop())
+                                t_args.append(args.pop(0))
+                    else:
+                        t_args = args
                     res = ext_s.call(
                         function, frame, meta_attributes["internal"]["main_path"], t_args
                     )
@@ -1168,7 +1184,7 @@ def run(code, frame=None):
                 func_params = ext_s.get_py_params(function)[2:]
                 if func_params and any(map(lambda x: x.endswith("_body") or x.endswith("_xbody"), func_params)):
                     t_args = []
-                    for i in func_params:
+                    for i, _ in zip(func_params, args):
                         if i.endswith("_xbody"):
                             temp = get_block(code, instruction_pointer, start=0)
                             if temp is None:

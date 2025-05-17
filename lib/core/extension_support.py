@@ -6,7 +6,6 @@ import itertools
 import time
 import os, sys
 import traceback
-import __main__
 from . import type_checker
 from . import utils
 from . import varproc
