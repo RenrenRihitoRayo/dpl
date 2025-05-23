@@ -145,7 +145,7 @@ DPL may now use an argument to explicitly
 point to the new parser to use.
 Basically making DPL a customizable front end.
 
-## Added Dic strings to every function...
+## Added Doc strings to every function...
 
 ## Added syntactic meaning to "_" as a name.
 
