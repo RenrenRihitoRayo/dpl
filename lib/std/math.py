@@ -1,10 +1,20 @@
 if __name__ != "__dpl__":
     raise Exception("This must be included by a DuProL script!")
 
-if not dpl.info.VERSION.isLater((1, 4, None)):
-    raise Exception("This is for version 1.4.x!")
+"""
+Sorry if there are bugs
+the entire module has been vibe coded by me :P
+
+- Sincirely Darren
+"""
 
 ext = dpl.extension("math")
+
+operators = [
+   ["**"],                # Exponentiation (right to left)
+   ["*", "/", "//", "%"], # Multiplication, division, etc. (left to right)
+   ["+", "-"]             # Addition and subtraction (left to right)
+]
 
 def evaluate(expr):
     if isinstance(expr, (int, float)):
@@ -19,13 +29,6 @@ def evaluate(expr):
 
     if num_operators >= num_operands:
         raise ValueError(f"Unsupported expression (likely unary op): {expr}")
-
-    # Operators in order of precedence (right-associative handled accordingly)
-    operators = [
-        ["**"],                # Exponentiation (right to left)
-        ["*", "/", "//", "%"], # Multiplication, division, etc. (left to right)
-        ["+", "-"]             # Addition and subtraction (left to right)
-    ]
 
     for ops in operators:
         i = 0

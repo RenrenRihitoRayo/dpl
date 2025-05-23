@@ -134,11 +134,16 @@ Most recent at top.
 
 # 1.4.8
 
+## DPL now supports references!
+
+See 'example/references.dpl'
+to see how it works!
+
 ## Updated suport for multiple parsers..
 
 DPL may now use an argument to explicitly
 point to the new parser to use.
-Basically making DPL a customozable front end.
+Basically making DPL a customizable front end.
 
 ## Added Dic strings to every function...
 

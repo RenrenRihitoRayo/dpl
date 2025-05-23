@@ -12,6 +12,8 @@ from . import extension_support as ext_s
 import time
 from . import utils
 
+error.error_setup_meta(meta_attributes)
+
 def my_exit_atexit(code=0):
     if info.unique_imports:
         print(f"\nPerformed {len(info.imported):,} non-identical imports\nPerformed {info.unique_imports:,} total imports")

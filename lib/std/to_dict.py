@@ -1,10 +1,6 @@
 if __name__ != "__dpl__":
     raise Exception("This must be included by a DuProL script!")
 
-if not dpl.info.VERSION.isLater((1, 4, None)):
-    raise Exception("This is for version 1.4.x!")
-
-
 def _to_dict(obj):
     if isinstance(obj, (tuple, list, set, complex, float, int, str, dict)):
         return obj

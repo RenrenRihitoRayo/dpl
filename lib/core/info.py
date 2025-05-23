@@ -9,50 +9,9 @@ import sys
 import platform
 
 unique_imports = set()
-
 program_flags = set()
-<<<<<<< HEAD
-
-# turns out ffi.cdef doesnt support directives.
-# good to know...
-safe_py_bindings = """
-
-typedef struct {
-    char* content;
-    char* type;
-} Expr;
-
-typedef struct {
-    char* key;
-    Expr value;
-} DictEntry;
-
-typedef struct {
-    DictEntry *items;
-    size_t length;
-    size_t cap;
-} Dict;
-
-Dict make_dict(DictEntry e[]);
-void dict_add_item(Dict *d, char* k, char* s);
-void* dict_get_item(Dict d, char* k);
-void* dict_pop_item(Dict *d, char* k);
-"""
-
-# provide the bindings for interacting with python
-# albeit simpler
-py_bindings = f"""
-#ifndef _DPL_PY_BINDINGS_H_
-#define _DPL_PY_BINDINGS_H_
-
-#include <stdint.h>
-#include <stdlib.h>
-{safe_py_bindings}
-#endif // _DPL_PY_BINDINGS_H_
-"""
-=======
 program_vflags = {}
->>>>>>> 1.4.8
+original_argv = []
 
 try:
     from . import constants
@@ -152,112 +111,47 @@ class flags:
     WARNINGS = True      # Specific to warnings.
     ERRORS = True        # Logs, Warnings and Such
 
-VERSION_TRIPLE = (1, 4, 8)
-
-def isCompat(version, VERSION=VERSION_TRIPLE):
-    major, minor, patch = version
-    if major != VERSION[0]:
-        return False
-    elif minor != VERSION[1]:
-        return False
-    if VERSION[2] is None or patch is None:
-        return True
-    if patch >= VERSION[2]:
-        return True
-    else:
-        return False
-
-
-def getDiff(version_triple, VERSION=VERSION_TRIPLE):
-    major, minor, patch = version_triple
-    if major < VERSION[0]:
-        return "Script is outdated!"
-    elif major > VERSION[0]:
-        return "Interpreter is outdated!"
-    elif minor < VERSION[1]:
-        return "Script is outdated!"
-    elif minor > VERSION[1]:
-        return "Interpreter is outdated!"
-    if VERSION[2] is None or patch is None:
-        return 0
-    if patch < VERSION[2]:
-        return "Script is outdated!"
-    else:
-        return 0
-
-
-def isLater(version_triple, VERSION=VERSION_TRIPLE):
-    major, minor, patch = version_triple
-    b_major, b_minor, b_patch = VERSION
-
-    b_patch = b_patch or 0
-
-    if major >= b_major:
-        if minor >= b_minor:
-            if b_patch is None or patch is None:
-                return True
-            if patch >= b_patch:
-                return True
-            else:
-                return False
-        else:
-            return False
-    else:
-        return False
-
+VERSION_STRING = "1.4.8"
 
 class Version:
-    def __init__(self, major, minor, patch=None):
-        self.ver = (major, minor, patch)
-
-    def isCompat(self, version_triple):
-        if isinstance(version_triple, tuple):
-            return isCompat(version_triple, self.ver)
-        elif isinstance(version_triple, (Version, VersionSpec)):
-            return isCompat(version_triple.ver, self.ver)
-
-    def isLater(self, version_triple):
-        if isinstance(version_triple, tuple):
-            return isLater(version_triple, self.ver)
-        elif isinstance(version_triple, (Version, VersionSpec)):
-            return isLater(version_triple.ver, self.ver)
-
-    def getDiff(self, version_triple, VERSION=None):
-        VERSION = VERSION
-        major, minor, patch = version_triple
-        if major < VERSION[0]:
-            return "Script is outdated!"
-        elif major > VERSION[0]:
-            return "Interpreter is outdated!"
-        elif minor < VERSION[1]:
-            return "Script is outdated!"
-        elif minor > VERSION[1]:
-            return "Interpreter is outdated!"
-        if VERSION[2] is None or patch is None:
-            return 0
-        if patch < VERSION[2]:
-            return "Script is outdated!"
-        else:
-            return 0
-
-    def __repr__(self):
-        if self.ver[2] is None:
-            return ".".join(map(str, self.ver[:2])) + ".x"
-        return "v" + ".".join(map(str, self.ver))
-
-
-class VersionSpec(Version):
     def __init__(self, ver_str):
-        if not (ver := tuple(filter(str.isdigit, ver_str.split(".")))):
-            raise Exception(f"Invalid version format!")
+        if not (ver := tuple(filter(str.isdigit, ver_str.split(".")))) or len(ver) > 3:
+            raise Exception(f"Invalid version format: {ver_str}")
         ver = (*map(int, ver),)
-        self.ver = ver + (0,) * (3 - len(ver))
+        self.version_tuple = ver + (0,) * (3 - len(ver))
+    def __gt__(self, other):
+        return other > self.version_tuple[:len(other)]
+    def __lt__(self, other):
+        return other < self.version_tuple[:len(other)]
+    def __ge__(self, other):
+        return other >= self.version_tuple[:len(other)]
+    def __le__(self, other):
+        return other <= self.version_tuple[:len(other)]
+    def __eq__(self, other):
+        return other == self.version_tuple[:len(other)]
+    def __ne__(self, other):
+        return not other == self.ver
+    def isLater(self, other):
+        return other > self
+    def isExact(self, other):
+        return other == self
+    def isEarlier(self, other):
+        return other < self
+    def __getitem__(self, index):
+        return self.version_tuple[index]
+    def __iter__(self):
+        return self.version_tuple
+    def __repr__(self):
+        return "v"+".".join(map(str, self.version_tuple))
 
-
-VERSION = Version(*VERSION_TRIPLE)
+VERSION = Version(VERSION_STRING)
+VERSION_TRIPLE = VERSION.version_tuple
 
 BINDIR = os.path.dirname(ARGV[0])
 LIBDIR = os.path.join(BINDIR, "lib")
+# a copy that shouldnt be changed.
+# Used by IsolatedParser for the default libdir.
+PERM_LIBDIR = LIBDIR
 CORE_DIR = os.path.join(BINDIR, "lib", "core")
 
 if os.name == "nt":

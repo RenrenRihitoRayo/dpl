@@ -4,6 +4,15 @@ from . import varproc
 from . import constants
 
 
+def make_reference(scope_index, name, value, data=constants.none):
+    return {
+        "__ref__": 1,
+        "scope": scope_index,
+        "name": name,
+        "value": value,
+        "data": data
+    }
+
 def set_repr(frame, name="???", type_name=None, repr=None, func=False):
     if "_internal" not in frame:
         frame["_internal"] = {

@@ -42,27 +42,7 @@ sys.setrecursionlimit(2**30)
 import lib.core.utils as utils
 import lib.core.error as error
 import os
-<<<<<<< HEAD
-
-if "use-python" not in prog_flags:
-    try:  # Try to use the .pyd or .so parser to get some kick
-        try:
-            import lib.core.parser as parser
-        except ImportError as e:
-            raise ImportError(f"Non-Python Parser had an error while importing: {e}") from e
-        except Exception as e:
-            raise Exception(f"Non-Python Parser had difficulties: {e}")
-        meta["internal"]["implementation"] = "non-python"
-    except Exception as e:  # fallback to normal python impl if it fails
-        if "show-parser-import" in prog_flags: print(e)
-        import lib.core.py_parser as parser
-else:
-    import lib.core.py_parser as parser
-import lib.core.varproc as varproc
-
-=======
 ext_s.modules.os = os
->>>>>>> 1.4.8
 if "skip-non-essential" not in prog_flags:
     import cProfile
     from dfpm import dfpm
@@ -79,14 +59,11 @@ if "skip-non-essential" not in prog_flags:
     ext_s.modules.shutil = shutil
     ext_s.modules.subrocess = subprocess
     import lib.core.suggestions as suggest
-<<<<<<< HEAD
-=======
 
 # removed try except flag here.
 import lib.core.py_parser as parser
 
 import lib.core.varproc as varproc
->>>>>>> 1.4.8
 
 import dill
 
@@ -331,6 +308,7 @@ def handle_args():
                         res.append(line[2:])
             print("\n".join(res))
         case ["repl"] | []:
+            error.error_setup_meta(varproc.meta_attributes)
             frame = varproc.new_frame()
             cmd_hist = InMemoryHistory()
             acc = []
@@ -346,10 +324,11 @@ def handle_args():
             START_FILE = os.path.join(info.BINDIR, "repl_conf/startup.dpl")
             if os.path.isfile(START_FILE):
                 try:
-                    with open(START_FILE, "r") as f:
-                        parser.run(parser.process(f.read()), frame)
-                except:
-                    print("something went wrong while running start up script!")
+                    with parser.IsolatedParser(file_name="start_up_script") as pip:
+                        with open(START_FILE, "r") as f:
+                            pip.run(f.read(), frame)
+                except Exception as e:
+                    print("something went wrong while running start up script!\n:", e)
             while True:
                 try:
                     act = prompt(PROMPT_CTL["ps1"], completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist, lexer=repl_conf.DPLLexer(), style=repl_conf.style).strip()
@@ -394,10 +373,9 @@ def handle_args():
                 elif act == ".reload":
                     if os.path.isfile(START_FILE):
                         try:
-                            with open(START_FILE, "r") as f:
-                                parser.run(
-                                    parser.process(f.read(), name="dpl_repl-startup")
-                                )
+                            with parser.IsolatedParser(file_name="start_up_script") as pip:
+                                with open(START_FILE, "r") as f:
+                                    pip.run(f.read(), frame)
                         except:
                             print("something went wrong while running start up script!")
                     continue

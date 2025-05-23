@@ -41,8 +41,7 @@ chars = {
     "e": chr(27)
 }
 
-
-# from requests.models import parse_header_links
+from . import objects
 from . import state
 from . import constants
 from . import varproc
@@ -54,22 +53,6 @@ rget = varproc.rget
 get_debug = varproc.get_debug
 
 run_code = None  # to be set by py_parser
-
-class argt:
-    class Evaluated:
-        def __init__(self, value):
-            self.value = value
-        def unwrap(self):
-            return self.value
-        def __repr__(self):
-            return f"Evaluated({self.value!r})"
-    class NotEvaluated:
-        def __init__(self, value):
-            self.value = value
-        def unwrap(self):
-            return self.value
-        def __repr__(self):
-            return f"NotEvaluated({self.value!r})"
 
 def nest_args(tokens):
     stack = [[]]
@@ -270,6 +253,19 @@ def is_id(arg):
     return arg.replace(".", "").replace("_", "a").replace(":", "a").replace("?", "a").replace("-", "a").isalnum()
 
 
+def is_rvar(arg):
+    if arg.endswith("::ref"):
+        arg = arg[:-5]
+        if arg.endswith("::tag"):
+            arg = arg[:-5]
+        return is_id(arg)
+    return False
+
+
+def is_deref(arg):
+    return arg.endswith("::deref") and is_id(arg[:-7])
+
+
 def is_fvar(arg):
     return arg.startswith(":") and is_id(arg[1:])
 
@@ -331,6 +327,29 @@ def expr_runtime(frame, arg):
         if get_debug("disable_nil_values") and v == constants.nil:
             raise Exception(f"{arg!r} is nil!")
         return v
+    elif is_rvar(arg):
+        full_name = arg[:-5]
+        if full_name.endswith("::tag"):
+            full_name, tag_name = full_name[:-5].rsplit(":", maxsplit=1)
+            tag = varproc.rget(
+                frame[-1],
+                tag_name,
+                default=varproc.rget(frame[0], tag_name),
+            )
+        else:
+            tag = constants.none
+        return objects.make_reference(len(frame)-1, full_name, varproc.rget(
+                frame[-1],
+                full_name,
+                default=varproc.rget(frame[0], full_name),
+            ), tag)
+    elif is_deref(arg):
+        reference = varproc.rget(
+                frame[-1],
+                arg[:-7],
+                default=varproc.rget(frame[0], arg[:-7]),
+        )
+        return reference["value"]
     elif arg == ".input":
         return input()
     elif is_id(arg):

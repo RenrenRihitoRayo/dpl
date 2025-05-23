@@ -118,7 +118,7 @@ class extension:
 
     @property
     def items(self):
-        return self.__func
+        return self.__data
 
     def __repr__(self):
         return f"Extension<{self._name or f'{self.meta_name}:*'!r}>"
@@ -163,6 +163,7 @@ class dpl:
     info = info
     error = error
     state = state
+    Version = info.Version
     ffi = None
     register_error = error.register_error
     restricted = restricted

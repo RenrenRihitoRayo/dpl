@@ -20,116 +20,6 @@ import traceback
 import sys
 import os
 
-<<<<<<< HEAD
-if "no-cffi" not in info.program_flags:
-    from cffi import FFI
-    ext_s.dpl.ffi = FFI()
-
-IS_STILL_RUNNING = Event()
-
-threads = []
-thread_events = [] # Thread events, so any threads can be killed manually or automatically
-
-def clean_threads():  # kill all threads and wait for them to terminate
-    for i in thread_events:
-        i.set()
-    for i in threads:
-        i.join()
-
-def my_exit(code=0):
-    IS_STILL_RUNNING.set()
-    clean_threads()
-    og_exit(code)
-
-
-def my_exit_atexit(code=0):
-    if info.unique_imports:
-        print(f"\nPerformed {len(info.imported):,} non-identical imports\nPerformed {info.unique_imports:,} total imports")
-
-atexit.register(my_exit_atexit)
-
-og_exit = sys.exit
-ext_s.dpl.exit = my_exit
-sys.exit = my_exit
-exit = my_exit
-
-# setup runtime stuff. And yes on import.
-# user will have to manually define type signatures
-# or lower the type checker strictness by setting TC_DEFAULT_WHEN_NOT_FOUND
-try:
-    import psutil
-
-    CUR_PROCESS = psutil.Process()
-
-    def get_memory(_, __):
-        memory_usage = CUR_PROCESS.memory_info().rss
-        return (utils.convert_bytes(memory_usage),)
-
-    varproc.meta["internal"]["HasGetMemory"] = 1
-    varproc.meta["internal"]["GetMemory"] = get_memory
-except ModuleNotFoundError as e:
-    varproc.meta["internal"]["HasGetMemory"] = 0
-    varproc.meta["internal"]["GetMemory"] = lambda _, __: (state.bstate("nil"),)
-
-varproc.meta["internal"]["SetEnv"] = os.putenv,
-varproc.meta["internal"]["GetEnv"] = os.getenv
-
-varproc.meta["internal"]["os"] = {
-    "uname": info.SYS_MACH_INFO,  # uname
-    "architecture": info.SYS_ARCH,  # system architecture (commonly x86 or ARMv7 or whatever arm proc)
-    "executable_format": info.EXE_FORM,  # name is self explanatory
-    "machine": info.SYS_MACH,  # machine information
-    "information": info.SYS_INFO,  # basically the tripple
-    "processor": info.SYS_PROC,  # processor (intel and such)
-    "threads": os.cpu_count(),  # physical thread count,
-    "os_name":info.SYS_OS_NAME.lower(),
-}
-
-if info.UNIX and info.SYS_OS_NAME == "linux":
-    varproc.meta["internal"]["os"]["linux"] = {
-        "name": info.LINUX_DISTRO,
-        "version": info.LINUX_VERSION,
-        "codename": info.LINUX_CODENAME
-}
-
-
-varproc.meta["threading"] = {
-    "runtime_event": IS_STILL_RUNNING,
-    "is_still_running": lambda: IS_STILL_RUNNING.is_set(),
-}
-
-if "get-internals" in info.program_flags:
-    varproc.meta["argument_processing"] = {
-        "process_argument":process_arg,
-        "process_argumemts":process_args,
-        "preprocess_arguments":exprs_preruntime,
-        "evaluate":evaluate
-    }
-    
-    varproc.meta["variable_processing"] = {
-        "rset":rset,
-        "rget":rget,
-        "rpop":rpop,
-        "new_frame":new_frame,
-        "pop_scope":pscope,
-        "new_scope":nscope
-    }
-
-def get_size_of(_, __, object):
-    return (utils.convert_bytes(sys.getsizeof(object)),)
-
-
-try:
-    get_size_of(0, 0, 0)
-    varproc.meta["internal"]["SizeOf"] = get_size_of
-except:
-    def temp(_, __, ___):
-        return f"err:{error.PYTHON_ERROR}:Cannot get memory usage of an object!\nIf you are using pypy, pypy does not support this feature."
-
-    varproc.meta["internal"]["SizeOf"] = temp
-
-=======
->>>>>>> 1.4.8
 def get_block(code, current_p, supress=False, start=1):
     "Get a code block"
     instruction_pointer = current_p + 1
@@ -600,6 +490,7 @@ def run(code, frame=None):
                             error.error(pos, file, f"Type mismatch [{ins}]: Expected {itypes} but got {atypes}")
                             return error.TYPE_ERROR
             except Exception as e:
+                raise
                 error.error(
                     pos,
                     file,
@@ -613,6 +504,10 @@ def run(code, frame=None):
             rset(frame[-1], args[0], rget(frame[-1], args[0], default=0) + 1)
         elif ins == "dec" and argc == 1:
             rset(frame[-1], args[0], rget(frame[-1], args[0], default=0) - 1)
+        elif ins == "setref" and argc == 3 and args[1] == "=":
+            reference, _, value = args
+            rset(frame[reference["scope"]], reference["name"], value)
+            reference["value"] = value
         elif ins == "fn" and argc == 2:
             name, params = args
             block = get_block(code, instruction_pointer)
@@ -774,27 +669,6 @@ def run(code, frame=None):
                         elif err == error.SKIP_RESULT:
                             continue
                         return err
-<<<<<<< HEAD
-        elif ins == "dlopen" and argc == 2:
-            if args[1].startswith("{") and args[1].endswith("}"):
-                file = info.get_path_with_lib(args[1][1:-1])
-            else:
-                file = args[1]
-            if not os.path.isfile(file):
-                error.error(pos, file, f"File {file!r} couldnt be loaded!")
-                return error.FILE_NOT_FOUND_ERROR
-            try:
-                frame[-1][args[0]] = ext_s.dpl.ffi.dlopen(file)
-            except Exception as perror:
-                error.error(pos, file, f"Dynamic library couldnt be opened!\nError: {perror!r}\nReasons:\n* Permissions\n* Unsupported\n* Corrupt file")
-                return error.PYTHON_ERROR
-        elif ins == "dlclose" and argc == 1:
-            ext_s.dpl.ffi.dlclose(args[0])
-        elif ins == "getc" and argc == 2:
-            frame[-1][args[0]] = getattr(args[1], args[0], constants.none)
-        elif ins == "cdef" and argc == 1:
-            ext_s.dpl.ffi.cdef(args[0])
-=======
         elif ins == "dlopen":
             error.error(pos, file, "DEPRECATED AS OF 1.4.8 FFI IS TOO MESSY\nA REPLACEMENT WILL BE PUT IN AS SOON AS POSSIBLE")
             return error.PYTHON_ERROR
@@ -807,7 +681,6 @@ def run(code, frame=None):
         elif ins == "cdef":
             error.error(pos, file, "DEPRECATED AS OF 1.4.8 FFI IS TOO MESSY\nA REPLACEMENT WILL BE PUT IN AS SOON AS POSSIBLE")
             return error.PYTHON_ERROR
->>>>>>> 1.4.8
         elif ins == "stop" and argc == 0:
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
@@ -1386,12 +1259,43 @@ def run(code, frame=None):
     error.error(pos, file, "Error was raised!")
     return error.SYNTAX_ERROR
 
+class IsolatedParser:
+    def __init__(self, file_name="__main__", main_path=".", libdir=info.PERM_LIBDIR, argv=None):
+        self.defaults = {
+            "libdir":info.PERM_LIBDIR,
+            "argv":info.ARGV.copy(),
+            "main_file":varproc.internal_attributes["main_file"],
+            "main_path":varproc.internal_attributes["main_path"],
+            "meta":copy(varproc.meta_attributes),
+        }
+        varproc.internal_attributes["main_file"] = file_name
+        varproc.internal_attributes["main_path"] = main_path
+        info.LIBDIR = libdir
+    def __enter__(self):
+        return self
+    def run(self, code, frame=None):
+        if isinstance(code, str):
+            code = process(code)
+        return run(code, frame=frame)
+    def __exit__(self, exc, exc_ins, tb):
+        info.LIBDIR = self.defaults["libdir"]
+        info.ARGV = self.defaults["argv"]
+        varproc.internal_attributes["main_file"] = self.defaults["main_file"]
+        varproc.internal_attributes["main_path"] = self.defaults["main_path"]
+        varproc.meta_attributes.update(self.defaults["meta"])
+        return False
+        
+
+##################################
+#      BEWARE DARK SOURCERY      #
+##################################
+# this is classified as dark magic...
+
 # Doesnt use module.name = value
 # so that when we change the names
 # we dont need to go scour every file.
 
 # to avoid circular imports
-# this is classified as dark magic...
 # basically instead of an "import"
 # is equivalent to "export to"
 ext_s.register_run(run)

@@ -39,6 +39,19 @@ preprocessing_flags = {
     "_set_only_when_defined": 1,
 }
 
+# Core interpreter attributes
+internal_attributes = {
+    "main_path": constants.none,
+    "main_file": "__main__",
+    "version": info.VERSION,
+    "raw_version": info.VERSION_TRIPLE,
+    "pid": os.getpid(),
+    "python_version": str(sys.version_info),
+    "python_version_string": info.PYTHON_VER,
+    "implementation":"python", # the language the parser is in.
+    "_set_only_when_defined": 1,
+}
+
 flags = set()
 
 # related to interpreter methods or behavior
@@ -50,19 +63,10 @@ meta_attributes = {
     "debug": debug_settings,
     "argv": info.ARGV,
     "argc": info.ARGC,
+    "original_argv":info.original_argv,
     "interpreter_flags":info.program_flags,
     "interpreter_vflags":info.program_vflags,
-    "internal": {
-        "main_path": constants.none,
-        "main_file": "__main__",
-        "version": info.VERSION,
-        "raw_version": info.VERSION_TRIPLE,
-        "pid": os.getpid(),
-        "python_version": str(sys.version_info),
-        "python_version_string": info.PYTHON_VER,
-        "_set_only_when_defined": 1,
-        "implementation":"python" # python - full python impl, non-python - uses another language for parser
-    },
+    "internal": internal_attributes,
     "preprocessing_flags":preprocessing_flags,
     "dependencies": dependencies,
     "err": {},
@@ -84,6 +88,14 @@ def get_lib_path(_, __, path):
 # info.LIBDIR rather than meta_attributes"internal"]["lib_path"]
 meta_attributes["internal"]["set_lib_path"] = set_lib_path
 meta_attributes["internal"]["get_lib_path"] = get_lib_path
+
+def get_important():
+    return {
+        "meta_attributes": meta_attributes,
+    }
+
+def update_globals(stuff):
+    globals().update(stuff)
 
 def new_frame():
     "Generate a new scope frame"
