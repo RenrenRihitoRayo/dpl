@@ -93,6 +93,9 @@ dpl package remove <package_name>
     Delete that package.
 dpl get-docs file
     Get the doc comments.
+dpl dump-hlir file
+    Dumbs the high level IR that DPL generates.
+    Output is `[file].hlir`
 
 Flags and such:
 dpl -info
