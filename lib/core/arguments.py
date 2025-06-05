@@ -48,6 +48,10 @@ from . import varproc
 from . import error
 from .info import *
 from . import py_argument_handler as pah
+from . import fmt
+
+fmt_format = fmt.format
+fmt_old_format = fmt.old_format
 
 rget = varproc.rget
 get_debug = varproc.get_debug
@@ -186,7 +190,7 @@ def parse_dict(frame, temp_name, body):
             error.error(pos, file, f"Invalid statement!")
             return 1
 
-def flatten_dict(d, parent_key="", sep=".", seen=None, hide=False):
+def flatten_dict(d, parent_key="", sep=".", seen=None):
     if seen is None:
         seen = set()
     items = {}
@@ -195,7 +199,7 @@ def flatten_dict(d, parent_key="", sep=".", seen=None, hide=False):
         return d
     seen.add(dict_id)
     for key, value in d.items():
-        if hide and isinstance(key, str) and key.startswith("_"):
+        if not isinstance(key, str):
             continue
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
         if isinstance(value, dict):
@@ -203,7 +207,7 @@ def flatten_dict(d, parent_key="", sep=".", seen=None, hide=False):
         elif isinstance(value, (list, tuple)):
             items[f"{new_key}"] = value
             for i, item in enumerate(value):
-                items[f"{new_key}[{i}]"] = item
+                items[f"{new_key}({i})"] = item
         else:
             items[new_key] = value
     seen.remove(dict_id)
@@ -213,6 +217,19 @@ def flatten_dict(d, parent_key="", sep=".", seen=None, hide=False):
 methods = {}
 matches = {}
 
+
+def add_method(func_name, func, from_func=False, module_name=None, is_meta_name=False):
+    if module_name is not None:
+        if not is_meta_name:
+            name = f"{module_name}.{func_name}"
+        else:
+            name = f"{module_name}:{func_name}"
+    else:
+        name = func_name
+    if not from_func:
+        methods[name] = func
+    else:
+        methods[name] = lambda frame, args: func(frame, None, *args)[0]
 
 # Need I explain?
 def is_int(arg):
@@ -308,6 +325,10 @@ def expr_preruntime(arg):
         return 22/7
     return arg
 
+def handle_in_string_expr(text, data):
+    args = exprs_preruntime(group(text))
+    args = process_args(data, args)
+    return evaluate(data, args)
 
 def expr_runtime(frame, arg):
     "Process an argument at runtime"
@@ -358,28 +379,13 @@ def expr_runtime(frame, arg):
         return arg[1:-1]
     elif arg.startswith("'") and arg.endswith("'"):
         text = arg[1:-1]
-        for name, value in flatten_dict(frame[-1]).items():
-            text = text.replace(f"${{{name}}}", str(value))
-            if (tmp:=f"${{{name}!}}") in text: text = text.replace(tmp, repr(value))
-        return text
+        return fmt_format(text, flatten_dict(frame[-1]), expr_fn=lambda text, _: handle_in_string_expr(text, frame))
     elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
         return arg
     elif arg in ("?tuple", "?args", "?float", "?int", "?string", "?bytes", "?set", "?list", "nil?", "none?", "def?") or arg in sym:
         return arg
     else:
         raise Exception(f"Invalid literal: {arg}")
-
-
-def add_method(name=None, from_func=False, process=True):
-    def wrapper(func):
-        fname = name if name is not None else getattr(func, "__name__", "_dump")
-        methods[fname] = (
-            lambda *arg: func(None, None, *arg) if from_func else func,
-            process,
-        )
-        return func
-
-    return wrapper
 
 
 def my_range(start, end):
@@ -466,22 +472,19 @@ def evaluate(frame, expression):
         return ~processed[1]
     elif len(processed) == 2 and processed[0] == "type":
         return getattr(type(processed[1]), "__name__", constants.nil)
-    elif len(processed) >= 1 and processed[0] == "sum":
-        args = processed[1:]
+    elif len(processed) == 2 and processed[0] == "sum":
+        args = processed[1]
         t = type(args[0])
         start = args[0]
-        for i in args[1:]:
+        for i in args:
             start += t(i)
         return start
     elif len(processed) == 2 and processed[0] == "eval":
         return evaluate(frame, processed[1])
-    elif len(processed) == 2 and processed[0] == "fast-format":
-        local = flatten_dict(frame[-1], hide=True)
+    elif len(processed) == 2 and processed[0] == "oldformat":
+        local = flatten_dict(frame[-1])
         text = processed[1]
-        for name, value in flatten_dict(frame[-1]).items():
-            if f"${{{name}}}" in text:
-                text = text.replace(f"${{{name}}}", str(value)) 
-        return text
+        return fmt_old_format(text, local)
     elif len(processed) == 2 and processed[0] == "to_ascii":
         return chr(processed[1])
     elif len(processed) == 2 and processed[0] == "from_ascii":
@@ -578,13 +581,10 @@ def evaluate(frame, expression):
         case ["set", name, "=", value]:
             varproc.rset(frame[-1], name, value)
             return value
-        case ["fset", name, "=", value]:
-            varproc.rset(frame[-1], name, value, meta=False)
-            return constants.nil
-        case ["#", method, *args] if method in methods:
-            return methods[method](frame, *args)[0]
-        case ["##", ins, *args]:
-            return ins(frame, "_", *args)[0]
+        case ["@", method, *args] if method in methods:
+            return methods[method](frame, *args)
+        case ["@", ins, *args]:
+            return ins(frame, None, *args)[0]
         case [obj, "@", method, *args] if hasattr(
             obj, method
         ):  # direct python method calling
@@ -608,11 +608,11 @@ def evaluate(frame, expression):
                     if not (res:=fn(frame, default)) is None:
                         return res
                 except:
-                    raise Exception(f"Error while evaluating: {default}\n{traceback.format_exc()}") from None
+                    raise Exception(f"Error while evaluating: {default}\nMatcher: {name}\n{traceback.format_exc()}") from None
     raise Exception(f"Unknown expression: {processed!r}")
 
 sep = " ,"
-special_sep = "@()+/*#[]π<>=!π%"
+special_sep = "@()+/*[]π<>=!π%"
 sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//"]
 
 def group(text):

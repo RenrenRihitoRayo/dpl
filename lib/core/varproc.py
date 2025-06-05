@@ -9,7 +9,12 @@ from . import state
 from . import error
 from . import type_checker
 
-dependencies = {"dpl": set(), "python": {}, "lua": {}}
+# dependencies (populated by module_handler.py)
+dependencies = {
+    "dpl": set(),
+    "python": set(),
+    "lua": set()
+}
 
 # debug options
 debug_settings = {
@@ -18,7 +23,7 @@ debug_settings = {
     "allow_automatic_global_name_resolution":1, # set to false to get variables faster
     "show_scope_updates": 0, # show when scope is popped or pushed onto
     "show_value_updates": 0, # show when variables are read or changed
-    "show_imports": 0,       # show imoports and includes
+    "show_imports": 0,       # show imports and includes
     "warn_no_return": 0,     # warn about cathing python functions even when theres no return value
     "log_events": 0,         # log output (redirects to log file)
     "debug_output_file": "debug_log.txt",
@@ -35,7 +40,7 @@ preprocessing_flags = {
     "IGNORE_EMPTY_FUNCTIONS":constants.false, # doesnt optimize empty functions out
     "WARNINGS":constants.true, # display warnings
     "STRICT":constants.false, # treat warnings as errors
-    "RUNTIME_ERRORS":1,
+    "RUNTIME_ERRORS":1, # Yep this is a thing
     "_set_only_when_defined": 1,
 }
 

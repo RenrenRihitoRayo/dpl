@@ -33,15 +33,13 @@ ERRORS = (
 
 META_ERR = None
 PREPROCESSING_FLAGS = None
-MAIN_PATH = "__main__"
 
 def error_setup_meta(scope):
-    global META_ERR, PREPROCESSING_FLAGS, MAIN_PATH
+    global META_ERR, PREPROCESSING_FLAGS
 
     META_ERR = scope
     PREPROCESSING_FLAGS = scope["preprocessing_flags"]
     scope["err"].update({"builtins": ERRORS, "defined_errors": list(ERRORS)})
-    MAIN_PATH = scope["internal"]["main_file"]
     PREPROCESSING_FLAGS = scope["preprocessing_flags"]
     for pos, name in enumerate(ERRORS, 1):
         globals()[name] = pos
@@ -51,11 +49,11 @@ def error_setup_meta(scope):
 def register_error(name, value=None):
     if name in META_ERR:
         return META_ERR[name]
-    META_ERR["defined_errors"].append(name)
-    META_ERR[name] = (
-        err_id := len(META_ERR["defined_errors"]) if value is None else value
+    META_ERR["err"]["defined_errors"].append(name)
+    META_ERR["err"][name] = (
+        err_id := len(META_ERR["err"]["defined_errors"]) if value is None else value
     )
-    META_ERR[err_id] = name
+    META_ERR["err"][err_id] = name
     ERRORS_DICT[err_id] = name
     return err_id
 
@@ -74,9 +72,8 @@ def get_error_string(name, message):
     return None if name not in ERRORS_DICT else f"err:{ERRORS_DICT.get(name)}:{message}"
 
 def pre_error(pos, file, cause=None):
-    print("::", file, MAIN_PATH)
     if file == "__main__":
-        file = MAIN_PATH
+        file = META_ERR["internal"]["main_file"]
     og_print(f"\n[Preprocessing Error]\nError in line {pos} file {file!r}")
     if cause is not None:
         og_print(f"Cause:\n{cause}")
@@ -84,7 +81,7 @@ def pre_error(pos, file, cause=None):
 
 def error(pos, file, cause=None):
     if file == "__main__":
-        file = MAIN_PATH
+        file = META_ERR["internal"]["main_file"]
     og_print(f"\nError in line {pos} file {file!r}")
     if cause is not None:
         og_print(f"Cause:\n{cause}")

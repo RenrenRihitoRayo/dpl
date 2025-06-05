@@ -15,7 +15,7 @@ There are no style rules. There are no guardrails. Just a loosely-held-together 
 
 ## Features
 
-- Classes? Kinda.  
+- Classes? Kinda. (its in a state of DIY syntax)
 - Functions? Yes, and they sometimes even work.  
 - Syntax? Let's call it... *flexible*.  
 - Naming conventions? **Snake case**, **PascalCase**, **camelCase**, or **whoknows_case** — all welcome.
@@ -41,12 +41,12 @@ Flags:
 
 We dont abstract the python types here,
 you can call its methods and do some stuff with it.
-`set CAPS ["my string"@upper]`
+`set CAPS = ["my string"@upper]`
 
 ### Truthy Values
 
-- Any non-empty containers and strings
-- If an int or float is not zero
+- Any non-empty containers and strings.
+- If an int or float is not zero.
 - true (duh)
 
 ### Falsy Values
@@ -74,6 +74,11 @@ While Implicitly undefined means that the variable does exist but is set as nil.
 
 To differentiate between these two use the `def?` operator. Ex: `set exists [def? var]`
 To make sure its only implicitly undefined use `def?` with `nil?`. Ex: `set exists_bit_is_nil [[def? var] and [nil? :var]]`
+
+### Extra Note
+
+Even values representing a state of nothingness
+has value here, too sad you dont have any...
 
 ## How To Use DPL
 
@@ -126,6 +131,12 @@ Why use DPL?
 * You believe standards are optional. You want full control and full responsibility.
 * You enjoy chaos, minimalism, or pain.
 
+## DPL's Moto
+
+> DPL just works.
+> What your code doesnt?
+> Thats on you dumbass not DPL.
+
 ---
 
 # Change Notes / Dev Logs
@@ -133,6 +144,16 @@ Why use DPL?
 Most recent at top.
 
 # 1.4.8
+
+## Renamed extension_support into module_handling
+
+## Moved inclusion logic to extention_support
+
+I was bored.
+
+## Added "Humorful" Text in the repo
+
+I was bored okay?
 
 ## DPL now supports references!
 
@@ -171,13 +192,13 @@ end
 
 ## Concerns for threading
 
-> [!WARNING]
+> [!WARNING]()
 > Threading may be moved to a separate module!
 > Make sure to have your code adjusted.
 > The new syntax is the same just with the new `&use {std/threads.py}` at the top.
 
 
-> [!CAUTION]
+> [!CAUTION]()
 > Reading and writing variables are no longer atomic!
 > You may need to manually use the "lock" keyword.
 

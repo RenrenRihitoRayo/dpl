@@ -2,26 +2,44 @@
 # This is needed for the cythonized parser and slows down the pure python impl!
 # I tried it, it still failed :)
 
+# This will be kept
+# why? modularity.
+# why? to suffer. [ding ding ding correct answer!]
+
+# Inclusion system for DPL
+#
+# Design rationale:
+# - Only two include roots are supported: local (relative to script or absolute path) and global (dpl/lib)
+# - This keeps include resolution simple, fast, and deterministic
+# - Avoids overhead of searching multiple directories and prevents accidental includes
+# - No priority conflicts or ambiguity in module resolution
+#
+# If you’re thinking “but even C does it differently...” —
+# well, this ain’t C, is it now?
+#
+# DPL’s inclusion philosophy: simplicity and clarity over legacy complexity.
+
 import itertools
 import time
 import os, sys
 import traceback
-from . import type_checker
-from . import utils
-from . import varproc
-from . import arguments as argproc
-from . import info
-if "no-lupa" not in info.program_flags:
-    import lupa
 from types import ModuleType
+from . import fmt
+from . import info
 from . import error
+from . import utils
 from . import state
-from . import restricted
 from . import objects
+from . import varproc
 from . import constants
+from . import restricted
+from . import type_checker
 from . import py_argument_handler
+from . import arguments as argproc
 arguments_handler = py_argument_handler.arguments_handler
 
+if "no-lupa" not in info.program_flags:
+    import lupa
 
 def register_run(func):
     dpl.run_code = func
@@ -46,7 +64,6 @@ class extension:
 
     def __init__(self, name=None, meta_name=None, alias=None):
         self.__func = {}  # functions
-        self.__meth = {}  # methods
         self.__data = {}
         self._name = (
             name  # This is a scope name, dpl defined name.func_name
@@ -83,13 +100,11 @@ class extension:
     def add_method(self, name=None, from_func=False):
         "Add a method."
         def wrap(func):
-            nonlocal name
             if name is None:
-                name = getattr(func, "__name__", None) or "_"
-            self.__meth[self.mangle(name)] = (
-                func if not from_func else lambda *args: func(args[0], None, *args[1:])
-            )
-            return func
+                fname = func.__name__
+            else:
+                fname = name
+            argproc.add_method(fname, func, from_func, self.name, self.is_meta)
         return wrap
 
     def get(self, name, default=None):
@@ -109,12 +124,14 @@ class extension:
             else self.meta_name)
 
     @property
-    def functions(self):
-        return self.__func
+    def is_meta(self):
+        return (False
+            if not self.meta_name
+            else True)
 
     @property
-    def methods(self):
-        return self.__meth
+    def functions(self):
+        return self.__func
 
     @property
     def items(self):
@@ -165,6 +182,7 @@ class dpl:
     state = state
     Version = info.Version
     ffi = None
+    fmt = fmt
     register_error = error.register_error
     restricted = restricted
     state_nil = state.bstate("nil")
@@ -197,6 +215,56 @@ def get_py_params(func):
     co = func.__code__
     arg_count = co.co_argcount
     return co.co_varnames[:arg_count]
+
+def dpl_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"]):
+    variables = {}
+    if not os.path.isabs(file):
+        if search_path is not None:
+            file = os.path.join(
+                {"_std": info.LIBDIR, "_loc": loc}.get(
+                    search_path, search_path
+                ),
+                file,
+            )
+        if not os.path.exists(file):
+            print("Not found:", file)
+            return 1
+    if os.path.isdir(file):
+        if os.path.isfile(files:=os.path.join(file, "include-dpl.txt")):
+            res = []
+            with open(files) as f:
+                for line in f.readlines():
+                    line = line.strip()
+                    if "=>" in line:
+                        line, alias = line.split("=>")
+                        line = line.strip()
+                        alias = alias.strip()
+                    else:
+                        alias = None
+                    if line.startswith("#:"):
+                        print(f"{files} [N/A]:",line[2:]) # for messages like deprecation warnings
+                    elif line.startswith("#?"):
+                        print(line[2:]) # for messages like deprecation warnings
+                    elif line.startswith('#') or not line:
+                        ...
+                    else:
+                        if (err:=dpl_import(frame, line, search_path=file, loc=loc)) is None:
+                            print(f"Something went wrong while importing {line!r}")
+                            return
+                        frame, code = err
+                        variables.update(frame)
+                        res.update(code)
+            return res
+        else:
+            print(f"python: 'include-py.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
+            return
+    varproc.dependencies["dpl"].add(file)
+    if varproc.is_debug_enabled("show_imports"):
+        error.info(f"Imported {file!r}" if not alias else f"Imported {file!r} as {alias}")
+    with open(file, "r") as f:
+        res = dpl.process_code(f.read(), name=file)
+        variables.update(res["frame"][0])
+        return variables, res["code"]
 
 def luaj_import(
     frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"]
@@ -273,10 +341,7 @@ def luaj_import(
     frame[-1].update(funcs)
     argproc.methods.update(meths)
     file = os.path.realpath(file)
-    if search_path in varproc.dependencies["lua"]:
-        varproc.dependencies["lua"][search_path].add(file)
-    else:
-        varproc.dependencies["lua"][search_path] = {file}
+    varproc.dependencies["lua"].add(file)
 
 
 def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"], alias=None):
@@ -332,7 +397,6 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
             error.error("[N/A]", file, traceback.format_exc())
             return 1
     funcs = {}
-    meths = {}
     for name, ext in d.items():
         if isinstance(ext, extension):
             if ext.meta_name:
@@ -342,14 +406,9 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
             elif ext.name:
                 varproc.rset(frame[-1], ext.name, (temp := {}))
                 temp.update(ext.functions)
-            meths.update(ext.methods)
     frame[-1].update(funcs)
-    argproc.methods.update(meths)
     file = os.path.realpath(file)
-    if search_path in varproc.dependencies["python"]:
-        varproc.dependencies["python"][search_path].add(file)
-    else:
-        varproc.dependencies["python"][search_path] = {file}
+    varproc.dependencies["python"].add(file)
 
 
 def call(func, frame, file, args):

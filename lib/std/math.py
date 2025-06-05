@@ -59,9 +59,9 @@ def evaluate(expr):
             else:
                 i += 1
 
-    return expr
+    return expr[0]
 
 @dpl.add_matcher(ext.mangle("expr_match"))
 def matcher(frame, expr):
     if expr and expr[0] == "math":
-        return evaluate(expr[1:])[0]
+        return evaluate(expr[1:])

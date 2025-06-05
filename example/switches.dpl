@@ -1,0 +1,6 @@
+#cmd: python3 ../dpl.py dump-hlir $file
+&use {std/text_io.py}
+
+io:println "This is a program that prints."
+
+dump_vars :_meta

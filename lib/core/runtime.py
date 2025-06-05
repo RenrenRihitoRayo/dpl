@@ -8,7 +8,7 @@ from .objects import *
 from . import constants
 from .type_checker import *
 from . import error
-from . import extension_support as ext_s
+from . import module_handling as mod_s
 import time
 from . import utils
 

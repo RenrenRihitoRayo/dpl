@@ -6,11 +6,10 @@ from . import constants
 
 def make_reference(scope_index, name, value, data=constants.none):
     return {
-        "__ref__": 1,
         "scope": scope_index,
         "name": name,
         "value": value,
-        "data": data
+        "tag": data
     }
 
 def set_repr(frame, name="???", type_name=None, repr=None, func=False):

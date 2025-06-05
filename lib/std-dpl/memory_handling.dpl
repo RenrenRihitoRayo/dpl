@@ -1,3 +1,11 @@
+--
+  Memory handler.
+  Currently only supports reference counting.
+  To avoid bugs treat every implementation here
+  as non thread safe (even though it is) just to
+  be sure.
+--
+
 &use {std/text_io.py}
 
 if [not :_meta.debug.TC_DEFAULT_WHEN_NOT_FOUND]
@@ -8,19 +16,19 @@ end
 
 object RC
 
-method :RC new value
+method RC.new(value)
     new :self tmp
-    set tmp.value :value
-    set tmp.refs 1
-    set tmp.func none
+    set tmp.value = :value
+    set tmp.refs = 1
+    set tmp.func = none
     return :tmp
 end
 
-method :RC inc_ref
-    set self.refs [:self.refs + 1]
+method RC.inc_ref()
+    set self.refs = [:self.refs + 1]
 end
 
-method :RC dec_ref
+method RC.dec_ref()
     match :self.refs
         case [:self.refs <= 0]
             raise :_meta.err.MEM_HANDLE_ERROR "MEM_HANDLE_ERROR: This might cause a double free!"
@@ -29,36 +37,36 @@ method :RC dec_ref
             self.free
         end
     end
-    set self.refs [:self.refs - 1]
+    set self.refs = [:self.refs - 1]
 end
 
-method :RC set_free func
-    set self.func :func
+method RC.set_free(func)
+    set self.func = :func
 end
 
-method :RC free
+method RC.free()
     if [:self.refs <= 0]
         raise :_meta.err.MEM_HANDLE_ERROR "MEM_HANDLE_ERROR: This might cause a double free!"
     end
     self.func :self
-    set self.refs 0
-    set self.value none
-    set self.func none
+    set self.refs = 0
+    set self.value = none
+    set self.func = none
 end
 
-method :RC _im_repr
-    return '<RC [${self.refs}] ${self.value!}>'
+method RC._im_repr()
+    return '<RC [${self.refs}] ${self.value}>'
 end
 
 
 
 ifmain
-    catch [my_ref] RC.new "What"
+    catch (my_ref) RC.new "What"
     io:println :my_ref
     
-    fn test state
+    fn test(state)
         # simulate freeing
-        io:println 'Freeing ${state.value!}...'
+        io:println 'Freeing ${state.value}...'
     end
     
     my_ref.set_free :test

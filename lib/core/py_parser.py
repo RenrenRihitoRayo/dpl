@@ -10,7 +10,6 @@ arguments_handler = py_argument_handler.arguments_handler
 from .runtime import *
 from . import utils
 from . import objects
-from . import extension_support as ext_s
 from . import constants
 from . import type_checker
 check_ins = type_checker.check_ins
@@ -47,11 +46,8 @@ def get_block(code, current_p, supress=False, start=1):
     return instruction_pointer, code[current_p+(2-start):instruction_pointer]
 
 
-def has(attrs, dct):
-    return True if False not in map(lambda x: x in dct, attrs) else False
-
-
 def pprint(d, l=0, seen=None, hide=True):
+    "Custom pretty printer"
     if seen is None:
         seen = set()
     if id(d) in seen:
@@ -91,7 +87,7 @@ def pprint(d, l=0, seen=None, hide=True):
             print("  "*l+f"{name!r} = {value!r}")
 
 def process(fcode, name="__main__"):
-    "Preprocess a file"
+    "Preprocess a file. Output can then be ran by the run function."
     res = []
     nframe = new_frame()
     multiline = False
@@ -124,11 +120,12 @@ def process(fcode, name="__main__"):
             if ins == "include" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.abspath(info.get_path_with_lib(args[0][1:-1]))
+                    search = info.LIBDIR
                 else:
                     if name != "__main__":
-                        file = os.path.join(os.path.dirname(name), args[0])
+                        file = os.path.join(search:=os.path.dirname(name), args[0])
                     else:
-                        file = os.path.join(os.getcwd(), args[0])
+                        file = os.path.join(search:=os.getcwd(), args[0])
                 if not os.path.exists(file):
                     error.error(lpos, file, f"Not found: {file}")
                     return error.PREPROCESSING_ERROR
@@ -216,6 +213,24 @@ def process(fcode, name="__main__"):
                     res.extend(process(f.read(), name=name))
                 file = os.path.realpath(file)
                 meta_attributes["dependencies"]["dpl"].add(file)
+            elif ins == "new_include" and argc == 1:
+                if args[0].startswith("{") and args[0].endswith("}"):
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
+                    search_path = "_std"
+                else:
+                    file = os.path.join(os.path.dirname(name), (ofile := args[0]))
+                    if name != "__main__":
+                        file = os.path.join(os.path.dirname(name), file)
+                    search_path = "_loc"
+                if not os.path.exists(file):
+                    error.error(lpos, file, f"Not found while including: {file}")
+                    return error.PREPROCESSING_ERROR
+                if (me:=mod_s.dpl_import(nframe, file, search_path, loc=os.path.dirname(name))) is None:
+                    print(f"python: Something wrong happened...\nLine {lpos}\nFile {name}")
+                    return error.PREPROCESSING_ERROR
+                (vars, cccc) = me
+                nframe[0].update(vars)
+                res.extend(cccc)
             elif ins == "use" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
@@ -228,7 +243,7 @@ def process(fcode, name="__main__"):
                 if not os.path.exists(file):
                     error.error(lpos, file, f"Not found while including: {file}")
                     return error.PREPROCESSING_ERROR
-                if ext_s.py_import(nframe, file, search_path, loc=os.path.dirname(name)):
+                if mod_s.py_import(nframe, file, search_path, loc=os.path.dirname(name)):
                     print(f"python: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
             elif ins == "use" and argc == 3 and args[1] == "as":
@@ -243,7 +258,7 @@ def process(fcode, name="__main__"):
                 if not os.path.exists(file):
                     error.error(lpos, file, f"Not found while including: {file}")
                     return error.PREPROCESSING_ERROR
-                if ext_s.py_import(nframe, file, search_path, loc=os.path.dirname(name), alias=args[2]):
+                if mod_s.py_import(nframe, file, search_path, loc=os.path.dirname(name), alias=args[2]):
                     print(f"python: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
             elif ins == "use:luaj" and argc == 1:
@@ -254,7 +269,7 @@ def process(fcode, name="__main__"):
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
                     search_path = "_loc"
-                if ext_s.luaj_import(nframe, file, search_path, loc="."):
+                if mod_s.luaj_import(nframe, file, search_path, loc="."):
                     print(f"luaj: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
             elif ins == "embed" and argc == 3 and args[1] == "as":
@@ -1018,11 +1033,11 @@ def run(code, frame=None):
                 if argc == 3 and isinstance(args[0], dict) and args[0].get("[RGS]"):
                     args[0].pop("[RGS]")
                     pa = args[0].pop("[PARGS]", tuple())
-                    res = ext_s.call(
+                    res = mod_s.call(
                         function, frame, meta_attributes["internal"]["main_path"], pa, args[0]
                     )
                 else:
-                    func_params = ext_s.get_py_params(function)[2:]
+                    func_params = mod_s.get_py_params(function)[2:]
                     if func_params and any(map(lambda x: x.endswith("_body") or x.endswith("_xbody"), func_params)):
                         t_args = []
                         for i, _ in zip(func_params, args):
@@ -1044,7 +1059,7 @@ def run(code, frame=None):
                                 t_args.append(args.pop(0))
                     else:
                         t_args = args
-                    res = ext_s.call(
+                    res = mod_s.call(
                         function, frame, meta_attributes["internal"]["main_path"], t_args
                     )
                 if (
@@ -1114,7 +1129,11 @@ def run(code, frame=None):
             )
             != constants.nil
             and isinstance(temp, dict)
-            and has(["defaults", "self", "body", "args", "capture"], temp)
+            and "defaults" in temp and
+                "body" in temp and
+                "args" in temp and
+                "capture" in temp and
+                "self" in temp
         ):  # Call a function
             nscope(frame)
             if temp["defaults"]:
@@ -1143,8 +1162,12 @@ def run(code, frame=None):
             (temp := rget(frame[-1], ins, default=rget(frame[0], ins)))
             != constants.nil
             and isinstance(temp, dict)
-            and has(["defaults", "self", "body", "args", "capture"], temp)
-        ):  # Call a function
+            and "defaults" in temp and
+                "body" in temp and
+                "args" in temp and
+                "capture" in temp and
+                "self" in temp
+            ):  # Call a function
             nscope(frame)
             if temp["self"] != constants.nil:
                 frame[-1]["self"] = temp["self"]
@@ -1186,7 +1209,7 @@ def run(code, frame=None):
             function, "__call__"
         ):  # call a python function
             try:
-                func_params = ext_s.get_py_params(function)[2:]
+                func_params = mod_s.get_py_params(function)[2:]
                 if func_params and any(map(lambda x: x.endswith("_body") or x.endswith("_xbody"), func_params)):
                     t_args = []
                     for i, _ in zip(func_params, args):
@@ -1208,7 +1231,7 @@ def run(code, frame=None):
                             t_args.append(args.pop(0))
                 else:
                     t_args = args
-                res = ext_s.call(
+                res = mod_s.call(
                     function, frame, meta_attributes["internal"]["main_path"], t_args
                 )
                 if isinstance(res, int) and res:
@@ -1298,6 +1321,6 @@ class IsolatedParser:
 # to avoid circular imports
 # basically instead of an "import"
 # is equivalent to "export to"
-ext_s.register_run(run)
-ext_s.register_process(process)
+mod_s.register_run(run)
+mod_s.register_process(process)
 argproc_setter.set_run(run)
