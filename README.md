@@ -145,6 +145,10 @@ Most recent at top.
 
 # 1.4.8
 
+## Overhauled py_parse2
+
+Made it more flexible in syntax ;)
+
 ## Renamed extension_support into module_handling
 
 ## Moved inclusion logic to extention_support

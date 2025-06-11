@@ -6,7 +6,7 @@ import dpl.lib.core.py_parser2 as parser2
 import dpl.lib.core.varproc as varproc
 import dpl.lib.core.arguments as argproc
 import dpl.lib.core.info as info
-import dpl.lib.core.extension_support as extension_support
+import dpl.lib.core.module_handling as module_handling
 import dpl.lib.core.error as error
 import dpl.lib.core.dpl_configure_imports as dci
 import dpl.lib.core.scanner as scanner

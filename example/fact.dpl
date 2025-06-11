@@ -21,13 +21,13 @@ set n = 100
 
 # sub 20ms
 START_TIME
-catch (result) fact_loop :n
+fact_loop :n
 STOP_TIME
 LOG_TIME 'Loop fib(${n})'
 
 # sub 30ms
 START_TIME
-catch (result) fact_rec :n
+fact_rec :n
 STOP_TIME
 LOG_TIME 'Recursive fib(${n})'
 

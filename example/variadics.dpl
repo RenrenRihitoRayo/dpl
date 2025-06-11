@@ -1,0 +1,13 @@
+&use {std/text_io.py}
+
+fn test(fmt, variadic:names)
+    io:println 'Fmt: ${fmt}'
+    for (i, value) in :names
+        io:println 'Variadic ${i}:' :value
+    end
+end
+
+# Fmt: some fmt
+# Variadic 0: yep1
+# Variadic 1: yep2
+test "some fmt" yep1 yep2

@@ -59,6 +59,7 @@ get_debug = varproc.get_debug
 run_code = None  # to be set by py_parser
 
 def nest_args(tokens):
+    "Magic thing."
     stack = [[]]
     for token in tokens:
         if not isinstance(token, str):
@@ -110,33 +111,37 @@ def get_block(code, current_p):
 # without dark magic.
 
 def parse_match(frame, body, value):
+    "Parse a match statement."
+    # TODO: Split this function for
+    # preruntime - like how switch compiles into _intern.switch
+    # runtime - like how _intern.switch is ran but with the match thingy.
     name = None
     np = 0
-    ft = False
+    ft = False # fallthrough
     if value != constants.nil:
         for p, [pos, file, ins, args] in enumerate(body):
             if ins == "as":
-                varproc.rset(frame[-1], process_args(frame, args)[0], value)
+                varproc.rset(frame[-1], process_arg(frame, args[0]), value)
             elif ins == "case":
-                if (v := process_args(frame, args))[0]:
+                if (v := process_arg(frame, args[0])) or ft:
+                    if ft:
+                        ft = False
                     temp = get_block(body, p)
                     if temp is None:
                         error.error(pos, file, "Expected a case block!")
                         return error.SYNTAX_ERROR
-                    if name:
-                        frame[-1][name] = value
                     res = run_code(temp[1], frame=frame)
                     if res != error.FALLTHROUGH:
                         return res
                     ft = True
             elif ins == "with":
-                if (v := process_args(frame, args))[0] == value:
+                if (v := process_arg(frame, args[0])) == value or ft:
+                    if ft:
+                        ft = False
                     temp = get_block(body, p)
                     if temp is None:
                         error.error(pos, file, "Expected a case block!")
                         return error.SYNTAX_ERROR
-                    if name:
-                        frame[-1][name] = value
                     res = run_code(temp[1], frame=frame)
                     if res != error.FALLTHROUGH:
                         return res
@@ -152,7 +157,9 @@ def parse_match(frame, body, value):
     else:
         for p, [pos, file, ins, args] in enumerate(body):
             if ins == "case":
-                if (v := process_args(frame, args))[0]:
+                if (v := process_arg(frame, args[0])) or ft:
+                    if ft:
+                        ft = False
                     temp = get_block(body, p)
                     if temp is None:
                         error.error(pos, file, "Expected a case block!")
@@ -179,7 +186,7 @@ def parse_dict(frame, temp_name, body):
     varproc.rset(frame[-1], temp_name, data)
     for p, [pos, file, ins, args] in enumerate(body):
         argc = len(args)
-        if ins == "set" and argc == 3 and args[1] == "=>":
+        if ins == "set" and argc == 3 and args[1] == "=":
             name, _, value = args
             data[name] = value
         elif ins == "def" and argc == 1:
@@ -267,7 +274,7 @@ def is_float(arg):
 
 
 def is_id(arg):
-    return arg.replace(".", "").replace("_", "a").replace(":", "a").replace("?", "a").replace("-", "a").isalnum()
+    return arg.replace(".", "a").replace("_", "a").replace(":", "a").replace("?", "a").replace("-", "a").isalnum()
 
 
 def is_rvar(arg):

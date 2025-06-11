@@ -389,7 +389,7 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
     with open(file, "r") as f:
         obj = compile(f.read(), file, "exec")
         try:
-            d = {"__name__": "__dpl__", "modules": modules, "dpl": dpl, "__alias__":alias}
+            d = {"__name__": "__dpl__", "modules": modules, "dpl": dpl, "__alias__":alias, "frame_stack": frame}
             exec(obj, d)
         except (SystemExit, KeyboardInterrupt):
             raise

@@ -1,0 +1,19 @@
+&use {std/text_io.py}
+
+match 90
+    as value
+    with 90
+        io:println "Yep!"
+    end
+    case [:value < 90]
+        io:println "less than 90"
+        fallthrough
+    end
+    with "jejwiwjwjwh"
+        io:println "fallthrough!"
+    end
+    default
+        io:println "greater than 90"
+    end
+end
+

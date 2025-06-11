@@ -26,7 +26,6 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
             "name": 0,
             "args": [],
             "defaults": 0,
-            "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
                 (
@@ -42,7 +41,6 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
             "name": 0,
             "args": [],
             "defaults": 0,
-            "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
                 (
@@ -58,7 +56,6 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
             "name": 0,
             "args": [],
             "defaults": 0,
-            "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
                 (
@@ -74,7 +71,6 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
             "name": 0,
             "args": [],
             "defaults": 0,
-            "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
                 (
@@ -90,7 +86,6 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
             "name": 0,
             "args": [],
             "defaults": 0,
-            "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
                 (
@@ -106,7 +101,6 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
             "name": 0,
             "args": [],
             "defaults": 0,
-            "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
                 (
@@ -122,7 +116,6 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
             "name": 0,
             "args": [],
             "defaults": 0,
-            "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
                 (
@@ -138,7 +131,6 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
             "name": 0,
             "args": [],
             "defaults": 0,
-            "docs": f"Default internal method for ({name}).",
             "self": 0,
             "body": [
                 (
@@ -153,16 +145,24 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
 
 
 def make_function(name, body, params):
+    vname = constants.nil
+    vindex = 0
+    for pos, name in enumerate(params):
+        if name.startswith("variadic:"):
+            vindex = pos
+            vname = name[9:]
     return set_repr(
         {
             "name": name,
             "body": body,
             "args": params,
             "self": constants.nil,
-            "docs": f"Function. ({name!r})",
-            "defaults": constants.nil,
             "memoize": {},
-            "capture": constants.nil
+            "capture": constants.nil,
+            "variadic":{
+                "name": vname,
+                "index": vindex,
+            }
         },
         name,
         "builtin-function-object",
@@ -177,8 +177,7 @@ def make_method(name, body, params, self):
             "body": body,
             "args": params,
             "self": self,
-            "docs": f"Method of {varproc.rget(self, '_internal.name')}. ({name})",
-            "defaults": constants.nil,
+            "defaults": {},
             "capture":constants.nil
         },
         name,
@@ -193,7 +192,6 @@ def make_object(name):
             "_internal": {
                 "name": name,
                 "type": f"type:{name}",
-                "docs": f"An object. ({name})",
                 "instance_name": f"{name}:root"
             }
         },

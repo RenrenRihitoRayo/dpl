@@ -35,12 +35,13 @@ debug_settings = {
 
 # preruntime flags
 preprocessing_flags = {
-    "DEAD_CODE_OPT":constants.true, # dead code optimization
-    "EXPRESSION_FOLDING":constants.true, # expression folding
-    "IGNORE_EMPTY_FUNCTIONS":constants.false, # doesnt optimize empty functions out
-    "WARNINGS":constants.true, # display warnings
-    "STRICT":constants.false, # treat warnings as errors
-    "RUNTIME_ERRORS":1, # Yep this is a thing
+    "DEAD_CODE_OPT": constants.true, # dead code optimization
+    "EXPRESSION_FOLDING": constants.true, # expression folding
+    "IGNORE_EMPTY_FUNCTIONS": constants.false, # doesnt optimize empty functions out
+    "WARNINGS": constants.true, # display warnings
+    "STRICT": constants.false, # treat warnings as errors
+    "RUNTIME_ERRORS": constants.true, # Yep this is a thing
+    "EXPIRAMENTAL_LLIR": constants.false, # enable expiramental llir and new execution loop.
     "_set_only_when_defined": 1,
 }
 
@@ -95,11 +96,13 @@ meta_attributes["internal"]["set_lib_path"] = set_lib_path
 meta_attributes["internal"]["get_lib_path"] = get_lib_path
 
 def get_important():
+    "Setup."
     return {
         "meta_attributes": meta_attributes,
     }
 
 def update_globals(stuff):
+    "Setup."
     globals().update(stuff)
 
 def new_frame():

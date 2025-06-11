@@ -64,8 +64,12 @@ if "skip-non-essential" not in prog_flags:
     import lib.core.suggestions as suggest
     import pprint
 
-# removed try except flag here.
-import lib.core.py_parser as parser
+# removed try except here.
+if "use-py-parser2" in prog_flags:
+    import lib.core.py_parser2 as parser
+    if "ignore-expiramental" not in prog_flags: print("!!! WARNING: USING NEW EXPIRAMENTAL PARSER !!!\n")
+else:
+    import lib.core.py_parser as parser
 
 import lib.core.varproc as varproc
 
@@ -76,11 +80,11 @@ help_str = f"""Help for DPL [v{varproc.meta_attributes['internal']['version']}]
 Commands:
 dpl run [file] args...
     Runs the given DPL script.
-dpl rc [file] args...
-    Runs the given compiled DPL script.
 dpl compile [file]
     Compiles the given DPL script.
     Outputs to [file].cdpl
+dpl rc [file] args...
+    Runs the given compiled DPL script.
 `dpl repl` ALSO JUST `dpl`
     Invokes the REPL
 dpl package install <user> <repo> <branch> <include_branch_name?>
@@ -93,7 +97,7 @@ dpl package remove <package_name>
     Delete that package.
 dpl get-docs file
     Get the doc comments.
-dpl dump-hlir file
+dpl dump-hlir <file>
     Dumbs the high level IR that DPL generates.
     Output is `[file].hlir`
 
@@ -136,12 +140,20 @@ dpl -instant-help
     Prints the help string without using the command matching.
 dpl -get-internals
     Insert interpreter internals in "_meta"
-    Scopes that will be defined:
+    Variables that will be injected:
     - "argument_processing": Functions to process arguments.
     - "variable_processing": Functions to manipulate a frame.
+dpl -use-py-parser2
+    Use the new expiramental parser (INCOMPLETE)
+    You also need to include the "&enable:EXPIRAMENTAL_LLIR"
+    directive to use it.
+dpl -ignore-expiramental
+    Avoid printing warnings for expiramental
+    options.
 """
 
 def rec(this, ind=0):
+    "Print errors [rec]ursively."
     if not isinstance(this, (tuple, list)):
         print(
             f"{'  '*ind}Error Name: {error.ERRORS_DICT.get(this, f'ERROR NAME NOT FOUND <{this}>')}"

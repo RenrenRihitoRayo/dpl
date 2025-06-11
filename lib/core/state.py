@@ -24,4 +24,4 @@ class bstate:
         return f"<{self.name}>"
 
     def __hash__(self):
-        return id(self)
+        return hash(repr(self))

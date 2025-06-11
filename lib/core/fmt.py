@@ -1,10 +1,11 @@
+from io import StringIO
+
 def old_format(template, vars):
     for name, value in vars.items(): # expect a flattened dict
         template = template.replace(f"${{{name}}}", str(value))
     return template
 
 def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
-    from io import StringIO
 
     result = StringIO()
     i = 0
@@ -98,6 +99,11 @@ if __name__ == "__dpl__":
         return format(text, values, expr_fn=this)
     dpl.arguments.add_method("fmt:format", fmt_format)
     dpl.info.add_runtime_dependent_method("fmt:format")
+    frame_stack[0]["fmt:format"] = lambda frame, _, text, name=None: (
+        dpl.varproc.rset(frame[-1], name, text:=fmt_format(frame, text)),
+        frame[-1].__setitem__(name, text) if name is not None else None,
+        (text,)
+    )[-1]
 
 if __name__ == "__main__":
     # just a test case to test the greedy concat
