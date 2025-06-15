@@ -5,8 +5,8 @@ from ..runtime import *
 from ..py_parser import process, register_execute, register_process_hlir, get_run
 
 hlir_matcher_registry = []
-def end(): _ # not meant to do anything
-op_code_registry = {0: end}
+def end_block(): _ # not meant to do anything
+op_code_registry = [end_block]
 run = get_run()
 inc_op_code = set()
 
@@ -48,7 +48,7 @@ def instruction(func):
     This returns a lambda `lambda *args: (op_code, args)`
     """
     op_code = len(op_code_registry)
-    op_code_registry[op_code] = func
+    op_code_registry.append(func)
     return lambda *a, **kw: (op_code, a, kw)
 
 def inc_instruction(func):
@@ -62,7 +62,8 @@ def inc_instruction(func):
     This returns a lambda `lambda *args: (op_code, args)`
     """
     op_code = len(op_code_registry)
-    op_code_registry[op_code] = func
+    op_code_registry.append(func)
+    inc_op_code.add(op_code)
     return lambda *a, **kw: (op_code, a, kw)
 
 def register_hlir_matcher(func):

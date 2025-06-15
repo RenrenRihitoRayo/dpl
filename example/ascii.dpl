@@ -1,3 +1,4 @@
+#cmd: python3 ../dpl.py -use-py-parser2 dump-llir $file
 use {std/text_io.py}
 
 set start = [from_ascii "A"]

@@ -11,7 +11,7 @@ LLIR is implementation specific and may vary across versions
 and is volatile, LLIR is used internally and not externally
 unlike HLIR.
 
-Code format: (line position, source file, instruction as opcode, argumentsnto the op function)
+Code format: (line position, source file, instruction as opcode, arguments to the op function)
 
 Pipe line:
     old:
@@ -27,28 +27,37 @@ Pipe line:
     new dictionary dispatch parser ->
     program output
 
-{'code': [(3, '__main__', (1, ('use', ['{std/text_io.py}']), {})),
-          (5, '__main__', (3, ('start', 65), {})),
-          (6, '__main__', (3, ('end', 91), {})),
-          (7, '__main__', (3, ('a', 0), {})),
-          (9, '__main__', (2, (([':a', '+', ':start'], '<', ':end'),), {})),
-          (10,
+Opcodes:
+    0000 => end_block
+    0001 => op_call
+    0002 => op_while
+    0003 => op_assign
+    0004 => op_raise
+    0005 => op_if
+    0006 => op_dpl_fn
+
+{'code': [(2, '__main__', (1, ('use', ['{std/text_io.py}']), {})),
+          (4, '__main__', (3, ('start', 65), {})),
+          (5, '__main__', (3, ('end', 91), {})),
+          (6, '__main__', (3, ('a', 0), {})),
+          (8, '__main__', (2, (([':a', '+', ':start'], '<', ':end'),), {})),
+          (9,
            '__main__',
            (1, ('io:print', [['to_ascii', [':a', '+', ':start']]]), {})),
-          (11, '__main__', (3, ('a', [':a', '+', 1]), {})),
-          (12, '__main__', (0, (), {})),
-          (14, '__main__', (1, ('io:println', []), {})),
-          (16, '__main__', (3, ('a', 0), {})),
-          (17, '__main__', (2, ((':a', '<', 10),), {})),
-          (18,
+          (10, '__main__', (3, ('a', [':a', '+', 1]), {})),
+          (11, '__main__', (0, (), {})),
+          (13, '__main__', (1, ('io:println', []), {})),
+          (15, '__main__', (3, ('a', 0), {})),
+          (16, '__main__', (2, ((':a', '<', 10),), {})),
+          (17,
            '__main__',
            (1, ('io:print', [['to_ascii', [':a', '+', 48]]]), {})),
-          (19, '__main__', (3, ('a', [':a', '+', 1]), {})),
-          (20, '__main__', (0, (), {})),
-          (22, '__main__', (1, ('io:println', []), {}))],
- 'frame': [{'_frame_stack': <Recursion on list with id=511374851840>,
-            '_global': <Recursion on dict with id=511308920704>,
-            '_local': <Recursion on dict with id=511308920704>,
+          (18, '__main__', (3, ('a', [':a', '+', 1]), {})),
+          (19, '__main__', (0, (), {})),
+          (21, '__main__', (1, ('io:println', []), {}))],
+ 'frame': [{'_frame_stack': <Recursion on list with id=524523703296>,
+            '_global': <Recursion on dict with id=524523816000>,
+            '_local': <Recursion on dict with id=524523816000>,
             '_meta': {'_set_only_when_defined': 1,
                       'argc': 1,
                       'argv': ['/storage/emulated/0/dpl/example/ascii.dpl'],
@@ -110,13 +119,13 @@ Pipe line:
                                                  'NAME_ERROR',
                                                  'COMPAT_ERROR',
                                                  'FILE_NOT_FOUND_ERROR']},
-                      'internal': {'GetEnv': <function getenv at 0x7710968e00>,
-                                   'GetMemory': <function <lambda> at 0x770c6454e0>,
+                      'internal': {'GetEnv': <function getenv at 0x7a29a08e00>,
+                                   'GetMemory': <function <lambda> at 0x7a200bf4c0>,
                                    'HasGetMemory': 0,
                                    'SetEnv': (<built-in function putenv>,),
-                                   'SizeOf': <function get_size_of at 0x770c645580>,
+                                   'SizeOf': <function get_size_of at 0x7a200bf560>,
                                    '_set_only_when_defined': 1,
-                                   'get_lib_path': <function get_lib_path at 0x770fee2ca0>,
+                                   'get_lib_path': <function get_lib_path at 0x7a28fe2d40>,
                                    'implementation': 'python',
                                    'main_file': '/storage/emulated/0/dpl/example/ascii.dpl',
                                    'main_path': '/storage/emulated/0/dpl/example/',
@@ -131,7 +140,7 @@ Pipe line:
                                           'processor': <none>,
                                           'threads': 8,
                                           'uname': uname_result(system='Linux', node='localhost', release='4.19.191+', version='#1 SMP PREEMPT Mon Jan 20 11:12:50 CST 2025', machine='aarch64')},
-                                   'pid': 15782,
+                                   'pid': 4791,
                                    'python_version': 'sys.version_info(major=3, '
                                                      'minor=13, micro=2, '
                                                      "releaselevel='final', "
@@ -141,7 +150,7 @@ Pipe line:
                                                             '04:34:27) [GCC '
                                                             '11.4.0]',
                                    'raw_version': (1, 4, 8),
-                                   'set_lib_path': <function set_lib_path at 0x770fee2c00>,
+                                   'set_lib_path': <function set_lib_path at 0x7a28fe2ca0>,
                                    'version': v1.4.8},
                       'interpreter_flags': set(),
                       'interpreter_vflags': {},
@@ -150,12 +159,12 @@ Pipe line:
                                         'dump-llir',
                                         '/storage/emulated/0/dpl/example/ascii.dpl'],
                       'preprocessing_flags': {'DEAD_CODE_OPT': 1,
-                                              'EXPIRAMENTAL_LLIR': 0,
+                                              'EXPERIMENTAL_LLIR': 0,
                                               'EXPRESSION_FOLDING': 1,
                                               'IGNORE_EMPTY_FUNCTIONS': 0,
                                               'RUNTIME_ERRORS': 1,
                                               'STRICT': 0,
                                               'WARNINGS': 1,
                                               '_set_only_when_defined': 1}},
-            '_nonlocal': <Recursion on dict with id=511308920704>}],
+            '_nonlocal': <Recursion on dict with id=524523816000>}],
  'llir': True}

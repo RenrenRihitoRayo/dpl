@@ -26,7 +26,7 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
             "name": 0,
             "args": [],
             "defaults": 0,
-            "self": 0,
+            # "self": 0,
             "variadic": {
                 "name": constants.nil,
                 "index": 0
@@ -56,7 +56,7 @@ def make_function(name, body, params):
             "name": name,
             "body": body,
             "args": params,
-            "self": constants.nil,
+            # "self": constants.nil,
             "memoize": {},
             "capture": constants.nil,
             "variadic":{
@@ -83,7 +83,7 @@ def make_method(name, body, params, self):
             "name": name,
             "body": body,
             "args": params,
-            "self": self,
+            # "self": self,
             "capture":constants.nil,
             "variadic":{
                 "name": vname,

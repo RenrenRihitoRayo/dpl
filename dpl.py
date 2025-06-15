@@ -66,6 +66,7 @@ if "skip-non-essential" not in prog_flags:
     import lib.core.suggestions as suggest
     import pprint
     import lib.core.serialize_dpl as cereal # i was hungry
+    from lib.core.py_parser2_internals.py_parser2_internals import op_code_registry
 
 # removed try except here.
 if "use-py-parser2" in prog_flags:
@@ -252,7 +253,12 @@ Well HLIR is the user-facing bytecode.
 LLIR is implementation specific and may vary across versions
 and is volatile, LLIR is used internally and not externally
 unlike HLIR.\n
-Code format: (line position, source file, instruction as opcode, argumentsnto the op function)\n
+Code format: (
+    line position,
+    source file,
+    instruction as opcode,
+    arguments to the op function
+)\n
 Pipe line:
     old:
     source -> unprocessed lines ->
@@ -265,12 +271,16 @@ Pipe line:
     preprocessing and optimizations ->
     hlir generation -> llir transformation
     new dictionary dispatch parser ->
-    program output\n\n""")
+    program output\n\nOpcodes:\n""")
+                    for index, func in enumerate(op_code_registry):
+                        output.write(f"    {index:04} => {func.__name__}\n")
+                    output.write("\n\n")
                     print("Processing and HLIR Generation...")
                     out = parser.process(inputf.read())
                     print("LLIR Transformation...")
                     parser.process_hlir(out)
                     output.write(pprint.pformat(out))
+                    print("Done!")
         case ["dump-hlir", file]:
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
@@ -288,9 +298,14 @@ This is the high level ir for DPL, why high level?
 As you can see you can almost reconstruct the source from this.
 If you meant to compile a dpl script use compile instead of dump-hlir
 since this is not parsable and is just the output of pprint.pprint.\n
-Code format: (line position, source file, instruction, arguments)\n\n""")
+Code format: (
+    line position,
+    source file,
+    instruction,
+    arguments)\n\n""")
                     print("Processing and HLIR Generation...")
                     output.write(pprint.pformat(parser.process(inputf.read())))
+                    print("Done!")
         case ["rc", file, *args]:
             if not os.path.isfile(file):
                 print("Invalid file path:", file)

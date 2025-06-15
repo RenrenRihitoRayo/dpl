@@ -524,7 +524,7 @@ Template syntax has now been removed.
 Replaced by the new dict keyword!
 ```DuProL
 dict name
-    set name => value
+    set name = value
 end
 ```
 
