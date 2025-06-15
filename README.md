@@ -1,7 +1,7 @@
 # DPL – The Dumb Programming Language
 
-> "Simplicity is everywhere in DPL, like an airport cutting expenses."
-> "DPL gives you freedom. In return, it's your fault when you fail."
+> "Simplicity is everywhere in DPL, like an airport cutting expenses.
+> DPL gives you freedom. In return, it's your fault when you fail."
 
 Welcome to **DPL**, the programming language that doesn't try to be smart — just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
 There are no style rules. There are no guardrails. Just a loosely-held-together interpreter and your own chaotic energy.
@@ -15,7 +15,6 @@ There are no style rules. There are no guardrails. Just a loosely-held-together 
 
 ## Features
 
-- Classes? Kinda. (its in a state of DIY syntax)
 - Functions? Yes, and they sometimes even work.  
 - Syntax? Let's call it... *flexible*.  
 - Naming conventions? **Snake case**, **PascalCase**, **camelCase**, or **whoknows_case** — all welcome.
@@ -66,6 +65,7 @@ To explicitly say that this variable exists and is not yet set.
 ### `nil`
 
 Returns when an unset variable is read.
+Setting a var to nil wont delete!
 
 #### Explicit and Implicitly Defined (for nil)
 
@@ -149,10 +149,10 @@ Most recent at top.
 
 Current Pipe line:
 * Source
-> The source code
+> The source code.
 * Preprocessing
 > Preprocess the source code
-> like preruntime directives
+> like preruntime directives.
 * HLIR Generation
 > (High Level IR, almost reconstructable
 > to original source)
@@ -161,9 +161,9 @@ Current Pipe line:
 * Execution
 > Execution step (if else dispatch)
 > Op code execution is
-> O(n) oer iteration where n is the
+> O(n) per iteration where n is the
 > number of operations built in
-> to the execution loop
+> to the execution loop.
 * Output
 > Programs output/side effects.
 
@@ -176,10 +176,10 @@ New Parser Pipe Line (with py_parser2):
 > for direct HLIR execution.
 
 * Source
-> The source code
+> The source code.
 * Preprocessing
 > Preprocess the source code
-> like preruntime directives
+> like preruntime directives.
 * HLIR Generation
 > (High Level IR, almost reconstructable
 > to original source, human readable)
@@ -190,7 +190,7 @@ New Parser Pipe Line (with py_parser2):
 > Replaces text op codes into integer
 > based opcodes for fast look up.
 * Execution
-> Execution step
+> Execution step.
 > Uses a dictionary look up table.
 > Faster and op code execution is
 > O(1) per iteration.
@@ -206,7 +206,7 @@ Init time is just too long.
 
 ## OOP is temporarily dropped in support.
 
-I dont know what it doesnt work :)
+I dont know why it doesnt work :)
 
 ## Default variables are now deprecated
 
