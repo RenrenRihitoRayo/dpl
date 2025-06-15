@@ -148,54 +148,54 @@ Most recent at top.
 ## Pipe Line Explained
 
 Current Pipe line:
-    * Source
-    > The source code
-    * Preprocessing
-    > Preprocess the source code
-    > like preruntime directives
-    * HLIR Generation
-    > (High Level IR, almost reconstructable
-    > to original source)
-    > Turn the now preprocessed code
-    > into a interpretable form.
-    * Execution
-    > Execution step (if else dispatch)
-    > Op code execution is
-    > O(n) oer iteration where n is the
-    > number of operations built in
-    > to the execution loop
-    * Output
-    > Programs output/side effects.
+* Source
+> The source code
+* Preprocessing
+> Preprocess the source code
+> like preruntime directives
+* HLIR Generation
+> (High Level IR, almost reconstructable
+> to original source)
+> Turn the now preprocessed code
+> into a interpretable form.
+* Execution
+> Execution step (if else dispatch)
+> Op code execution is
+> O(n) oer iteration where n is the
+> number of operations built in
+> to the execution loop
+* Output
+> Programs output/side effects.
 
 New Parser Pipe Line (with py_parser2):
 > The new parser is a simple
 > slap on replacement.
 > Uses a flag and a preprocessing directive.
-> "-use-py-parser2" and "&enable:EXPIRAMENTAL_LLIR"
+> "-use-py-parser2" and "&enable:EXPERIMENTAL_LLIR"
 > The old parser will still be present
 > for direct HLIR execution.
-    
-    * Source
-    > The source code
-    * Preprocessing
-    > Preprocess the source code
-    > like preruntime directives
-    * HLIR Generation
-    > (High Level IR, almost reconstructable
-    > to original source, human readable)
-    > Turn the now preprocessed code
-    > into an interpretable form.
-    * LLIR Generation
-    > (Low Level IR, machine readable)
-    > Replaces text op codes into integer
-    > based opcodes for fast look up.
-    * Execution
-    > Execution step
-    > Uses a dictionary look up table.
-    > Faster and op code execution is
-    > O(1) per iteration.
-    * Output
-    > Programs output/side effects.
+
+* Source
+> The source code
+* Preprocessing
+> Preprocess the source code
+> like preruntime directives
+* HLIR Generation
+> (High Level IR, almost reconstructable
+> to original source, human readable)
+> Turn the now preprocessed code
+> into an interpretable form.
+* LLIR Generation
+> (Low Level IR, machine readable)
+> Replaces text op codes into integer
+> based opcodes for fast look up.
+* Execution
+> Execution step
+> Uses a dictionary look up table.
+> Faster and op code execution is
+> O(1) per iteration.
+* Output
+> Programs output/side effects.
 
 ## Runtime Type Checking is now deprecated.
 
