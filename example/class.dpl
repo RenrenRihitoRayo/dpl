@@ -1,4 +1,12 @@
+--
+  BIG FAT NOTICE
+  Due to some bugs OOP will be dropped,
+  however objects can still be used.
+--
+
 &use {std/text_io.py}
+
+set _meta.debug.show_value_updates = true
 
 object Person
 method Person.new(name, age)
@@ -8,10 +16,11 @@ method Person.new(name, age)
     return :tmp
 end
 method Person.greet(name)
+    dump_vars :self
     io:println 'Hello ${name} I am ${self.name}!'
 end
 method Person._im_repr()
-    return 'Person(${self.name!}, ${self.age!})'
+    return 'Person(${self.name}, ${self.age})'
 end
 
 catch (person) Person.new Andrew, 15
@@ -34,8 +43,8 @@ method Employee.greet(name)
     io:println 'Hello ${name} I work at ${self.work_place}!'
 end
 
-catch (employee) Employee.new Andrew, 15, lemonade_stand
+catch (employee) Employee.new Alex, 16, lemonade_stand
 -- Same output --
 io:println :employee
--- Hello Alex I work at lemonade_stand! --
-employee.greet Alex
+-- Hello Andew I work at lemonade_stand! --
+employee.greet Andrew

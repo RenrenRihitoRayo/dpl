@@ -33,7 +33,6 @@ from . import objects
 from . import varproc
 from . import constants
 from . import restricted
-from . import type_checker
 from . import py_argument_handler
 from . import arguments as argproc
 arguments_handler = py_argument_handler.arguments_handler
@@ -92,8 +91,6 @@ class extension:
             self.__func[self.mangle(name)] = (
                 func
             )
-            if typed:
-                type_checker.register(typed.replace("$$", self.mangle(name)))
             return func
         return wrap
 
@@ -144,7 +141,6 @@ class extension:
 def require(path):
     "Import a python file in the lib dir.\nIn cases of 'dir/.../file' use ['dir', ..., 'file'],\nthis uses os.path.join to increase portability."
     mod = {
-        "__name__": "__dpl_require__",
         "modules": modules,
         "dpl": dpl,
         "__import__": restricted.restricted(__import__),
@@ -206,12 +202,10 @@ class dpl:
             return fn
         return wrap
 
-    type_checker = type_checker
-
 
 def get_py_params(func):
     if not hasattr(func, "__code__"):
-        return None
+        return []
     co = func.__code__
     arg_count = co.co_argcount
     return co.co_varnames[:arg_count]
@@ -330,16 +324,14 @@ def luaj_import(
     for name in lua.globals():
         ext = lua.globals()[name]
         if isinstance(ext, extension):
-            if ext.name in frame[-1]:
+            if ext.meta_name:
+                funcs.update(ext.functions)
+            elif ext.name in frame[-1]:
                 raise Exception(f"Name clashing! For name {ext.name!r}")
-            if ext.name:
+            elif ext.name:
                 varproc.rset(frame[-1], ext.name, (temp := {}))
                 temp.update(ext.functions)
-            else:
-                funcs.update(ext.functions)
-            meths.update(ext.methods)
     frame[-1].update(funcs)
-    argproc.methods.update(meths)
     file = os.path.realpath(file)
     varproc.dependencies["lua"].add(file)
 
@@ -389,7 +381,7 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
     with open(file, "r") as f:
         obj = compile(f.read(), file, "exec")
         try:
-            d = {"__name__": "__dpl__", "modules": modules, "dpl": dpl, "__alias__":alias, "frame_stack": frame}
+            d = {"modules": modules, "dpl": dpl, "__alias__":alias, "frame_stack": frame}
             exec(obj, d)
         except (SystemExit, KeyboardInterrupt):
             raise

@@ -7,7 +7,6 @@ from . import constants
 from . import info
 from . import state
 from . import error
-from . import type_checker
 
 # dependencies (populated by module_handler.py)
 dependencies = {
@@ -18,8 +17,6 @@ dependencies = {
 
 # debug options
 debug_settings = {
-    "type_checker": 0, # type checker
-    "TC_DEFAULT_WHEN_NOT_FOUND": 1, # 1 ignores missing function signstures, 0 raises an error.
     "allow_automatic_global_name_resolution":1, # set to false to get variables faster
     "show_scope_updates": 0, # show when scope is popped or pushed onto
     "show_value_updates": 0, # show when variables are read or changed
@@ -41,7 +38,7 @@ preprocessing_flags = {
     "WARNINGS": constants.true, # display warnings
     "STRICT": constants.false, # treat warnings as errors
     "RUNTIME_ERRORS": constants.true, # Yep this is a thing
-    "EXPIRAMENTAL_LLIR": constants.false, # enable expiramental llir and new execution loop.
+    "EXPERIMENTAL_LLIR": constants.false, # enable expiramental llir and new execution loop.
     "_set_only_when_defined": 1,
 }
 
@@ -76,7 +73,6 @@ meta_attributes = {
     "preprocessing_flags":preprocessing_flags,
     "dependencies": dependencies,
     "err": {},
-    "type_signatures":type_checker.typed,
     "_set_only_when_defined": 1,
 }
 
@@ -142,6 +138,7 @@ def nscope(frame):
     frame.append(t)
     if is_debug_enabled("show_scope_updates"):
         error.info(f"New scope created!")
+    return t
 
 def pscope(frame):
     "Pop the current scope also discarding"
@@ -160,8 +157,7 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=True):
         temp = dct.get(full_name, default)
         if is_debug_enabled("show_value_updates"):
             error.info(f"Variable {full_name!r} was read!")
-        else:
-            return temp
+        return temp
     path = [*enumerate(full_name.split(sep), 1)][::-1]
     last = len(path)
     node = dct
@@ -176,8 +172,7 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=True):
         elif pos == last and name in node:
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was read!")
-            else:
-                return node[name]
+            return node[name]
         else:
             return default
     return default

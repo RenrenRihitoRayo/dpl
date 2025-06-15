@@ -99,7 +99,11 @@ def process_hlir(frame):
             # op_raise will be an intrinsic, safe to hardcode it here.
             res = [(pos, file, op_raise(error.PRERUNTIME_ERROR, "Syntax error!"))]
             break
-        res.append((pos, file, line))
+        if isinstance(line, list):
+            for op in line:
+                res.append((pos, file, op))
+        else:
+            res.append((pos, file, line))
     frame["code"] = res
     frame["llir"] = True
 

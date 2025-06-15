@@ -145,7 +145,75 @@ Most recent at top.
 
 # 1.4.8
 
-## Overhauled py_parse2
+## Pipe Line Explained
+
+Current Pipe line:
+    * Source
+    > The source code
+    * Preprocessing
+    > Preprocess the source code
+    > like preruntime directives
+    * HLIR Generation
+    > (High Level IR, almost reconstructable
+    > to original source)
+    > Turn the now preprocessed code
+    > into a interpretable form.
+    * Execution
+    > Execution step (if else dispatch)
+    > Op code execution is
+    > O(n) oer iteration where n is the
+    > number of operations built in
+    > to the execution loop
+    * Output
+    > Programs output/side effects.
+
+New Parser Pipe Line (with py_parser2):
+> The new parser is a simple
+> slap on replacement.
+> Uses a flag and a preprocessing directive.
+> "-use-py-parser2" and "&enable:EXPIRAMENTAL_LLIR"
+> The old parser will still be present
+> for direct HLIR execution.
+    
+    * Source
+    > The source code
+    * Preprocessing
+    > Preprocess the source code
+    > like preruntime directives
+    * HLIR Generation
+    > (High Level IR, almost reconstructable
+    > to original source, human readable)
+    > Turn the now preprocessed code
+    > into an interpretable form.
+    * LLIR Generation
+    > (Low Level IR, machine readable)
+    > Replaces text op codes into integer
+    > based opcodes for fast look up.
+    * Execution
+    > Execution step
+    > Uses a dictionary look up table.
+    > Faster and op code execution is
+    > O(1) per iteration.
+    * Output
+    > Programs output/side effects.
+
+## Runtime Type Checking is now deprecated.
+
+Overhead even when optional.
+Init time is just too long.
+
+## New parser may be used for ast generation?
+
+## OOP is temporarily dropped in support.
+
+I dont know what it doesnt work :)
+
+## Default variables are now deprecated
+
+To save memory space and male function
+definitions faster.
+
+## Overhauled py_parser2
 
 Made it more flexible in syntax ;)
 
@@ -196,13 +264,13 @@ end
 
 ## Concerns for threading
 
-> [!WARNING]()
+> WARNING
 > Threading may be moved to a separate module!
 > Make sure to have your code adjusted.
 > The new syntax is the same just with the new `&use {std/threads.py}` at the top.
 
 
-> [!CAUTION]()
+> CAUTION
 > Reading and writing variables are no longer atomic!
 > You may need to manually use the "lock" keyword.
 

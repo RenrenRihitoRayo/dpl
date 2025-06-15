@@ -1,4 +1,8 @@
+import uuid
 from .py_parser2_internals.py_parser2_internals import *
+
+def gen_name():
+    return str(uuid.uuid4())
 
 # define built ins from here
 @instruction
@@ -8,7 +12,17 @@ def op_call(context, name, arguments):
     if fn is None or fn == constants.nil:
         print(f"Error [{context.file}:{context.line}] Function {name} isnt defined!")
         return error.RUNTIME_ERROR
-    fn(context.frame, context.file, *arguments)
+    if isinstance(fn, dict):
+        new_scope = nscope(context.frame)
+        if fn["variadic"]["name"] == constants.nil:
+            new_scope.update(dict(
+                (name, value)
+                for name, value in zip(fn["args"], arguments)
+            ))
+        execute(fn["body"], context.frame)
+        pscope(context.frame)
+    else:
+        fn(context.frame, context.file, *arguments)
 
 @inc_instruction
 def op_while(context, cond):
@@ -45,9 +59,13 @@ def op_if(context, cond):
         if err:=execute(block, context.frame):
             return err
 
-@instruction
-def op_fn(context, name, *args):
-    ...
+@inc_instruction
+def op_dpl_fn(context, name, args):
+    context.instruction_pointer, block = get_block(context.instruction_pointer, context.code)
+    if block is None:
+        return error.SYNTAX_ERROR
+    fn = objects.make_function(name, block, args)
+    context.frame[-1][name] = fn
 
 @register_hlir_matcher
 def dpl_matcher(line):
@@ -60,5 +78,7 @@ def dpl_matcher(line):
             return op_if(cond)
         case ["end"]:
             return (0, (), {})
+        case ["fn", name, tuple(params)]:
+            return op_dpl_fn(name, params)
         case [func, *args]:
             return op_call(func, args)

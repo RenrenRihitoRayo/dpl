@@ -1,4 +1,3 @@
-from . import py_parser as parser
 import os
 import fnmatch
 import ast
@@ -71,26 +70,15 @@ def py_processor(deps, path):
                 "doc": ast.get_docstring(node) or "[not found]"
             })
 
-def py_processor(deps, path):
-    with open(path, 'r', encoding='utf-8') as f:
-        try:
-            tree = ast.parse(f.read(), filename=path)
-        except SyntaxError:
-            return
-    deps[path] = {
-        "definitions":[],
-        "file_size":os.path.getsize(path)
-    }
-
 if __name__ == "__main__":
     from pprint import pprint
     import sys
-    if len(sys.argv) < 2:
+    if len(sys.argv) == 2:
         print("Usage: python script.py <directory>")
     else:
         walker = FileWalker()
         walker.add_filetype("*.py", py_processor)
-        walker.scan(argv[1])
+        walker.scan(".")
         for file, files in walker.get_results().items():
             print("File:", file)
             for file in files["definitions"]:

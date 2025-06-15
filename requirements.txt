@@ -1,4 +1,8 @@
 lupa
-cffi
+dill
 requests
+prompt_toolkit
+# cffi - as of v1.4.8 not needed
 
+# for debugging purposes
+# modulegraph

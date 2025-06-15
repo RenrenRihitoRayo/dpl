@@ -1,6 +1,3 @@
-if __name__ != "__dpl__":
-    raise Exception
-
 ext = dpl.extension(meta_name="tests", alias=__alias__)
 
 ext.items["ASSERT_ERROR"] =\

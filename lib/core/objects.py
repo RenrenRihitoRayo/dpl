@@ -27,6 +27,10 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
             "args": [],
             "defaults": 0,
             "self": 0,
+            "variadic": {
+                "name": constants.nil,
+                "index": 0
+            },
             "body": [
                 (
                     0,
@@ -36,121 +40,17 @@ def set_repr(frame, name="???", type_name=None, repr=None, func=False):
                 )
             ],
         }
-    if "to_int" not in frame:
-        frame["to_int"] = {  # define a boring default _im_repr
-            "name": 0,
-            "args": [],
-            "defaults": 0,
-            "self": 0,
-            "body": [
-                (
-                    0,
-                    "_internal",
-                    "return",
-                    (constants.none,),
-                )
-            ],
-        }
-    if "to_float" not in frame:
-        frame["to_float"] = {  # define a boring default _im_repr
-            "name": 0,
-            "args": [],
-            "defaults": 0,
-            "self": 0,
-            "body": [
-                (
-                    0,
-                    "_internal",
-                    "return",
-                    (constants.none,),
-                )
-            ],
-        }
-    if "to_str" not in frame:
-        frame["to_str"] = {  # define a boring default _im_repr
-            "name": 0,
-            "args": [],
-            "defaults": 0,
-            "self": 0,
-            "body": [
-                (
-                    0,
-                    "_internal",
-                    "return",
-                    (constants.none,),
-                )
-            ],
-        }
-    if "to_list" not in frame:
-        frame["to_list"] = {  # define a boring default _im_repr
-            "name": 0,
-            "args": [],
-            "defaults": 0,
-            "self": 0,
-            "body": [
-                (
-                    0,
-                    "_internal",
-                    "return",
-                    (constants.none,),
-                )
-            ],
-        }
-    if "to_dict" not in frame:
-        frame["to_dict"] = {  # define a boring default _im_repr
-            "name": 0,
-            "args": [],
-            "defaults": 0,
-            "self": 0,
-            "body": [
-                (
-                    0,
-                    "_internal",
-                    "return",
-                    (constants.none,),
-                )
-            ],
-        }
-    if "to_none" not in frame:
-        frame["to_none"] = {  # define a boring default _im_repr
-            "name": 0,
-            "args": [],
-            "defaults": 0,
-            "self": 0,
-            "body": [
-                (
-                    0,
-                    "_internal",
-                    "return",
-                    (constants.none,),
-                )
-            ],
-        }
-    if "to_nil" not in frame:
-        frame["to_nil"] = {  # define a boring default _im_repr
-            "name": 0,
-            "args": [],
-            "defaults": 0,
-            "self": 0,
-            "body": [
-                (
-                    0,
-                    "_internal",
-                    "return",
-                    (constants.nil,),
-                )
-            ],
-        }
     return frame
 
 
 def make_function(name, body, params):
     vname = constants.nil
     vindex = 0
-    for pos, name in enumerate(params):
+    for pos, an in enumerate(params):
         if name.startswith("variadic:"):
             vindex = pos
-            vname = name[9:]
+            vname = an[9:]
+            break
     return set_repr(
         {
             "name": name,
@@ -171,14 +71,24 @@ def make_function(name, body, params):
 
 
 def make_method(name, body, params, self):
+    vname = constants.nil
+    vindex = 0
+    for pos, an in enumerate(params):
+        if an.startswith("variadic:"):
+            vindex = pos
+            vname = an[9:]
+            break
     return set_repr(
         {
             "name": name,
             "body": body,
             "args": params,
             "self": self,
-            "defaults": {},
-            "capture":constants.nil
+            "capture":constants.nil,
+            "variadic":{
+                "name": vname,
+                "index": vindex,
+            }
         },
         name,
         "builtin-method-object",

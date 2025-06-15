@@ -1,6 +1,3 @@
-if __name__ != "__dpl__":
-    raise Exception("This must be included by a DuProL script!")
-
 ext = dpl.extension(meta_name="compiler")
 # supported targets
 ext.items["targets"] = ["python"]
@@ -29,7 +26,7 @@ def process_args(args):
 def compile_body(_, __, main_body):
     for [pos, file, ins, args] in main_body:
         match [ins, *args]:
-            case ["printf", *args]:
+            case ["print", *args]:
                 if ext.items["target"] == "python":
                     ext.items["result"].append(indent(f"print({process_args(args)})"))
             case ["set", var, "=", value]:

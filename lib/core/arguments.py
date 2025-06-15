@@ -206,6 +206,8 @@ def flatten_dict(d, parent_key="", sep=".", seen=None):
         return d
     seen.add(dict_id)
     for key, value in d.items():
+        if key in ("_global", "_nonlocal", "_meta"):
+            continue
         if not isinstance(key, str):
             continue
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
@@ -386,7 +388,8 @@ def expr_runtime(frame, arg):
         return arg[1:-1]
     elif arg.startswith("'") and arg.endswith("'"):
         text = arg[1:-1]
-        return fmt_format(text, flatten_dict(frame[-1]), expr_fn=lambda text, _: handle_in_string_expr(text, frame))
+        data = flatten_dict(frame[-1])
+        return fmt_format(text, data, expr_fn=lambda text, _: handle_in_string_expr(text, frame))
     elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
         return arg
     elif arg in ("?tuple", "?args", "?float", "?int", "?string", "?bytes", "?set", "?list", "nil?", "none?", "def?") or arg in sym:

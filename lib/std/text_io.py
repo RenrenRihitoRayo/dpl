@@ -1,15 +1,8 @@
-from io import TextIOWrapper
-
-if __name__ != "__dpl__":
-    raise Exception("This must be included by a DuProL script!")
-
 helper = dpl.require("dpl_helpers/func_helper.py")
 if isinstance(helper, Exception):
-    raise helper
+    raise helper from None
 ext = dpl.extension(meta_name="io", alias=__alias__)
 ext.items["output"] = modules.sys.stdout
-
-dpl.type_checker.alias["TextIOWrapper"] = TextIOWrapper
 
 @ext.add_func("print", "@ranged $$ :: any ...")
 def myPrint(_, __, *args, end="", sep=" "):

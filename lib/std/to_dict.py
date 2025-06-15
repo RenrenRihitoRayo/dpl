@@ -1,6 +1,3 @@
-if __name__ != "__dpl__":
-    raise Exception("This must be included by a DuProL script!")
-
 def _to_dict(obj):
     if isinstance(obj, (tuple, list, set, complex, float, int, str, dict)):
         return obj

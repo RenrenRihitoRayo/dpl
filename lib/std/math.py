@@ -1,11 +1,11 @@
-if __name__ != "__dpl__":
-    raise Exception("This must be included by a DuProL script!")
-
 """
 Sorry if there are bugs
 the entire module has been vibe coded by me :P
 
 - Sincirely Darren
+
+PS: I though vibe coding was vibing while coding.
+Dissapointed.
 """
 
 ext = dpl.extension("math")

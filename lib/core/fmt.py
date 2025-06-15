@@ -24,6 +24,13 @@ def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
         elif char in ('$','&') and i + 1 < len(template) and template[i + 1] == '{':
             is_expr = (char == '&')
             i += 2
+            is_str = True
+            if template[i] == "!":
+                is_str = True
+                i += 1
+            elif template[i] == "?":
+                is_str = False
+                i += 1
             start = i
             while i < len(template) and template[i] != '}':
                 i += 1
@@ -50,7 +57,7 @@ def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
 
             for name in var_part:
                 if name in data:
-                    result.write(str(data[name]))
+                    result.write(str(data[name]) if is_str else repr(data[name]))
                     break
             else:
                 if default_text is not None:

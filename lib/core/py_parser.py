@@ -1,5 +1,8 @@
 # Parser and Preprocessor
 # The heart, the interpreter of DPL
+# will coexist beside py_parser2 cuz why not
+# makes sure HLIR can still be executed
+# directly
 
 import time
 import itertools
@@ -11,20 +14,17 @@ from .runtime import *
 from . import utils
 from . import objects
 from . import constants
-from . import type_checker
-check_ins = type_checker.check_ins
-tc_register = type_checker.register
 from . import info
 import traceback
 import sys
 import os
 
-execute = None
+pp2_execute = None
 process_hlir = None
 
 def register_execute(func):
-    global execute
-    execute = func
+    global pp2_execute
+    pp2_execute = func
 
 def register_process_hlir(func):
     global process_hlir
@@ -137,89 +137,10 @@ def process(fcode, name="__main__"):
             args = nest_args(exprs_preruntime(args))
             args = process_args(nframe, args)
             argc = len(args)
-            if ins == "include" and argc == 1:
-                if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.abspath(info.get_path_with_lib(args[0][1:-1]))
-                    search = info.LIBDIR
-                else:
-                    if name != "__main__":
-                        file = os.path.join(search:=os.path.dirname(name), args[0])
-                    else:
-                        file = os.path.join(search:=os.getcwd(), args[0])
-                if not os.path.exists(file):
-                    error.error(lpos, file, f"Not found: {file}")
-                    return error.PREPROCESSING_ERROR
-                if os.path.isdir(file):
-                    if os.path.isfile(files:=os.path.join(file, "include-dpl.txt")):
-                        with open(files) as f:
-                            for line in f:
-                                line = line.strip()
-                                if line.startswith("#:"):
-                                    print("{name} [{lpos}] {line}:",line[2:]) # for messages like deprecation warnings
-                                    continue
-                                elif line.startswith("#?"):
-                                    print(line[2:]) # for messages like deprecation warnings
-                                    continue
-                                elif line.startswith("#") or not line:
-                                    continue
-                                line = os.path.join(file, line)
-                                with open(line, "r") as f:
-                                    if isinstance(err:=process(f.read(), name=line), int):
-                                        return err
-                                    res.extend(err["code"])
-                                    if not err["frame"] is None: nframe[0].update(err["frame"][0])
-                                meta_attributes["dependencies"]["dpl"].add(os.path.realpath(line))
-                    else:
-                        error.error(lpos, name, f"While including the directory {file!r} the include-dpl.txt file wasnt found!")
-                        return error.PREPROCESSING_ERROR
-                else:
-                    with open(file, "r") as f:
-                        if isinstance(err:=process(f.read(), name=file), int):
-                            return err
-                        res.extend(err["code"])
-                        if not err["frame"] is None: nframe[0].update(err["frame"][0])
-                    file = os.path.realpath(file)
-                    meta_attributes["dependencies"]["dpl"].add(file)
-            elif ins == "set_name" and argc == 1:
+            if ins == "set_name" and argc == 1:
                 name = str(args[0])
             elif ins == "define_error" and argc == 1:
                 error.register_error(args[0])
-            elif ins == "includec" and argc == 1:
-                if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.abspath(info.get_path_with_lib(args[0][1:-1]))
-                else:
-                    if name != "__main__":
-                        file = os.path.join(os.path.dirname(name), args[0])
-                if not os.path.exists(file):
-                    error.error(lpos, file, f"Not found: {file}")
-                    return error.PREPROCESSING_ERROR
-                if os.path.isdir(file):
-                    if os.path.isfile(files:=os.path.join(file, "include-cdpl.txt")):
-                        with open(files) as f:
-                            for line in f:
-                                line = line.strip()
-                                if line.startswith("#:"):
-                                    print("{name} [{lpos}] {line}:",line[2:]) # for messages like deprecation warnings
-                                    continue
-                                elif line.startswith("#?"):
-                                    print(line[2:]) # for messages like deprecation warnings
-                                    continue
-                                elif line.startswith("#") or not line:
-                                    continue
-                                with open(line, "rb") as f:
-                                    if isinstance(err:=process(dill.loads(f.read()), name=line), int):
-                                        return err
-                                    res.extend(err["code"])
-                                    if not err["frame"] is None: nframe[0].update(err["frame"][0])
-                                meta_attributes["dependencies"]["dpl"].add(os.path.realpath(line))
-                else:
-                    with open(file, "rb") as f:
-                        if isinstance(err:=process(dill.loads(f.read()), name=file), int):
-                            return err
-                        res.extend(err["code"])
-                        if not err["frame"] is None: nframe[0].update(err["frame"][0])
-                    file = os.path.realpath(file)
-                    meta_attributes["dependencies"]["dpl"].add(file)
             elif ins == "extend" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.abspath(info.get_path_with_lib(args[0][1:-1]))
@@ -233,7 +154,7 @@ def process(fcode, name="__main__"):
                     res.extend(process(f.read(), name=name))
                 file = os.path.realpath(file)
                 meta_attributes["dependencies"]["dpl"].add(file)
-            elif ins == "new_include" and argc == 1:
+            elif ins == "include" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                     search_path = "_std"
@@ -489,35 +410,32 @@ def process(fcode, name="__main__"):
             # to automatically switch execution functions.
             "llir": False,
         }
-        if preprocessing_flags["EXPIRAMENTAL_LLIR"]:
+        # simple in place change :D proud of this.
+        if preprocessing_flags["EXPERIMENTAL_LLIR"]:
             if process_hlir is None:
-                raise Exception("Process hlir function not available!\nImport py_parser2 not py_parser to use this feature!")
+                raise Exception("Process hlir function not available!\nFlag '-use-py-parser2' wasnt suplied!")
             process_hlir(frame)
         return frame
     return error.PREPROCESSING_ERROR
 
 
-def run(code, frame=None):
-    "Run code generated by 'process'"
-    instruction_pointer = 0
-    if isinstance(code, int):
-        return code
-    if isinstance(code, dict):
-        is_llir = code["llir"]
-        code, nframe = code["code"], code["frame"]
-    else:
-        is_llir = False
-        nframe = new_frame()
-    if frame is not None:
-        frame[0].update(nframe[0])
-    else:
-        frame = nframe
-    tc_cache = set()
+def execute(code, frame=None):
+    """
+    Low level function to run.
+    Unlike the old run function
+    on setup it requires less conditions
+    per level of recursion.
+    Run HLIR,
+    Not LLIR.
+    This is used internally.
+    Use run instead for more logic.
+    """
     
-    if is_llir:
-        if execute is None:
-            raise Exception("Execution function for llir isnt available\nImport py_parser2 not py_parser to use this feature!")
-        return execute(code, frame)
+    instruction_pointer = 0
+    # the contents of the new run function
+    # was previously here
+    if frame is None:
+        frame = new_frame()
     
     while instruction_pointer < len(code):
         pos, file, ins, oargs = code[instruction_pointer]
@@ -527,18 +445,6 @@ def run(code, frame=None):
             try:
                 args = process_args(frame, oargs)
                 argc = len(args)
-                if debug_settings["type_checker"]:
-                    if (tmp:=(pos, file, ins)) not in tc_cache:
-                        tc_cache.add(tmp)
-                        if not check_ins(ins, args):
-                            itypesr = type_checker.get_ins(ins, args)
-                            if itypesr is None and not is_debug_enabled("TC_DEFAULT_WHEN_NOT_FOUND"):
-                                error.error(pos, file, f"Type signature for {ins} is not defined.\nUse tc_register to register your function.")
-                                return error.TYPE_ERROR
-                            itypes = tuple(map(lambda x: getattr(x, "__name__", x), itypesr))
-                            atypes = tuple(map(lambda x: type(x).__name__, args))
-                            error.error(pos, file, f"Type mismatch [{ins}]: Expected {itypes} but got {atypes}")
-                            return error.TYPE_ERROR
             except Exception as e:
                 raise
                 error.error(
@@ -568,6 +474,51 @@ def run(code, frame=None):
             args = list(params)
             func = objects.make_function(name, body, args)
             rset(frame[-1], name, func)
+        elif ins == "use" and argc == 1:
+            if args[0].startswith("{") and args[0].endswith("}"):
+                f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
+                search_path = "_std"
+            else:
+                f = os.path.join(os.path.dirname(name), (ofile := args[0]))
+                if name != "__main__":
+                    f = os.path.join(os.path.dirname(name), f)
+                search_path = "_loc"
+            if not os.path.exists(f):
+                error.error(lpos, file, f"Not found while including: {f}")
+                return error.PREPROCESSING_ERROR
+            if mod_s.py_import(frame, f, search_path, loc=os.path.dirname(file)):
+                print(f"python: Something wrong happened...\nLine {pos}\nFile {file}")
+                return error.RUNTIME_ERROR
+        elif ins == "use" and argc == 3 and arg[1] == "as":
+            if args[0].startswith("{") and args[0].endswith("}"):
+                f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
+                search_path = "_std"
+            else:
+                f = os.path.join(os.path.dirname(name), (ofile := args[0]))
+                if name != "__main__":
+                    f = os.path.join(os.path.dirname(name), f)
+                search_path = "_loc"
+            if not os.path.exists(f):
+                error.error(lpos, file, f"Not found while including: {f}")
+                return error.PREPROCESSING_ERROR
+            if mod_s.py_import(frame, f, search_path, loc=os.path.dirname(file), alias=args[2]):
+                print(f"python: Something wrong happened...\nLine {pos}\nFile {file}")
+                return error.RUNTIME_ERROR
+        elif ins == "use:luaj" and argc == 1:
+            if args[0].startswith("{") and args[0].endswith("}"):
+                f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
+                search_path = "_std"
+            else:
+                f = os.path.join(os.path.dirname(name), (ofile := args[0]))
+                if name != "__main__":
+                    f = os.path.join(os.path.dirname(name), f)
+                search_path = "_loc"
+            if not os.path.exists(f):
+                error.error(lpos, file, f"Not found while including: {f}")
+                return error.PREPROCESSING_ERROR
+            if mod_s.luaj_import(frame, f, search_path, loc=os.path.dirname(file)):
+                print(f"python: Something wrong happened...\nLine {pos}\nFile {file}")
+                return error.RUNTIME_ERROR
         elif ins == "_intern.switch" and argc == 2:
             body = args[0].get(args[1], args[0][None])
             if not body:
@@ -583,7 +534,7 @@ def run(code, frame=None):
             else:
                 instruction_pointer, body = temp
             if args[0]:
-                err = run(body, frame=frame)
+                err = execute(body, frame=frame)
                 if err:
                     return err
         elif ins == "ifmain" and argc == 0:
@@ -593,7 +544,7 @@ def run(code, frame=None):
             else:
                 instruction_pointer, body = temp
             if file == "__main__":
-                err = run(body, frame=frame)
+                err = execute(body, frame=frame)
                 if err:
                     return err
         elif ins == "match" and argc == 1:
@@ -627,8 +578,8 @@ def run(code, frame=None):
             _, name, _, value = args
             rset(frame[-1], "_export." + name, value)
             rset(frame[-1], name, value)
-        elif ins == "tc_register" and argc == 1:
-            tc_register(args[0])
+#        elif ins == "tc_register" and argc == 1:
+#            tc_register(args[0])
         elif ins == "for" and argc == 3 and args[1] == "in":
             temp = get_block(code, instruction_pointer)
             if temp is None:
@@ -645,7 +596,7 @@ def run(code, frame=None):
                     if index is not None:
                         frame[-1][index], i = i
                     frame[-1][name] = i
-                    err = run(body, frame)
+                    err = execute(body, frame)
                     if err:
                         if err == error.STOP_RESULT:
                             break
@@ -673,7 +624,7 @@ def run(code, frame=None):
                 instruction_pointer, body = temp
             if body:
                 while True:
-                    err = run(body, frame)
+                    err = execute(body, frame)
                     if err:
                         if err == error.STOP_RESULT:
                             break
@@ -692,7 +643,7 @@ def run(code, frame=None):
                 instruction_pointer, body = temp
             if body:
                 for _ in range(args[0]):
-                    err = run(body, frame)
+                    err = execute(body, frame)
                     if err:
                         if err == error.STOP_RESULT:
                             break
@@ -707,7 +658,7 @@ def run(code, frame=None):
                 instruction_pointer, body = temp
             if body:
                 while (tmp:=evaluate(frame, args[0])):
-                    err = run(body, frame)
+                    err = execute(body, frame)
                     if err:
                         if err == error.STOP_RESULT:
                             break
@@ -738,7 +689,7 @@ def run(code, frame=None):
                 instruction_pointer, body = temp
             while time.time() < args[0]:
                 pass
-            err = run(body, frame=frame)
+            err = execute(body, frame=frame)
             if err:
                 return err
         elif ins == "exec" and argc == 3:
@@ -746,7 +697,7 @@ def run(code, frame=None):
                 return err
         elif ins == "sexec" and argc == 4:
             error.silent()
-            frame[-1][args[0]] = run(process(args[1], name=args[2]), frame=args[3])
+            frame[-1][args[0]] = execute(process(args[1], name=args[2]), frame=args[3])
             error.active()
         elif ins == "fallthrough" and argc == 0:
             return error.FALLTHROUGH
@@ -770,7 +721,7 @@ def run(code, frame=None):
                 break
             else:
                 instruction_pointer, body = btemp
-            err = run(body, temp)
+            err = execute(body, temp)
             if err:
                 return err
             rset(frame[-1], name, temp[1]["_export"])
@@ -786,10 +737,11 @@ def run(code, frame=None):
             rset(frame[-1], args[1], copy(obj))
         elif ins == "method" and argc >= 2:
             name, params = args
-            self = rget(frame[-1], name.rsplit(".", 1)[0])
+            sname, mname = name.rsplit(".", 1)
+            self = rget(frame[-1], sname)
             if self == constants.nil:
                 error.error(
-                    pos, file, "Cannot bind a method to a value that isnt a context!"
+                    pos, file, "Cannot bind a method to a value that isnt a scope!"
                 )
                 return error.RUNTIME_ERROR
             temp = get_block(code, instruction_pointer)
@@ -797,12 +749,8 @@ def run(code, frame=None):
                 break
             else:
                 instruction_pointer, body = temp
-            func = objects.make_method(name, body, params, self)
-            if any(filter(lambda x: isinstance(x, dict), params)):
-                func["defaults"] = {}
-            for i in filter(lambda x: isinstance(x, dict), params):
-                func["defaults"].update(i)
-            rset(self, name, func)
+            func = objects.make_method(mname, body, params, self)
+            self[mname] = func
         elif ins == "START_TIME" and argc == 0:
             start_time = time.perf_counter()
         elif ins == "STOP_TIME" and argc == 0:
@@ -865,10 +813,14 @@ def run(code, frame=None):
             return error.STOP_FUNCTION
         elif ins == "catch" and argc >= 2:  # catch return value of a function
             rets, func_name, *args = args
-            if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
+            if (temp := rget(frame[-1], func_name, default=rget(frame[0], func_name))) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
             nscope(frame)
+            if temp["self"] != constants.nil:
+                frame[-1]["self"] = temp["self"]
+            if temp["capture"] != constants.nil:
+                frame[-1]["_capture"] = temp["capture"]
             if temp["variadic"]["name"] != constants.nil:
                 if len(args)-1 >= temp["variadic"]["index"]:
                     variadic = []
@@ -884,20 +836,16 @@ def run(code, frame=None):
                     error.error(pos, file, f"Function {ins} is a variadic and requires {temp['variadic']['index']+1} arguments or more.")
                     return error.RUNTIME_ERROR
             else:
-                if len(args) != len(temp["params"]):
-                    text = "more" if len(args) > len(temp["params"]) else "less"
-                    error.error(pos, file, f"Function got {text} than expected arguments!nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
+                if len(args) != len(temp["args"]):
+                    text = "more" if len(args) > len(temp["args"]) else "less"
+                    error.error(pos, file, f"Function got {text} than expected arguments!\nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
                     return error.RUNTIME_ERROR
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if name is None:
                         break
                     frame[-1][name] = value
-            if temp["self"] != constants.nil:
-                frame[-1]["self"] = temp["self"]
-            if temp["capture"] != constants.nil:
-                frame[-1]["_capture"] = temp["capture"]
             frame[-1]["_returns"] = rets
-            err = run(temp["body"], frame)
+            err = execute(temp["body"], frame)
             if err > 0:
                 error.error(pos, file, f"Error in function {ins!r}")
                 return err
@@ -917,7 +865,7 @@ def run(code, frame=None):
                 )
             )
             if (
-                (temp := rget(frame[-1], func_name, default=None)) is None
+                (temp := rget(frame[-1], func_name, default=rget(frame[0], func_name, default=None))) is None
             ):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
@@ -942,8 +890,8 @@ def run(code, frame=None):
                     error.error(pos, file, f"Function {ins} is a variadic and requires {temp['variadic']['index']+1} arguments or more.")
                     return error.RUNTIME_ERROR
             else:
-                if len(args) != len(temp["params"]):
-                    text = "more" if len(args) > len(temp["params"]) else "less"
+                if len(args) != len(temp["args"]):
+                    text = "more" if len(args) > len(temp["args"]) else "less"
                     error.error(pos, file, f"Function got {text} than expected arguments!nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
                     return error.RUNTIME_ERROR
                 for name, value in itertools.zip_longest(temp["args"], args):
@@ -956,7 +904,7 @@ def run(code, frame=None):
                 frame[-1]["_capture"] = temp["capture"]
             frame[-1]["_returns"] = rets
             frame[-1]["_memoize"] = (temp["memoize"], mem_args)
-            err = run(temp["body"], frame)
+            err = execute(temp["body"], frame)
             if err > 0:
                 error.error(pos, file, f"Error in function {ins!r}")
                 return err
@@ -1001,8 +949,8 @@ def run(code, frame=None):
                     error.error(pos, file, f"Function {ins} is a variadic and requires {temp['variadic']['index']+1} arguments or more.")
                     return error.RUNTIME_ERROR
             else:
-                if len(args) != len(temp["params"]):
-                    text = "more" if len(args) > len(temp["params"]) else "less"
+                if len(args) != len(temp["args"]):
+                    text = "more" if len(args) > len(temp["args"]) else "less"
                     error.error(pos, file, f"Function got {text} than expected arguments!nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
                     return error.RUNTIME_ERROR
                 for name, value in itertools.zip_longest(temp["args"], args):
@@ -1017,7 +965,7 @@ def run(code, frame=None):
             frame[-1]["_safe_call"] = constants.true
             frame[-1]["_memoize"] = (temp["memoize"], mem_args)
             error.silent()
-            err = run(temp["body"], frame)
+            err = execute(temp["body"], frame)
             if err:
                 frame[-1][args[0][0]] = err
             error.active()
@@ -1043,8 +991,8 @@ def run(code, frame=None):
                     error.error(pos, file, f"Function {ins} is a variadic and requires {temp['variadic']['index']+1} arguments or more.")
                     return error.RUNTIME_ERROR
             else:
-                if len(args) != len(temp["params"]):
-                    text = "more" if len(args) > len(temp["params"]) else "less"
+                if len(args) != len(temp["args"]):
+                    text = "more" if len(args) > len(temp["args"]) else "less"
                     error.error(pos, file, f"Function got {text} than expected arguments!nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
                     return error.RUNTIME_ERROR
                 for name, value in itertools.zip_longest(temp["args"], args):
@@ -1058,7 +1006,7 @@ def run(code, frame=None):
             frame[-1]["_returns"] = rets
             frame[-1]["_safe_call"] = constants.true
             error.silent()
-            err = run(temp["body"], frame)
+            err = execute(temp["body"], frame)
             if err:
                 frame[-1][args[0][0]] = err
             error.active()
@@ -1190,8 +1138,8 @@ def run(code, frame=None):
                     error.error(pos, file, f"Function {ins} is a variadic and requires {temp['variadic']['index']+1} arguments or more.")
                     return error.RUNTIME_ERROR
             else:
-                if len(args) != len(temp["params"]):
-                    text = "more" if len(args) > len(temp["params"]) else "less"
+                if len(args) != len(temp["args"]):
+                    text = "more" if len(args) > len(temp["args"]) else "less"
                     error.error(pos, file, f"Function got {text} than expected arguments!nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
                     return error.RUNTIME_ERROR
                 for name, value in itertools.zip_longest(temp["args"], args):
@@ -1201,7 +1149,7 @@ def run(code, frame=None):
             if temp["self"] != constants.nil:
                 frame[-1]["self"] = temp["self"]
             error.silent()
-            run(temp["body"], frame)
+            execute(temp["body"], frame)
             error.active()
             pscope(frame)
         elif (
@@ -1214,6 +1162,8 @@ def run(code, frame=None):
                 "self" in temp
             ):  # Call a function
             nscope(frame)
+            if temp["self"] != constants.nil:
+                frame[-1]["self"] = temp["self"]
             if temp["variadic"]["name"] != constants.nil:
                 if len(args)-1 >= temp["variadic"]["index"]:
                     variadic = []
@@ -1229,19 +1179,17 @@ def run(code, frame=None):
                     error.error(pos, file, f"Function {ins} is a variadic and requires {temp['variadic']['index']+1} arguments or more.")
                     return error.RUNTIME_ERROR
             else:
-                if len(args) != len(temp["params"]):
-                    text = "more" if len(args) > len(temp["params"]) else "less"
+                if len(args) != len(temp["args"]):
+                    text = "more" if len(args) > len(temp["args"]) else "less"
                     error.error(pos, file, f"Function got {text} than expected arguments!nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
                     return error.RUNTIME_ERROR
                 for name, value in itertools.zip_longest(temp["args"], args):
                     if name is None:
                         break
                     frame[-1][name] = value
-            if temp["self"] != constants.nil:
-                frame[-1]["self"] = temp["self"]
             if temp["capture"] != constants.nil:
                 frame[-1]["_capture"] = temp["capture"]
-            err = run(temp["body"], frame)
+            err = execute(temp["body"], frame)
             if err and err != error.STOP_FUNCTION:
                 if err > 0: error.error(pos, file, f"Error in function {ins!r}")
                 return err
@@ -1290,7 +1238,7 @@ def run(code, frame=None):
                 error.error(pos, file, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
         elif ins == "local" and argc == 1:
-            run(args[0]["body"], frame)
+            execute(args[0]["body"], frame)
         elif ins == "end" and argc == 0:
             error.error(pos, file, "Lingering end statement!")
             return error.SYNTAX_ERROR
@@ -1339,10 +1287,10 @@ class IsolatedParser:
         info.LIBDIR = libdir
     def __enter__(self):
         return self
-    def run(self, code, frame=None):
+    def execute(self, code, frame=None):
         if isinstance(code, str):
             code = process(code)
-        return run(code, frame=frame)
+        return execute(code, frame=frame)
     def __exit__(self, exc, exc_ins, tb):
         info.LIBDIR = self.defaults["libdir"]
         info.ARGV = self.defaults["argv"]
@@ -1350,6 +1298,49 @@ class IsolatedParser:
         varproc.internal_attributes["main_path"] = self.defaults["main_path"]
         varproc.meta_attributes.update(self.defaults["meta"])
         return False
+
+# Versions below 1.4.8 and some 1.4.8
+# builds ran the code inside this function
+# recursively affecting performance
+def run(code, frame=None):
+    """
+    Run code generated by 'process'
+    The code below only needs to run
+    at depth=1 so we dont need to run these
+    every scope that needs to run.
+    More performance! Yum ;)
+    """
+    instruction_pointer = 0
+    if isinstance(code, int):
+        return code
+    if isinstance(code, dict):
+        is_llir = code["llir"]
+        code, nframe = code["code"], code["frame"]
+    else:
+        is_llir = False
+        nframe = new_frame()
+    if frame is not None:
+        frame[0].update(nframe[0])
+    else:
+        frame = nframe
+    
+    # the process function returned
+    # LLIR? Run it using py_parser2
+    # even if theres no flag.
+    # This if some d*ckhead
+    # somehow injects LLIR into
+    # this function. Or when Im too
+    # lazy and do tests directly with this.
+    if is_llir:
+        if pp2_execute is None:
+            raise Exception("Execution function for llir isnt available\nImport py_parser2 not py_parser to use this feature!")
+        return pp2_execute(code, frame)
+    
+    # Run using old parser
+    # the function below is recursive
+    # thats why depth was mentioned
+    # in the doc string.
+    return execute(code, frame)
 
 def get_run():
     return run

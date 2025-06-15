@@ -1,6 +1,3 @@
-if __name__ != "__dpl__":
-    raise Exception("This must be included by a DuProL script!")
-
 ext = dpl.extension(meta_name="to_py", alias=__alias__)
 
 

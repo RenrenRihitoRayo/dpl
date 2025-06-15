@@ -1,11 +1,4 @@
-from io import TextIOWrapper
-
-if __name__ != "__dpl__":
-    raise Exception("This must be included by a DuProL script!")
-
 ext = dpl.extension(meta_name="io", alias=__alias__)
-
-dpl.type_checker.alias["TextIOWrapper"] = TextIOWrapper
 
 @ext.add_func("open", "%$$[str,str]\n%$$[str]")
 def myOpen(_, local, file_name, mode="r"):
