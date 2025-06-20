@@ -145,6 +145,11 @@ Most recent at top.
 
 # 1.4.8
 
+## Changed Runtime 'use:luaj'
+
+Instead of "use:luaj", when using the runtime equivalent
+use the "use\_luaj" instead
+
 ## New function call syntax!
 
 Function calls now must have parenthesis like

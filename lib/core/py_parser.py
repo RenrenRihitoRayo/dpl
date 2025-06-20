@@ -503,7 +503,7 @@ def execute(code, frame=None):
             if mod_s.py_import(frame, f, search_path, loc=os.path.dirname(file), alias=args[2]):
                 print(f"python: Something wrong happened...\nLine {pos}\nFile {file}")
                 return error.RUNTIME_ERROR
-        elif ins == "use:luaj" and argc == 1:
+        elif ins == "use_luaj" and argc == 1:
             if args[0].startswith("{") and args[0].endswith("}"):
                 f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                 search_path = "_std"

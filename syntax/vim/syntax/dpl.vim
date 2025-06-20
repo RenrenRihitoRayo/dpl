@@ -9,10 +9,10 @@ endif
 syntax match dplIncludeDirective "&\(define_error\|set_name\|extend\|whatever\|file\|version\|embed\|embed_binary\|\(warn\|dead\)_code_\(disable\|enable\)\|def_fn_\(enable\|disable\)\|save_config\|include\|use\|includec\|extend\|set\|use:luaj\)"
 
 " Keywords
-syntax keyword dplKeyword fallthrough as in is not and or export catch safe stop skip pass help wait_for_threads DEFINE_ERROR pycatch ccatch raise break_point break_off local setref set
+syntax keyword dplKeyword fallthrough as in is not and or export catch safe stop skip pass help DEFINE_ERROR pycatch ccatch raise break_point break_off local setref set cmd use_luaj use
 
 " - Keywords that indent
-syntax keyword keyword_indent fn if match case with default module thread pub while sched ifmain method switch begin enum loop for
+syntax keyword keyword_indent fn if match case with default module pub while sched ifmain method switch begin enum loop for
 " - Keywords that dedent
 syntax keyword keyword_dedent return end
 
