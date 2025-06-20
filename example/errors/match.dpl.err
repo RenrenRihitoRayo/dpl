@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "/storage/emulated/0/dpl/example/../dpl.py", line 26, in <module>
-    prog_flags.update((
-    ^^^^^^^^^^^^^^^^^
-AttributeError: 'tuple' object has no attribute 'update'
