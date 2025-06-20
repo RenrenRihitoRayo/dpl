@@ -19,6 +19,21 @@ info.program_flags = prog_flags
 info.program_vflags = prog_vflags
 info.ARGC = len(info.ARGV)
 import time
+import traceback
+
+# Simple mode
+if "simple-mode" in prog_flags:
+    prog_flags.update((
+        "simple-run",
+        "no-lupa",
+        "no-cffi"
+    ))
+
+# Debug mode
+if "debug-mode" in prog_flags:
+    prog_flags.update((
+        "init-time",
+    ))
 
 info.imported = set()
 info.unique_imports = 0
@@ -201,7 +216,7 @@ if "simple-run" in prog_flags:
         print(f"DEBUG: Initialization time: {s}{u}")
     with open(sys.argv[0], "r") as f:
         varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
-        ez_run(f.read())
+        ez_run(f.read(), sys.argv[0])
     exit(0)
 
 def handle_args():
@@ -432,6 +447,8 @@ Code format: (
                             pip.run(f.read(), frame)
                 except Exception as e:
                     print("something went wrong while running start up script!\n:", e)
+                    with open("repl_startup_error.txt", "w") as err_f:
+                        err_f.write(traceback.format_exc())
             inp = lambda text: (
                 prompt(text, completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist, lexer=repl_conf.DPLLexer(), style=repl_conf.style).strip()
                 if not "disable-highlight" in prog_flags

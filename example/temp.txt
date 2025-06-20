@@ -1,0 +1,4 @@
+Fmt: some fmt
+Variadic 0: yep1
+Variadic 1: yep2
+{'name': 'test', 'body': [[4, '__main__', 'io:println', [("'Fmt: ${fmt}'",)]], [5, '__main__', 'for', [('i', 'value'), 'in', ':names']], [6, '__main__', 'io:println', [("'Variadic ${i}:'", ':value')]], [7, '__main__', 'end', None]], 'args': ('fmt', 'variadic:names'), 'memoize': {}, 'capture': <nil>, 'variadic': {'name': 'names', 'index': 1}, '_internal': {'name': 'test', 'type': 'type:builtin-function-object', 'docs': 'An object.'}}

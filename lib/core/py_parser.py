@@ -471,8 +471,7 @@ def execute(code, frame=None):
                 break
             else:
                 instruction_pointer, body = block
-            args = list(params)
-            func = objects.make_function(name, body, args)
+            func = objects.make_function(name, body, params)
             rset(frame[-1], name, func)
         elif ins == "use" and argc == 1:
             if args[0].startswith("{") and args[0].endswith("}"):
@@ -773,52 +772,21 @@ def execute(code, frame=None):
             sys.exit(args[0])
         elif ins == "return":  # Return to the latched names
             if (temp := rget(frame[-1], "_returns")) != constants.nil:
-                if (
-                    "_safe_call" in frame[-1]
-                    and frame[-1]["_safe_call"] == constants.true
-                ):
-                    args = (0, args)
                 if len(temp) == 1:
-                    rset(frame[-1], f"_nonlocal.{temp[0]}", args[0] if isinstance(args, (tuple, list)) and len(args) == 1 else args, meta=False)
+                    rset(frame[-1], f"_nonlocal.{temp[0]}", args[0] if isinstance(args, (tuple, list)) and len(args) == 1 else args)
                     #pprint(rget(frame[-1], f"_nonlocal"), hide=False)
                 else:
                     if temp != "_":
                         for name, value in zip(temp, args):
                             rset(frame[-1], f"_nonlocal.{name}", value, meta=False)
-                if (tmp := frame[-1].get("_memoize")) not in constants.constants_false:
-                    tmp[0][tmp[1]] = tuple(
-                        map(
-                            lambda x: (
-                                x
-                                if isinstance(x, (str, int, float, tuple, complex))
-                                else f"{type(x)}:{id(x)}"
-                            ),
-                            args,
-                        )
-                    )
-            return error.STOP_FUNCTION
-        elif (
-            ins == "freturn"
-        ):  # Return to the latched names with no memoization detection (faster)
-            if not (temp := rget(frame[-1], "_returns")) != constants.nil:
-                ...
-            else:
-                if (
-                    "_safe_call" in frame[-1]
-                    and frame[-1]["_safe_call"] == constants.true
-                ):
-                    args = (0, args)
-                for name, value in zip(temp, args):
-                    rset(frame[-1], f"_nonlocal.{name}", value)
             return error.STOP_FUNCTION
         elif ins == "catch" and argc >= 2:  # catch return value of a function
-            rets, func_name, *args = args
+            rets, func_name, args = args
+            args = process_args(frame, args)
             if (temp := rget(frame[-1], func_name, default=rget(frame[0], func_name))) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
             nscope(frame)
-            if temp["self"] != constants.nil:
-                frame[-1]["self"] = temp["self"]
             if temp["capture"] != constants.nil:
                 frame[-1]["_capture"] = temp["capture"]
             if temp["variadic"]["name"] != constants.nil:
@@ -852,165 +820,6 @@ def execute(code, frame=None):
             pscope(frame)
         elif ins == "DEFINE_ERROR" and 0 < argc < 3:
             error.register_error(*args)
-        elif ins == "mcatch" and argc >= 2:  # catch return value of a function
-            rets, func_name, *args = args
-            mem_args = tuple(
-                map(
-                    lambda x: (
-                        x
-                        if isinstance(x, (str, int, float, tuple, complex))
-                        else f"{type(x)}:{id(x)}"
-                    ),
-                    args,
-                )
-            )
-            if (
-                (temp := rget(frame[-1], func_name, default=rget(frame[0], func_name, default=None))) is None
-            ):
-                error.error(pos, file, f"Invalid function {func_name!r}!")
-                break
-            if mem_args in temp["memoize"]:
-                for name, value in zip(rets, temp["memoize"][mem_args]):
-                    rset(frame[-1], name, value)
-                instruction_pointer += 1
-                continue
-            nscope(frame)
-            if temp["variadic"]["name"] != constants.nil:
-                if len(args)-1 >= temp["variadic"]["index"]:
-                    variadic = []
-                    for pos, [name, value] in enumerate(itertools.zip_longest(temp["args"], args)):
-                        if variadic:
-                            variadic.append(value)
-                        elif pos >= temp["variadic"]["index"]:
-                            variadic.append(value)
-                        else:
-                            frame[-1][name] = value
-                    frame[-1][temp["variadic"]["name"]] = variadic
-                else:
-                    error.error(pos, file, f"Function {ins} is a variadic and requires {temp['variadic']['index']+1} arguments or more.")
-                    return error.RUNTIME_ERROR
-            else:
-                if len(args) != len(temp["args"]):
-                    text = "more" if len(args) > len(temp["args"]) else "less"
-                    error.error(pos, file, f"Function got {text} than expected arguments!nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
-                    return error.RUNTIME_ERROR
-                for name, value in itertools.zip_longest(temp["args"], args):
-                    if name is None:
-                        break
-                    frame[-1][name] = value
-            if temp["self"] != constants.nil:
-                frame[-1]["self"] = temp["self"]
-            if temp["capture"] != constants.nil:
-                frame[-1]["_capture"] = temp["capture"]
-            frame[-1]["_returns"] = rets
-            frame[-1]["_memoize"] = (temp["memoize"], mem_args)
-            err = execute(temp["body"], frame)
-            if err > 0:
-                error.error(pos, file, f"Error in function {ins!r}")
-                return err
-            pscope(frame)
-        elif ins == "smcatch" and argc >= 2 and len(args[0]) >= 1:  # safe catch return value of a function
-            rets, func_name, *args = args
-            mem_args = tuple(
-                map(
-                    lambda x: (
-                        x
-                        if isinstance(x, (str, int, float, tuple, complex))
-                        else f"{type(x)}:{id(x)}"
-                    ),
-                    args,
-                )
-            )
-            if (
-                (temp := rget(frame[-1], func_name)) == constants.nil
-                and isinstance(temp, dict)
-                and mem_args in temp
-            ):
-                error.error(pos, file, f"Invalid function {func_name!r}!")
-                break
-            if mem_args in temp["memoize"]:
-                for name, value in zip(rets, temp["memoize"][mem_args]):
-                    rset(frame[-1], name, value)
-                instruction_pointer += 1
-                continue
-            nscope(frame)
-            if temp["variadic"]["name"] != constants.nil:
-                if len(args)-1 >= temp["variadic"]["index"]:
-                    variadic = []
-                    for pos, [name, value] in enumerate(itertools.zip_longest(temp["args"], args)):
-                        if variadic:
-                            variadic.append(value)
-                        elif pos >= temp["variadic"]["index"]:
-                            variadic.append(value)
-                        else:
-                            frame[-1][name] = value
-                    frame[-1][temp["variadic"]["name"]] = variadic
-                else:
-                    error.error(pos, file, f"Function {ins} is a variadic and requires {temp['variadic']['index']+1} arguments or more.")
-                    return error.RUNTIME_ERROR
-            else:
-                if len(args) != len(temp["args"]):
-                    text = "more" if len(args) > len(temp["args"]) else "less"
-                    error.error(pos, file, f"Function got {text} than expected arguments!nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
-                    return error.RUNTIME_ERROR
-                for name, value in itertools.zip_longest(temp["args"], args):
-                    if name is None:
-                        break
-                    frame[-1][name] = value
-            if temp["self"] != constants.nil:
-                frame[-1]["self"] = temp["self"]
-            if temp["capture"] != constants.nil:
-                frame[-1]["_capture"] = temp["capture"]
-            frame[-1]["_returns"] = rets
-            frame[-1]["_safe_call"] = constants.true
-            frame[-1]["_memoize"] = (temp["memoize"], mem_args)
-            error.silent()
-            err = execute(temp["body"], frame)
-            if err:
-                frame[-1][args[0][0]] = err
-            error.active()
-            pscope(frame)
-        elif ins == "scatch" and argc >= 2 and len(args[0]) >= 1:  # catch return value of a function
-            rets, func_name, *args = args
-            if (temp := rget(frame[-1], func_name)) == constants.nil or not isinstance(temp, dict):
-                error.error(pos, file, f"Invalid function {func_name!r}!")
-                break
-            nscope(frame)
-            if temp["variadic"]["name"] != constants.nil:
-                if len(args)-1 >= temp["variadic"]["index"]:
-                    variadic = []
-                    for pos, [name, value] in enumerate(itertools.zip_longest(temp["args"], args)):
-                        if variadic:
-                            variadic.append(value)
-                        elif pos >= temp["variadic"]["index"]:
-                            variadic.append(value)
-                        else:
-                            frame[-1][name] = value
-                    frame[-1][temp["variadic"]["name"]] = variadic
-                else:
-                    error.error(pos, file, f"Function {ins} is a variadic and requires {temp['variadic']['index']+1} arguments or more.")
-                    return error.RUNTIME_ERROR
-            else:
-                if len(args) != len(temp["args"]):
-                    text = "more" if len(args) > len(temp["args"]) else "less"
-                    error.error(pos, file, f"Function got {text} than expected arguments!nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
-                    return error.RUNTIME_ERROR
-                for name, value in itertools.zip_longest(temp["args"], args):
-                    if name is None:
-                        break
-                    frame[-1][name] = value
-            if temp["self"] != constants.nil:
-                frame[-1]["self"] = temp["self"]
-            if temp["capture"] != constants.nil:
-                frame[-1]["_capture"] = temp["capture"]
-            frame[-1]["_returns"] = rets
-            frame[-1]["_safe_call"] = constants.true
-            error.silent()
-            err = execute(temp["body"], frame)
-            if err:
-                frame[-1][args[0][0]] = err
-            error.active()
-            pscope(frame)
         elif ins == "pycatch" and argc >= 2:  # catch return value of a python function
             rets, name, *args = args
             if (function := rget(frame[-1], name, default=rget(frame[0], name))) == constants.nil or not hasattr(function, "__call__"):
@@ -1087,71 +896,7 @@ def execute(code, frame=None):
                 break
         elif ins == "raise" and isinstance(args[0], int) and argc == 2:
             error.error(pos, file, args[1])
-            if (
-                (temp := frame[-1].get("_returns"))
-                and "_safe_call" in frame[-1]
-                and frame[-1]["_safe_call"] == constants.true
-            ):
-                args = (args[0], constants.nil)
-                for name, value in zip(temp, args):
-                    rset(frame[-1], f"_nonlocal.{name}", value)
             return args[0]
-        elif ins == "raise" and argc == 1 and isinstance(args[0], int):
-            error.error(pos, file, "Raised an error.")
-            if (
-                (temp := frame[-1].get("_returns"))
-                and "_safe_call" in frame[-1]
-                and frame[-1]["_safe_call"] == constants.true
-            ):
-                args = (args[0], constants.nil)
-                for name, value in zip(temp, args):
-                    rset(frame[-1], f"_nonlocal.{name}", value)
-            return args[0]
-        elif (
-            ins == "safe"
-            and (
-                temp := rget(
-                    frame[-1], args[0], default=rget(frame[0], args[0])
-                )
-            )
-            != constants.nil
-            and isinstance(temp, dict)
-            and "defaults" in temp and
-                "body" in temp and
-                "args" in temp and
-                "capture" in temp and
-                "self" in temp
-        ):  # Call a function
-            nscope(frame)
-            if temp["variadic"]["name"] != constants.nil:
-                if len(args)-1 >= temp["variadic"]["index"]:
-                    variadic = []
-                    for pos, [name, value] in enumerate(itertools.zip_longest(temp["args"], args)):
-                        if variadic:
-                            variadic.append(value)
-                        elif pos >= temp["variadic"]["index"]:
-                            variadic.append(value)
-                        else:
-                            frame[-1][name] = value
-                    frame[-1][temp["variadic"]["name"]] = variadic
-                else:
-                    error.error(pos, file, f"Function {ins} is a variadic and requires {temp['variadic']['index']+1} arguments or more.")
-                    return error.RUNTIME_ERROR
-            else:
-                if len(args) != len(temp["args"]):
-                    text = "more" if len(args) > len(temp["args"]) else "less"
-                    error.error(pos, file, f"Function got {text} than expected arguments!nExpected {len(temp['args'])} arguments but got {len(args)} arguments.")
-                    return error.RUNTIME_ERROR
-                for name, value in itertools.zip_longest(temp["args"], args):
-                    if name is None:
-                        break
-                    frame[-1][name] = value
-            if temp["self"] != constants.nil:
-                frame[-1]["self"] = temp["self"]
-            error.silent()
-            execute(temp["body"], frame)
-            error.active()
-            pscope(frame)
         elif (
             (temp := rget(frame[-1], ins, default=rget(frame[0], ins)))
             != constants.nil
@@ -1159,11 +904,10 @@ def execute(code, frame=None):
             and "body" in temp and
                 "args" in temp and
                 "capture" in temp and
-                "self" in temp
+                argc == 1
             ):  # Call a function
             nscope(frame)
-            if temp["self"] != constants.nil:
-                frame[-1]["self"] = temp["self"]
+            args = process_args(frame, args[0])
             if temp["variadic"]["name"] != constants.nil:
                 if len(args)-1 >= temp["variadic"]["index"]:
                     variadic = []
@@ -1199,6 +943,7 @@ def execute(code, frame=None):
         ) != constants.nil and hasattr(
             function, "__call__"
         ):  # call a python function
+            args = process_args(frame, args[0])
             try:
                 func_params = mod_s.get_py_params(function)[2:]
                 if func_params and any(map(lambda x: x.endswith("_body") or x.endswith("_xbody"), func_params)):
@@ -1243,7 +988,7 @@ def execute(code, frame=None):
             error.error(pos, file, "Lingering end statement!")
             return error.SYNTAX_ERROR
         elif ins == "!" and argc >= 2:
-            it, func, *args = args
+            it, func, args = args
             try:
                 if it == "call":
                     if args and isinstance(args[0], arguments_handler): args[0].call(func)
@@ -1287,10 +1032,10 @@ class IsolatedParser:
         info.LIBDIR = libdir
     def __enter__(self):
         return self
-    def execute(self, code, frame=None):
+    def run(self, code, frame=None):
         if isinstance(code, str):
             code = process(code)
-        return execute(code, frame=frame)
+        return run(code, frame=frame)
     def __exit__(self, exc, exc_ins, tb):
         info.LIBDIR = self.defaults["libdir"]
         info.ARGV = self.defaults["argv"]

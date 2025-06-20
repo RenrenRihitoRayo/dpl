@@ -6,10 +6,10 @@ fn test(reference)
     # deref the value
     set previous_val = reference::deref
     setref :reference = 80
-    io:println '${reference.name} changed into 80 from ${previous_val}'
+    io:println('${reference.name} changed into 80 from ${previous_val}')
 end
 
 # Prints: var changed into 80 from 90
-test var::ref
+test(var::ref)
 
-io:println :var
+io:println(:var)

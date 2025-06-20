@@ -21,7 +21,7 @@ set object.list = (1 2 3 4 5 6)
 # min 1ms max 1.6ms
 # prints: what 1 92 22
 START_TIME
-io:println '${object.name} ${object.list(0)} &{:this + 2} &{sum :object.list}'
+io:println('${object.name} ${object.list(0)} &{:this + 2} &{sum :object.list}')
 STOP_TIME
 LOG_TIME "new format strings (old syntax unchanged)"
 
@@ -29,7 +29,7 @@ LOG_TIME "new format strings (old syntax unchanged)"
 # min 1.5 max 3ms
 # prints: what 1 &{:this + 2} &{sum :object.list}
 START_TIME
-io:println [oldformat "${object.name} ${object.list(0)} &{:this + 2} &{sum :object.list}"]
+io:println ([oldformat "${object.name} ${object.list(0)} &{:this + 2} &{sum :object.list}"])
 STOP_TIME
 LOG_TIME "old format strings (collapsed into a method instead)"
 

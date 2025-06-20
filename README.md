@@ -145,6 +145,29 @@ Most recent at top.
 
 # 1.4.8
 
+## New function call syntax!
+
+Function calls now must have parenthesis like
+in other languages.
+
+```DuProL
+# example
+io:println("Hello, world!")
+```
+
+## Objects are now manally passed around!
+
+Implicit `self` variable is no longer supported.
+You must manually pass it into the method.
+
+## Memoization
+
+Memoization has now been deprecated.
+Why? No reson to remembebr if it runs fast.
+Plus the cache grows too fast for recursive functions
+since we dont use any fancy cache, it was literally just
+a dictionary object.
+
 ## Pipe Line Explained
 
 Current Pipe line:

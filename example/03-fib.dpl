@@ -13,9 +13,5 @@ fn fib(n)
     return :b
 end
 
-for i in [rawrange 100]
-    if [[:i % 5] == 0]
-        catch (result) fib :i
-        io:println :i :result [:result / 5]
-    end
-end
+catch (result) fib(10)
+io:println(:result)

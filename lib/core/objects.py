@@ -47,7 +47,7 @@ def make_function(name, body, params):
     vname = constants.nil
     vindex = 0
     for pos, an in enumerate(params):
-        if name.startswith("variadic:"):
+        if an.startswith("variadic:"):
             vindex = pos
             vname = an[9:]
             break

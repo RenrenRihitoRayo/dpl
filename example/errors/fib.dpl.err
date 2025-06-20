@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/storage/emulated/0/dpl/example/../dpl.py", line 219, in <module>
+    ez_run(f.read(), sys.argv[0])
+  File "/storage/emulated/0/dpl/example/../dpl.py", line 197, in ez_run
+    if err := parser.run(code):
+              ^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 1088, in run
+    return execute(code, frame)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 785, in execute
+    args = process_args(frame, args[0])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/arguments.py", line 706, in process_args
+    return list(map(lambda x: expr_runtime(frame, x), e))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'int' object is not iterable

@@ -1,4 +1,3 @@
-#cmd: python3 ../dpl.py -use-py-parser2 dump-llir $file
 use {std/text_io.py}
 
 set start = [from_ascii "A"]
@@ -6,19 +5,19 @@ set end   = [[from_ascii "Z"] + 1]
 set a     = 0
 
 while ([:a + :start] < :end)
-    io:print [to_ascii [:a + :start]]
+    io:print([to_ascii [:a + :start]])
     set a = [:a + 1]
 end
 
-io:println
+io:println()
 
 set a = 0
 while (:a < 10)
-    io:print [to_ascii [:a + 48]]
+    io:print([to_ascii [:a + 48]])
     set a = [:a + 1]
 end
 
-io:println
+io:println()
 
 --
   Break statement = stop

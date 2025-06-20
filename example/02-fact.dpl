@@ -1,18 +1,21 @@
 &use {std/text_io.py}
 
 fn fact_rec(n)
+    io:println(:n)
+
     if [:n <= 1]
         return 1
     end
-     
-    catch (a) _global.fact_rec [:n - 1]
+    set temp = [:n - 1]
+    catch (a) _global.fact_rec(:temp)
     return [:a * :n]
 end
 
 fn fact_loop(n)
     set a = :n
     while (:n > 1)
-        set a = [:a * [set n = [:n - 1]]]
+        set a = [:a * :n]
+        dec n
     end
     return :a
 end
@@ -21,13 +24,13 @@ set n = 100
 
 # sub 20ms
 START_TIME
-fact_loop :n
+fact_loop(:n)
 STOP_TIME
 LOG_TIME 'Loop fib(${n})'
 
 # sub 30ms
 START_TIME
-fact_rec :n
+fact_rec(:n)
 STOP_TIME
 LOG_TIME 'Recursive fib(${n})'
 

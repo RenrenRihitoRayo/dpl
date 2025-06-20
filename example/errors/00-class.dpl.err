@@ -1,0 +1,17 @@
+   [INFO] 2025-06-21 00:16:52.002826: Variable '_meta.debug.show_value_updates' was set to `1`!
+   [INFO] 2025-06-21 00:16:52.002935: Variable 'Person' was read!
+   [INFO] 2025-06-21 00:16:52.002999: Variable 'Person' was read!
+   [INFO] 2025-06-21 00:16:52.003044: Variable 'Person' was read!
+Traceback (most recent call last):
+  File "/storage/emulated/0/dpl/example/../dpl.py", line 219, in <module>
+    ez_run(f.read(), sys.argv[0])
+  File "/storage/emulated/0/dpl/example/../dpl.py", line 197, in ez_run
+    if err := parser.run(code):
+              ^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 1088, in run
+    return execute(code, frame)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 784, in execute
+    rets, func_name, args = args
+    ^^^^^^^^^^^^^^^^^^^^^
+ValueError: too many values to unpack (expected 3)

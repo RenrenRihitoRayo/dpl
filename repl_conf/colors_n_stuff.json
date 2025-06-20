@@ -24,7 +24,8 @@
                 "switch",
                 "begin",
                 "end",
-                "return"
+                "return",
+		"setref"
             ]
         },
         "functions":{

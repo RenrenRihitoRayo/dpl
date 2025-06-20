@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/storage/emulated/0/dpl/example/../dpl.py", line 219, in <module>
+    ez_run(f.read(), sys.argv[0])
+  File "/storage/emulated/0/dpl/example/../dpl.py", line 197, in ez_run
+    if err := parser.run(code):
+              ^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 1088, in run
+    return execute(code, frame)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 936, in execute
+    err = execute(temp["body"], frame)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 659, in execute
+    while (tmp:=evaluate(frame, args[0])):
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/arguments.py", line 474, in evaluate
+    return simple_ops[processed[1]](processed[0], processed[2])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/arguments.py", line 17, in <lambda>
+    '>': lambda *x: constants.true if operator.gt(*x) else constants.false,
+                                      ^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'tuple' and 'int'

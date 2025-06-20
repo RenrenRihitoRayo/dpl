@@ -18,7 +18,7 @@
 
 # DPL REPL for DPL v1.4.8
 # Python 3.12.0 [...]
-io:println "DPL REPL for DPL" :_meta.internal.version
-io:println "Python" :_meta.internal.python_version_string
+io:println("DPL REPL for DPL" :_meta.internal.version)
+io:println("Python" :_meta.internal.python_version_string)
 
 # More configurations will be available!

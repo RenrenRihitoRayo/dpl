@@ -1,0 +1,8 @@
+
+Error in line 13 file '__main__'
+Cause:
+Function test is a variadic and requires 2 arguments or more.
+
+[???]
+Finished with an error: 3
+Error Name: RUNTIME_ERROR

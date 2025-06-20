@@ -1,0 +1,13 @@
+ABCDEFGHIJKLMNOPQRSTUVWXYZTraceback (most recent call last):
+  File "/storage/emulated/0/dpl/example/../dpl.py", line 219, in <module>
+    ez_run(f.read(), sys.argv[0])
+  File "/storage/emulated/0/dpl/example/../dpl.py", line 197, in ez_run
+    if err := parser.run(code):
+              ^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 1087, in run
+    return execute(code, frame)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 945, in execute
+    args = process_args(frame, args[0])
+                               ~~~~^^^
+IndexError: list index out of range

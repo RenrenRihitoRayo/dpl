@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/storage/emulated/0/dpl/dpl.py", line 433, in handle_args
+    pip.run(f.read(), frame)
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 1037, in run
+    return execute(code, frame=frame)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 441, in execute
+    pos, file, ins, oargs = code[instruction_pointer]
+                            ~~~~^^^^^^^^^^^^^^^^^^^^^
+KeyError: 0
