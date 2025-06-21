@@ -32,7 +32,7 @@ def rawprintln(_, __, *args, sep=" "):
 
 
 @ext.add_func("input", "%$$[str]\n%$$[str,str]")
-def myInput(frame, __, prompt=None, name=None):
+def myInput(frame, __, name=None, prompt=None):
     res = input(prompt if prompt not in dpl.falsy else "")
     if name is not None:
         dpl.varproc.rset(frame[-1], name, res)

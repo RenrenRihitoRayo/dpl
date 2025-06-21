@@ -5,6 +5,10 @@ from sys import flags
 import traceback
 import operator
 
+# custom type to distinguish lists and expressions
+class Expression(list):
+    ...
+
 simple_ops = {
     '+': operator.add,
     '-': operator.sub,
@@ -12,6 +16,7 @@ simple_ops = {
     '/': operator.truediv,
     '//': operator.floordiv,
     '%': operator.mod,
+    '%%': lambda x, y: constants.true if x % y == 0 else constants.false,
     '<': lambda *x: constants.true if operator.lt(*x) else constants.false,
     '<=': lambda *x: constants.true if operator.le(*x) else constants.false,
     '>': lambda *x: constants.true if operator.gt(*x) else constants.false,
@@ -75,6 +80,8 @@ def nest_args(tokens):
             stack.pop()
             if token == ")":
                 stack[-1].append(tuple(stack[-1].pop()))
+            elif token == "]":
+                stack[-1].append(Expression(stack[-1].pop()))
         else:
             stack[-1].append(token)
     if len(stack) > 1:
@@ -341,7 +348,7 @@ def handle_in_string_expr(text, data):
 
 def expr_runtime(frame, arg):
     "Process an argument at runtime"
-    if isinstance(arg, list):
+    if isinstance(arg, Expression):
         return evaluate(frame, arg)
     elif not isinstance(arg, str):
         return arg
@@ -520,14 +527,17 @@ def evaluate(frame, expression):
         case ["if", value, "then", true_v, "else", false_v]:
             return true_v if value else false_v
         case [obj, tuple(index)]:
+            index = process_arg(frame, index[0])
             if not isinstance(obj, (tuple, list, str)):
                 return constants.nil
-            if isinstance(obj, (tuple, list, str)) and index[0] >= len(obj):
+            if not isinstance(index, int):
                 return constants.nil
-            elif isinstance(obj, dict) and index[0] not in obj:
+            if isinstance(obj, (tuple, list, str)) and index >= len(obj):
+                return constants.nil
+            elif isinstance(obj, dict) and index not in obj:
                 return constants.nil
             else:
-                return obj[index[0]]
+                return obj[index]
         # types
         case ["tuple", *lst]:
             return tuple(lst)
@@ -623,7 +633,7 @@ def evaluate(frame, expression):
 
 sep = " ,"
 special_sep = "@()+/*[]π<>=!π%"
-sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//"]
+sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//", "%%"]
 
 def group(text):
     res = []

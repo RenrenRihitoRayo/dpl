@@ -1,0 +1,40 @@
+&use {std/text_io.py}
+
+set sym = ("-", "+", "*", "**", "/", "=")
+set sep = " "
+
+fn tokenize(text)
+    set tokens = [!]
+    set temp = [!]
+    set p = 0
+    while (:p < [length :text])
+        io:println(:p)
+        set char = [:text(:p)]
+        match nil
+	    case [ :char in :sym ]
+                if :temp
+                    set _ = [ :tokens @ append [ "" @ join :temp ] ]
+		    set - = [ :temp @ clear ]
+		end
+		set _ = [ :tokens @ append :char ]
+            end
+	    case [ :char in :sep ]
+	        if :temp
+                    set _ = [ :tokens @ append [ "" @ join :temp ] ]
+		    set - = [ :temp @ clear ]
+		end
+	    end
+	    default
+	        set _ = [ :temp @ append :char ]
+	    end
+        end
+	inc p
+    end
+    if :temp
+        set _ = [ :tokens @ append [ "" @ join :temp ] ]
+    end
+    return :tokens
+end
+
+catch (test) tokenize("A = 0; B = A = 90; A")
+io:println(:test)

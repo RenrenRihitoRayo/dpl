@@ -1,0 +1,31 @@
+&use {std/text_io.py}
+
+set n = [ :_meta.argv(1) ] 
+if [ nil? :n ]
+    set n = 100
+end
+
+set n = [?int :n]
+
+--doc
+  This is a simple fizbuzz program
+  the '%%' operator is the short hand for
+  'num % op == 0' meaning
+  if num is divisible by op.
+--
+
+for i in [rawrange :n]
+    if [[ :i %% 3 ] and [ :i %% 5 ]]
+        io:println("fizzbuzz")
+        skip
+    end
+    if [ :i %% 3 ]
+        io:println("fizz")
+        skip
+    end
+    if [ :i %% 5 ]
+        io:println("buzz")
+        skip
+    end
+    io:println(:i)
+end

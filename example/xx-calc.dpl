@@ -1,0 +1,27 @@
+&use {std/text_io.py}
+
+loop
+    io:input(val, "V1: ")
+    io:input(op, "OP: ")
+    io:input(val1, "V2: ")
+
+    switch :op
+        case "+"
+            set res = [[ ?int :val ] + [ ?int :val1 ]]
+        end
+        case "-"
+            set res = [[ ?int :val ] - [ ?int :val1 ]]
+        end
+        case "*"
+            set res = [[ ?int :val ] * [ ?int :val1 ]]
+	end
+        case "/"
+            set res = [[ ?int :val ] / [ ?int :val1 ]]
+	end
+        default
+            set res = "???"
+	end
+    end
+
+    io:println('The result is: ${res}')
+end

@@ -387,7 +387,7 @@ def process(fcode, name="__main__"):
                         if temp is None:
                             error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
                             return error.PREPROCESSING_ERROR
-                        offset, body[args[0]] = temp
+                        offset, body[process_arg(nframe, args[0])] = temp
                     elif ins == "default" and args is None:
                         temp = get_block(switch_block, instruction_pointer)
                         if temp is None:
