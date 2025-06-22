@@ -42,6 +42,8 @@ preprocessing_flags = {
     "_set_only_when_defined": 1,
 }
 
+to_be_methods = set()
+
 # Core interpreter attributes
 internal_attributes = {
     "main_path": constants.none,
@@ -53,6 +55,7 @@ internal_attributes = {
     "python_version_string": info.PYTHON_VER,
     "implementation":"python", # the language the parser is in.
     "_set_only_when_defined": 1,
+    "methods": to_be_methods
 }
 
 flags = set()

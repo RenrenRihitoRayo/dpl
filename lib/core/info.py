@@ -61,7 +61,8 @@ RT_EXPR = {
     "?int", "?float", "?str",
     "length", "type", "range", "rawrange", "drange",
     "drawrange", 'nil?', 'none?', 'def?',
-    "eval", "oldformat"
+    "eval", "oldformat",
+    "!"
 }
 
 def add_runtime_dependent_method(keyword):

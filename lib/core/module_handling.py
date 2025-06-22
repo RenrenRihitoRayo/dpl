@@ -101,7 +101,8 @@ class extension:
                 fname = func.__name__
             else:
                 fname = name
-            argproc.add_method(fname, func, from_func, self.name, self.is_meta)
+            fname = self.mangle(fname)
+            argproc.add_method(fname, func, from_func)
         return wrap
 
     def get(self, name, default=None):
@@ -192,6 +193,9 @@ class dpl:
     truthy = (state_true, True)
     exit = None
     wrap = wrap
+
+    def to_bool(obj):
+        return constants.true if obj else constants.false
 
     def pycall(func, args, table):
         return func(*(args or []), **table)

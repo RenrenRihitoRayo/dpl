@@ -1,6 +1,8 @@
 &use {std/text_io.py}
+&use {std/formats.py}
 
-set sym = ("-", "+", "*", "**", "/", "=")
+
+set sym = [! "-", "+", "*", "**", "/", "=", ";"]
 set sep = " "
 
 fn tokenize(text)
@@ -8,23 +10,26 @@ fn tokenize(text)
     set temp = [!]
     set p = 0
     while (:p < [length :text])
-        io:println(:p)
         set char = [:text(:p)]
         match nil
 	    case [ :char in :sym ]
                 if :temp
                     set _ = [ :tokens @ append [ "" @ join :temp ] ]
-		    set - = [ :temp @ clear ]
+		    set _ = [ :temp @ clear ]
 		end
 		set _ = [ :tokens @ append :char ]
             end
 	    case [ :char in :sep ]
 	        if :temp
                     set _ = [ :tokens @ append [ "" @ join :temp ] ]
-		    set - = [ :temp @ clear ]
+		    set _ = [ :temp @ clear ]
 		end
 	    end
 	    default
+	        if [ :temp and [ [ :char + [ :temp(-1) ] ] in :sym ] ]
+                    set _ = [ :temp @ append [ :char + [ :temp @ pop ] ] ]
+		    skip
+		end
 	        set _ = [ :temp @ append :char ]
 	    end
         end
@@ -36,5 +41,40 @@ fn tokenize(text)
     return :tokens
 end
 
-catch (test) tokenize("A = 0; B = A = 90; A")
-io:println(:test)
+fn evaluate(frame, expr)
+    new :expr tokens
+    while :tokens
+        set current _ = [ :tokens @ pop ]
+        match nil
+	    case [ @ formats:is_identifier :current  ]
+
+            end
+	end
+    end
+end
+
+loop
+io:input(expr, "Expresion: ")
+catch (tokens) tokenize(:expr)
+
+for token in :tokens
+    match nil
+        case [@ formats:is_integer :token]
+	    io:println('NUM I: ${token}')
+	end
+        case [@ formats:is_identifier :token]
+	    io:println('  ID: ${token}')
+	end
+	case [@ formats:is_float :token]
+	    io:println('NUM F: ${token}')
+	end
+	case [ :token in :sym ]
+	    io:println('  OP: ${token}')
+	end
+	default
+     	    io:println('  ??: ${token}' [ :token in :sym ] :token :sym)
+	end
+    end
+end
+
+end

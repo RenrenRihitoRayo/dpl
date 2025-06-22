@@ -234,18 +234,12 @@ methods = {}
 matches = {}
 
 
-def add_method(func_name, func, from_func=False, module_name=None, is_meta_name=False):
-    if module_name is not None:
-        if not is_meta_name:
-            name = f"{module_name}.{func_name}"
-        else:
-            name = f"{module_name}:{func_name}"
-    else:
-        name = func_name
+def add_method(func_name, func, from_func=False):
+    varproc.to_be_methods.add(func_name)
     if not from_func:
-        methods[name] = func
+        methods[func_name] = func
     else:
-        methods[name] = lambda frame, args: func(frame, None, *args)[0]
+        methods[func_name] = lambda frame, args: func(frame, None, *args)[0]
 
 # Need I explain?
 def is_int(arg):
@@ -527,12 +521,14 @@ def evaluate(frame, expression):
         case ["if", value, "then", true_v, "else", false_v]:
             return true_v if value else false_v
         case [obj, tuple(index)]:
+            if not obj:
+                return constants.nil
             index = process_arg(frame, index[0])
             if not isinstance(obj, (tuple, list, str)):
                 return constants.nil
             if not isinstance(index, int):
                 return constants.nil
-            if isinstance(obj, (tuple, list, str)) and index >= len(obj):
+            if isinstance(obj, (tuple, list, str)) and index >= len(obj) and abs(index)-1 >= len(object):
                 return constants.nil
             elif isinstance(obj, dict) and index not in obj:
                 return constants.nil
@@ -602,7 +598,7 @@ def evaluate(frame, expression):
             varproc.rset(frame[-1], name, value)
             return value
         case ["@", method, *args] if method in methods:
-            return methods[method](frame, *args)
+            return methods[method](frame, args)
         case ["@", ins, *args]:
             return ins(frame, None, *args)[0]
         case [obj, "@", method, *args] if hasattr(

@@ -732,7 +732,6 @@ def execute(code, frame=None):
             if obj == constants.nil:
                 error.error(pos, file, f"Unknown object")
                 break
-            rset(obj, "_internal.instance_name", args[1])
             rset(frame[-1], args[1], copy(obj))
         elif ins == "method" and argc >= 2:
             name, params = args

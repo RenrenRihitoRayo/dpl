@@ -35,3 +35,5 @@ if [ $fails -ne 0 ]; then
 else
 	echo "All tests passed!"
 fi
+
+rm temp.txt &> /dev/null
