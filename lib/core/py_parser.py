@@ -97,6 +97,47 @@ def pprint(d, l=0, seen=None, hide=True):
         else:
             print("  "*l+f"{name!r} = {value!r}")
 
+def pre_execution(frame, code):
+    instruction_pointer = 0
+    final = len(code)
+    result = []
+    while instruction_pointer < final:
+        line_pos, file, ins, args = line_oc = code[instruction_pointer]
+        if args is not None and args:
+            args = nest_args(exprs_preruntime(args))
+            args = process_args(frame, args)
+            argc = len(args)
+        else:
+            args = []
+            argc = 0
+        if ins == "..set" and argc == 3 and args[1] == "=":
+            name, _, value = args
+            rset(frame[-1], name, value)
+        elif ins == "..if" and argc == 1:
+            temp = get_block(instruction_pointer, code)
+            if temp is None:
+                error.error(instruction_pointer, file, "Block not closed")
+                return []
+            if args[0]:
+                instruction_pointer, body = temp
+                result.extend(pre_execution(frame, body))
+        elif ins == "..while" and argc == 1:
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                error.error(instruction_pointer, file, "Block not closed")
+                return []
+            instruction_pointer, body = temp
+            while evaluate(frame, args[0]):
+                result.extend(pre_execution(frame, body))
+        elif ins == "..log":
+            print(*args, sep="\n")
+        elif ins == "..emit":
+            result.append((line_pos, file, args[0], args[1:]))
+        else:
+            result.append(line_oc)
+        instruction_pointer += 1
+    return result
+
 def process(fcode, name="__main__"):
     """
     Preprocess a file. Output can then be ran by the run function.
@@ -366,6 +407,7 @@ def process(fcode, name="__main__"):
         else:
             nres = res
         # pass for switches
+        nres = pre_execution(nframe, nres)
         res = []
         offset = 0
         whole_offset = 0
@@ -676,6 +718,11 @@ def execute(code, frame=None):
         elif ins == "cdef":
             error.error(pos, file, "DEPRECATED AS OF 1.4.8 FFI IS TOO MESSY\nA REPLACEMENT WILL BE PUT IN AS SOON AS POSSIBLE")
             return error.PYTHON_ERROR
+        elif ins == "check_schema" and argc == 3:
+            data, as_, schema = args
+            if not type_checker.check_schema(data, schema):
+                error.error(pos, file, "Data doesnt comply with schema!")
+                return error.TYPE_ERROR
         elif ins == "stop" and argc == 0:
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:

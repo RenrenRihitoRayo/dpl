@@ -3,14 +3,25 @@
 from . import varproc
 from . import constants
 
+class object_type(dict):
+    def __repr__(self):
+        return "<object>"
+
+class reference_type(object_type):
+    def __repr__(self):
+        return f"<reference {self['name']} in scope {self['scope']}>"
+
+class function_type(object_type):
+    def __repr__(self):
+        return f"<function {self['name']}({', '.join(self['args'])})>"
 
 def make_reference(scope_index, name, value, data=constants.none):
-    return {
+    return reference_type({
         "scope": scope_index,
         "name": name,
         "value": value,
         "tag": data
-    }
+    })
 
 def set_repr(frame, name="???", type_name=None, repr=None, func=False):
     if "_internal" not in frame:
@@ -51,7 +62,7 @@ def make_function(name, body, params):
             vindex = pos
             vname = an[9:]
             break
-    return set_repr(
+    return function_type(set_repr(
         {
             "name": name,
             "body": body,
@@ -67,37 +78,10 @@ def make_function(name, body, params):
         name,
         "builtin-function-object",
         func=True
-    )
-
-
-def make_method(name, body, params, self):
-    vname = constants.nil
-    vindex = 0
-    for pos, an in enumerate(params):
-        if an.startswith("variadic:"):
-            vindex = pos
-            vname = an[9:]
-            break
-    return set_repr(
-        {
-            "name": name,
-            "body": body,
-            "args": params,
-            # "self": self,
-            "capture":constants.nil,
-            "variadic":{
-                "name": vname,
-                "index": vindex,
-            }
-        },
-        name,
-        "builtin-method-object",
-        func=True
-    )
-
+    ))
 
 def make_object(name):
-    return set_repr(
+    return object_type(set_repr(
         {
             "_internal": {
                 "name": name,
@@ -107,4 +91,4 @@ def make_object(name):
         },
         name,
         "builtin-object:Object",
-    )
+    ))

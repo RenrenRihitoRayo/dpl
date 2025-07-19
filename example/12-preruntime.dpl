@@ -1,0 +1,21 @@
+&use {std/text_io.py}
+
+# prerutnime!
+
+# generate code
+# that prints 0 to 89
+
+# the new preruntime
+# extension for DPL!
+
+..set test = 0
+
+..while (:test < 90)
+    ..emit io:println[! :test]
+    ..set test = [:test + 1]
+..end
+
+..set flag = true
+..if :flag
+    ..emit io:println("Flag us true!")
+..end

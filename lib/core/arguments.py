@@ -47,6 +47,19 @@ chars = {
 }
 
 from . import objects
+
+type_annotations = {
+    "..int": int,
+    "..string": str,
+    "..float": float,
+    "..bool": int,
+    "..python_bool": bool,
+    "..function": objects.function_type,
+    "..object": objects.object_type,
+    "..reference": objects.reference_type,
+    "..sequence": list | set | tuple
+}
+
 from . import state
 from . import constants
 from . import varproc
@@ -331,6 +344,8 @@ def expr_preruntime(arg):
         return set()
     elif arg == ".None":
         return None
+    elif arg in type_annotations:
+        arg = type_annotations[arg]
     elif arg == "π":
         return 22/7
     return arg

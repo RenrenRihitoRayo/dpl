@@ -53,7 +53,7 @@ INC = {}
 
 INCREMENTS = set(INC.keys()) | INC_EXT
 
-DEC = {"end"}
+DEC = {"end", "..end"}
 
 RT_EXPR = {
     "tuple", "?tuple",

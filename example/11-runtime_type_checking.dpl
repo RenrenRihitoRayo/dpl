@@ -1,0 +1,13 @@
+&use {std/text_io.py}
+
+dict person_schema
+    set name = ..string
+    set age = ..int
+    set info = ..reference
+end
+
+dict person
+    set name = "Darren Chase Papa"
+    set age = 16
+    set info = "Created DPL"
+end
