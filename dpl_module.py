@@ -8,9 +8,9 @@ import dpl.lib.core.arguments as argproc
 import dpl.lib.core.info as info
 import dpl.lib.core.module_handling as module_handling
 import dpl.lib.core.error as error
-import dpl.lib.core.dpl_configure_imports as dci
 import dpl.lib.core.scanner as scanner
 import dpl.lib.core.utils as utils
+import dpl.lib.core.ast_gen as ast_gen
 import dpl.project_mngr.pmfdpl as project_manager
 import dpl.dfpm.dfpm as dfpm
 import dpl.misc.dpl_pygments as dpl_pygments

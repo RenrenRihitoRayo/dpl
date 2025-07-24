@@ -82,6 +82,7 @@ if "skip-non-essential" not in prog_flags:
     import pprint
     import lib.core.serialize_dpl as cereal # i was hungry
     from lib.core.py_parser2_internals.py_parser2_internals import op_code_registry
+    import lib.core.ast_gen as ast_gen
 
 # removed try except here.
 if "use-py-parser2" in prog_flags:
@@ -117,13 +118,22 @@ dpl package remove <package_name>
 dpl get-docs file
     Get the doc comments.
 dpl dump-hlir <file>
-    Dumbs the high level IR that DPL generates.
+    Dumps the high level IR that DPL generates.
     Output is `[file].hlir`
 dpl dump-llir <file>
-    Dumbs the low level IR that DPL generates.
+    Dumps the low level IR that DPL generates.
     Output is `[file].llir`
     Must provide the "-use-py-parser2"
     to use.
+dpl dump-ast <file.dpl>
+    Dumps the ast of the given file.
+    Outputs to `<file.dpl>.dplad`
+dpl dump-ast-cdpl <file.cdpl>
+    Dumps the ast of the given file.
+    Outputs to `<file.cdpl>.dplad`
+
+Note AST Dumps are not for execution
+and only for program analysis.
 
 Flags and such:
 dpl -info
@@ -321,6 +331,13 @@ Code format: (
                     print("Processing and HLIR Generation...")
                     output.write(pprint.pformat(parser.process(inputf.read())))
                     print("Done!")
+        case ["dump-ast", file]:
+            with open(f"{file}.dplad", "w") as output:
+                with open(file) as input:
+                    ast_gen.walk(ast_gen.gen_ast_from_str(input.read()), file=output)
+        case ["dump-ast-cdpl", file]:
+            with open(f"{file}.dplad", "w") as output:
+                ast_gen.walk(ast_gen.gen_ast_from_cdpl(file), file=output)
         case ["rc", file, *args]:
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
