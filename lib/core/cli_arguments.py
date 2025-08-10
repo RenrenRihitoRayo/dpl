@@ -34,7 +34,7 @@ def flags(argv, types=None, remove_first=False):
     for i in indexes.keys():
         if i <= end:
             argv.pop(min(indexes.keys()))
-    return tuple(flags), values
+    return set(flags), values
 
 if __name__ == "__main__":
     from pprint import pprint

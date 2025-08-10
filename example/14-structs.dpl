@@ -1,0 +1,15 @@
+use {std}
+
+--
+  DPL supports cffi types
+--
+
+# ctypes: C compat
+struct person
+    name as [c::char * 10]
+    age as c::int
+end
+
+struct :person([?bytes "Darren"], 90) as andrew
+
+io:println(:andrew)

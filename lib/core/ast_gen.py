@@ -8,11 +8,12 @@ Currently only has nodes for (heirchy):
   * Functions
   * Conditionals
   * Assignments
+  * Runtime Imports
 * Body Node
 
 Note:
 This isnt for codegen!
-Only for tyoe checking and static analysis.
+Only for type checking and static analysis.
 
 Sample code:
 ```
@@ -30,7 +31,7 @@ end
 With walk(gen_ast_from_str(code)):
 ```
 ProgramNode
-  line: 1, ins: use
+  line: 1, ins: use, module: {std/text_io.py}
   line: 3, ins: fn, name: main
   BodyNode
     line: 4, ins: io:println
@@ -45,6 +46,12 @@ from . import serialize_dpl
 from . import info
 from . import py_parser
 import sys
+
+MAIN_FILE = "__main__"
+
+def set_main(main):
+    global MAIN_FILE
+    MAIN_FILE = main
 
 def blockade(tokens):
     "Called blockade because it generates blocks. Blocking... blockades."
@@ -87,6 +94,10 @@ def blockade(tokens):
         else:
             if ins == "set":
                 node = AssignNode(token)
+            elif ins == "use":
+                node = UseNode(token)
+            elif ins == "use_luaj":
+                node = UseLuaNode(token)
             else:
                 node = InstructionNode(token)
             stack[-1].append(node)
@@ -114,14 +125,14 @@ def gen_ast_from_cdpl(file):
         serialize_dpl.deserialize(f.read())
     return gen_ast_from_hlir(data["code"])
 
-def walk_for_each(tree, node_type):
+def walk_for_each(node_type, tree):
     for ins in tree:
         if isinstance(ins, node_type):
             yield ins
         elif isinstance(ins, ProgramNode):
-            yield from walk_for_each(ins.value, node_type)
+            yield from walk_for_each(node_type, ins.value)
         elif isinstance(ins, BodyNode):
-            yield from walk_for_each(ins.value, node_type)
+            yield from walk_for_each(node_type, ins.value)
 
 def walk(tree, depth=0, file=sys.stdout):
     for ins in tree:
@@ -147,6 +158,12 @@ def walk(tree, depth=0, file=sys.stdout):
                 print("  "*depth + f"line: {ins.line_pos}, ins: {ins.instruction}, name: {ins.variable_name}, value: {ins.variable_value!r}", file=file)
             case FunctionNode():
                 print("  "*depth + f"line: {ins.line_pos}, ins: {ins.instruction}, name: {ins.function_name}", file=file)
+            case UseNode():
+                print("  "*depth + f"line: {ins.line_pos}, ins: {ins.instruction}, module: {ins.module}", file=file)
+                if ins.alias:
+                    print("  "*(depth+1) + f"alias: {ins.alias}", file=file)
+            case UseLuaNode():
+                print("  "*depth + f"line: {ins.line_pos}, ins: {ins.instruction}, module: {ins.module}", file=file)
             case InstructionNode():
                 print("  "*depth + f"line: {ins.line_pos}, ins: {ins.instruction}", file=file)
             case BodyNode(body):
@@ -194,6 +211,8 @@ class InstructionNode(ASTNode):
     __match_args__ = ("value",)
     def __init__(self, value):
         self.line_pos, self.source_file, self.instruction, self.args = value
+        if self.source_file == "__main__":
+            self.source_file = MAIN_FILE
         super().__init__("InstructionNode", value)
 
 class FunctionNode(InstructionNode):
@@ -205,6 +224,24 @@ class FunctionNode(InstructionNode):
         self.function_parameters = self.args[1]
         self.function_attributes = {tuple(pair.items())[0][0]: tuple(pair.items())[0][1] for pair in self.args[2:]}
         self.body = None
+
+class UseNode(InstructionNode):
+    __match_args__ = ("value",)
+    def __init__(self, value):
+        super().__init__(value)
+        self.node_type = "UseNode"
+        self.module = self.args[0]
+        if len(self.args) == 3:
+            self.alias = self.args[2]
+        else:
+            self.alias = None
+
+class UseLuaNode(InstructionNode):
+    __match_args__ = ("value",)
+    def __init__(self, value):
+        super().__init__(value)
+        self.node_type = "UseLuaNode"
+        self.module = self.args[0]
 
 class AssignNode(InstructionNode):
     __match_args__ = ("value",)

@@ -1,0 +1,14 @@
+&use {std}
+
+--
+  DPL 1.4.9
+  Now allows function calls in expressions.
+  Using DPL functions in expressions are
+  easier.
+--
+
+fn square(val)
+    return [:val ** 2]
+end
+
+io:println([call :square( [call :square(2) ] )])

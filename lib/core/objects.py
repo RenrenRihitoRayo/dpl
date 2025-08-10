@@ -9,18 +9,19 @@ class object_type(dict):
 
 class reference_type(object_type):
     def __repr__(self):
-        return f"<reference {self['name']} in scope {self['scope']}>"
+        return f"<reference {self['name']} in scope {self['scope']}:{self['scope_uuid']}>"
 
 class function_type(object_type):
     def __repr__(self):
         return f"<function {self['name']}({', '.join(self['args'])})>"
 
-def make_reference(scope_index, name, value, data=constants.none):
+def make_reference(scope_index, scope_uuid, name, value, data=constants.none):
     return reference_type({
         "scope": scope_index,
+        "scope_uuid": scope_uuid,
         "name": name,
         "value": value,
-        "tag": data
+        "tag": data,
     })
 
 def set_repr(frame, name="???", type_name=None, repr=None, func=False):

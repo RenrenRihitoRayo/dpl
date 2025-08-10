@@ -26,7 +26,6 @@ if "simple-mode" in prog_flags:
     prog_flags.update((
         "simple-run",
         "no-lupa",
-        "no-cffi"
     ))
 
 # Debug mode
@@ -83,6 +82,7 @@ if "skip-non-essential" not in prog_flags:
     import lib.core.serialize_dpl as cereal # i was hungry
     from lib.core.py_parser2_internals.py_parser2_internals import op_code_registry
     import lib.core.ast_gen as ast_gen
+    import misc.dpl_linter as linter
 
 # removed try except here.
 if "use-py-parser2" in prog_flags:
@@ -165,8 +165,6 @@ dpl -show-parser-import
     Prints if any errors arised while importing the non-python based parser.
 dpl -no-lupa
     Do not import lupa components.
-dpl -no-cffi
-    Do not import cffi components.
 dpl -instant-help
     Prints the help string without using the command matching.
 dpl -get-internals
@@ -531,6 +529,23 @@ Code format: (
                             acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
                 except Exception as e:
                     print(f"Python Exception was raised while running:\n{repr(e)}")
+        case ["extract", file]:
+            with open(file) as f:
+                linter.set_main(os.path.realpath(file))
+                program = linter.Program(parser.process(f.read()))
+                program.update()
+                print("Runtime Imports:")
+                for v in program.runtime_imports:
+                    if isinstance(v, linter.UseLuaNode):
+                        print(f"[{v.source_file}:{v.line_pos}] use_luaj {v.module}")
+                    else:
+                        print(f"[{v.source_file}:{v.line_pos}] use {v.module}{'' if not v.alias else f' as {v.alias}'}")
+                print("Variables:")
+                for v in program.variables:
+                    print(f"[{v.source_file}:{v.line_pos}] {v.variable_name!r} = {v.variable_value}")
+                print("Functions:")
+                for v in program.functions:
+                    print(f"[{v.source_file}:{v.line_pos}] {v.function_name!r}({', '.join(v.function_parameters)})")
         case ["help"]:
             print(help_str)
         case _:

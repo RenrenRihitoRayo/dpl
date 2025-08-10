@@ -27,7 +27,8 @@ except ImportError:
 ARGV = sys.argv
 ARGC = len(ARGV)
 
-INC_EXT = {
+# only one increments
+INC_EXT_BUILTIN = {
     "match",
     "case",
     "fn",
@@ -46,23 +47,35 @@ INC_EXT = {
     "enum",
     "ifmain",
     "switch",
-    "begin"
+    "begin",
+    "on_new_scope",
+    "on_pop_scope",
+    ".while",
+    ".if",
+    ".macro",
+    ".emit_block",
 }
 
-INC = {}
+# multiple increments
+INC_BUILTIN = {}
+
+# user exposed for INC and INC_EXT
+INC_EXT = INC_EXT_BUILTIN.copy()
+INC = INC_BUILTIN.copy()
+PATTERN = {}
 
 INCREMENTS = set(INC.keys()) | INC_EXT
 
-DEC = {"end", "..end"}
+DEC = {"end", ".end"}
 
 RT_EXPR = {
     "tuple", "?tuple",
     "dict", "?dict",
     "?int", "?float", "?str",
-    "length", "type", "range", "rawrange", "drange",
+    "len", "type", "range", "rawrange", "drange",
     "drawrange", 'nil?', 'none?', 'def?',
     "eval", "oldformat",
-    "!"
+    "!", "call"
 }
 
 def add_runtime_dependent_method(keyword):
@@ -93,7 +106,7 @@ KEYWORDS = {
 ALL_INTRINSICS = INC_EXT | set(INC.keys()) | DEC | KEYWORDS
 
 CHARS = {
-    "\\\\": "\\[escape]",
+    "\\\\": "\\[lit_slash]",
     "\\n": "\n",
     "\\t": "\t",
     "\\s": " ",
@@ -102,7 +115,10 @@ CHARS = {
     "\\r": "\r",
     "\\a": "\a",
     "\\0": "\0",
-    "\\[escape]": "\\",
+    "\\[null]": "\0",
+    "\\e": "\x1B",
+    "\\[escape]": "\x1B",
+    "\\[lit_slash]": "\\",
 }
 
 OPEN_P = "[("
@@ -112,7 +128,7 @@ class flags:
     WARNINGS = True      # Specific to warnings.
     ERRORS = True        # Logs, Warnings and Such
 
-VERSION_STRING = "1.4.8"
+VERSION_STRING = "1.4.9"
 
 class Version:
     def __init__(self, ver_str):

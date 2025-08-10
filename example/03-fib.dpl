@@ -1,4 +1,4 @@
-&use {std/text_io.py}
+use {std/text_io.py}
 
 fn fib(n)
     set a = 1
@@ -13,5 +13,6 @@ fn fib(n)
     return :b
 end
 
+# output is 55
 catch (result) fib(10)
 io:println(:result)

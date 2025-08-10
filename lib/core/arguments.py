@@ -1,9 +1,15 @@
 # Used to handle arguments and expressions
 # NOT FOR THE CLI
 
+from . import dpl_ctypes
+
+globals().update(vars(dpl_ctypes))
+
 from sys import flags
 import traceback
 import operator
+
+inf = float("inf")
 
 # custom type to distinguish lists and expressions
 class Expression(list):
@@ -49,15 +55,31 @@ chars = {
 from . import objects
 
 type_annotations = {
-    "..int": int,
-    "..string": str,
-    "..float": float,
-    "..bool": int,
-    "..python_bool": bool,
-    "..function": objects.function_type,
-    "..object": objects.object_type,
-    "..reference": objects.reference_type,
-    "..sequence": list | set | tuple
+    "dpl::bool": int,
+    "dpl::int": int,
+    "dpl::string": str,
+    "dpl::float": float,
+    "dpl::function": objects.function_type,
+    "dpl::object": objects.object_type,
+    "dpl::reference": objects.reference_type,
+    "dpl::sequence": list | set | tuple,
+    "py::int": int,
+    "py::string": str,
+    "py::float": float,
+    "py::bool": bool,
+    "py::sequence": list | set | tuple,
+    "c::int": c_int, "c::uint": c_uint,
+    "c::double": c_double,
+    "c::float": c_float,
+    "c::char": c_char,
+    "c::byte": c_byte, "c::ubyte": c_ubyte,
+    "c::short": c_short, "c::ushort": c_ushort,
+    "c::long": c_long, "c::ulong": c_ulong,
+    "c::bool": c_bool,
+}
+
+dpl_constants = {
+    "py::none": None,
 }
 
 from . import state
@@ -126,9 +148,6 @@ def get_block(code, current_p):
         return None
     return p, res
 
-
-# Functions in utils that couldnt be imported
-# without dark magic.
 
 def parse_match(frame, body, value):
     "Parse a match statement."
@@ -211,11 +230,28 @@ def parse_dict(frame, temp_name, body):
             data[name] = value
         elif ins == "def" and argc == 1:
             name, = args
-            # TODO: check if previous item is a int
-            data[name] = tuple(data.items())[-1][1] + 1
+            if not data:
+                data[name] = 0
+            else:
+                # TODO: check if previous item is a int
+                data[name] = tuple(data.items())[-1][1] + 1
         else:
             error.error(pos, file, f"Invalid statement!")
             return 1
+
+
+def parse_struct(frame, ffi, s_name, body):
+    names = ["typedef struct {"]
+    for p, [pos, file, name, [eq, type]] in enumerate(body):
+        if eq != "as":
+            error.error(pos, file, f"Invalid statement!")
+            return 1
+        names.append("   " + type.name(name) + ";")
+    
+    names.append(f"}} {s_name};")
+    ffi.cdef("\n".join(names))
+    varproc.rset(frame[-1], s_name, f"{s_name}*")
+
 
 def flatten_dict(d, parent_key="", sep=".", seen=None):
     if seen is None:
@@ -310,6 +346,10 @@ def is_fvar(arg):
     return arg.startswith(":") and is_id(arg[1:])
 
 
+def is_prvar(arg):
+    return arg.startswith("$") and is_id(arg[1:])
+
+
 def is_pfvar(arg):
     return arg.startswith(".:") and is_id(arg[2:])
 
@@ -336,14 +376,18 @@ def expr_preruntime(arg):
         return constants.nil
     elif arg == "...":
         return constants.elipsis
+    elif arg == "infinity":
+        return inf
+    elif arg == "neg_infinity":
+        return -inf
     elif arg == ".dict":
         return {}
     elif arg == ".list":
         return []
     elif arg == ".set":
         return set()
-    elif arg == ".None":
-        return None
+    elif arg in dpl_constants:
+        arg = dpl_constants[arg]
     elif arg in type_annotations:
         arg = type_annotations[arg]
     elif arg == "π":
@@ -384,7 +428,7 @@ def expr_runtime(frame, arg):
             )
         else:
             tag = constants.none
-        return objects.make_reference(len(frame)-1, full_name, varproc.rget(
+        return objects.make_reference(len(frame)-1, frame[-1]["_scope_uuid"], full_name, varproc.rget(
                 frame[-1],
                 full_name,
                 default=varproc.rget(frame[0], full_name),
@@ -401,10 +445,16 @@ def expr_runtime(frame, arg):
     elif is_id(arg):
         return arg
     elif arg.startswith('"') and arg.endswith('"'):
-        return arg[1:-1]
+        t = arg[1:-1]
+        for c, cc in CHARS.items():
+            t = t.replace(c, cc)
+        return t
     elif arg.startswith("'") and arg.endswith("'"):
         text = arg[1:-1]
         data = flatten_dict(frame[-1])
+        text = arg[1:-1]
+        for c, cc in CHARS.items():
+            text = text.replace(c, cc)
         return fmt_format(text, data, expr_fn=lambda text, _: handle_in_string_expr(text, frame))
     elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
         return arg
@@ -412,7 +462,6 @@ def expr_runtime(frame, arg):
         return arg
     else:
         raise Exception(f"Invalid literal: {arg}")
-
 
 def my_range(start, end):
     def pos(start, end):
@@ -437,7 +486,7 @@ def is_static(frame, code):
             continue
         elif i in RT_EXPR:
             return False
-        elif is_pfvar(i) and varproc.rget(frame[-1], i[2:], default=None, meta=False) is None:
+        elif is_pfvar(i) and varproc.rget(frame[-1], i[2:], default=None) is None:
             return False
         elif is_fvar(i):
             return False
@@ -519,6 +568,23 @@ def evaluate(frame, expression):
         return processed[1][0]
     elif len(processed) == 2 and processed[0] == "tail":
         return processed[1][-1]
+    elif len(processed) == 3 and processed[0] == "call":
+        func, args = processed[1:]
+        args = process_args(frame, args)
+        varproc.nscope(frame)
+        
+        frame[-1]["_returns"] = ("_intern_result",)
+        frame[-1].update({
+            name: value
+            for name, value
+            in zip(func["args"], args)
+        })
+        if func["capture"]:
+            frame[-1]["_capture"] = func["capture"]
+        run_code(func["body"], frame=frame)
+        varproc.pscope(frame)
+        ret = frame[-1]["_intern_result"]
+        return ret
     match (processed):
         # conditionals
         case ["if", value, "then", true_v, "else", false_v]:
@@ -527,11 +593,9 @@ def evaluate(frame, expression):
             if not obj:
                 return constants.nil
             index = process_arg(frame, index[0])
-            if not isinstance(obj, (tuple, list, str)):
+            if not isinstance(obj, (tuple, list, str, dict)):
                 return constants.nil
-            if not isinstance(index, int):
-                return constants.nil
-            if isinstance(obj, (tuple, list, str)) and index >= len(obj) and abs(index)-1 >= len(object):
+            if isinstance(obj, (tuple, list, str)) and isinstance(index, int) and index >= len(obj) and abs(index)-1 >= len(object):
                 return constants.nil
             elif isinstance(obj, dict) and index not in obj:
                 return constants.nil
@@ -550,7 +614,7 @@ def evaluate(frame, expression):
             return str(item)
         case ["?bytes", item]:
             try:
-                return bytes(item)
+                return bytes(item) if not isinstance(item, str) else item.encode("utf-8")
             except:
                 return constants.nil
         case ["?int", item]:
@@ -561,6 +625,11 @@ def evaluate(frame, expression):
         case ["?float", item]:
             try:
                 return float(item)
+            except:
+                return constants.nil
+        case ["?dict", item]:
+            try:
+                return dict(item)
             except:
                 return constants.nil
         case ["dict", *args]:
@@ -574,7 +643,7 @@ def evaluate(frame, expression):
         case ["none?", value]:
             return value == constants.none
         case ["def?", name]:
-            value = varproc.rget(frame[-1], name, default=None, meta=False)
+            value = varproc.rget(frame[-1], name, default=None)
             if value is None:
                 return constants.false
             return constants.true
@@ -610,6 +679,10 @@ def evaluate(frame, expression):
             if args and isinstance(args[0], pah.arguments_handler):
                 return args[0].call(getattr(obj, method))
             return getattr(obj, method)(*args)
+        case [obj, "->", attr]:
+            if not hasattr(obj, attr):
+                return constants.nil
+            return getattr(obj, attr)
         # other
         case ["?args", *args]:
             lst = []
@@ -639,7 +712,6 @@ def group(text):
     str_tmp = []
     id_tmp = []
     this = False
-    is_bytes = False
     rq = False
     quotes = {"str": '"', "pre": "}", "str1": "'"}
     str_type = "str"
@@ -656,8 +728,7 @@ def group(text):
                 this = True
             elif i == quotes[str_type]:
                 text = "".join(str_tmp) + quotes[str_type]
-                res.append(text[1:-1].encode("utf-8") if is_bytes else text)
-                if is_bytes: is_bytes = False
+                res.append(text)
                 str_tmp.clear()
             else:
                 str_tmp.append(i)
@@ -673,12 +744,8 @@ def group(text):
             res.append(i)
         elif i in "\"{'":
             if id_tmp:
-                if len(id_tmp) == 5 and "".join(id_tmp) == "cstr?":
-                    is_bytes = True
-                    id_tmp.clear()
-                else:
-                    res.append("".join(id_tmp))
-                    id_tmp.clear()
+                res.append("".join(id_tmp))
+                id_tmp.clear()
             str_tmp.append(i)
             if i == '"':
                 str_type = "str"
@@ -712,7 +779,7 @@ def process_arg(frame, e):
     return expr_runtime(frame, e)
 
 def process_args(frame, e):
-    return list(map(lambda x: expr_runtime(frame, x), e))
+    return list(map(lambda x: process_arg(frame, x), e))
 
 class argproc_setter:
     def set_run(func):

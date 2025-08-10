@@ -1,10 +1,22 @@
 Traceback (most recent call last):
-  File "/storage/emulated/0/dpl/dpl.py", line 433, in handle_args
+  File "/storage/emulated/0/dpl/dpl.py", line 513, in handle_args
     pip.run(f.read(), frame)
-  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 1037, in run
-    return execute(code, frame=frame)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 441, in execute
-    pos, file, ins, oargs = code[instruction_pointer]
-                            ~~~~^^^^^^^^^^^^^^^^^^^^^
-KeyError: 0
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 1111, in run
+    return run(code, frame=frame)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 1161, in run
+    return execute(code, frame)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/py_parser.py", line 1000, in execute
+    args = process_args(frame, args[0])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/arguments.py", line 727, in process_args
+    return list(map(lambda x: expr_runtime(frame, x), e))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/arguments.py", line 727, in <lambda>
+    return list(map(lambda x: expr_runtime(frame, x), e))
+                              ^^^^^^^^^^^^^^^^^^^^^^
+  File "/storage/emulated/0/dpl/lib/core/arguments.py", line 408, in expr_runtime
+    for c, cc in info.CHARS.items():
+                 ^^^^
+NameError: name 'info' is not defined

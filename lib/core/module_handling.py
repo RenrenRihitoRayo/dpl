@@ -13,11 +13,15 @@
 # - This keeps include resolution simple, fast, and deterministic
 # - Avoids overhead of searching multiple directories and prevents accidental includes
 # - No priority conflicts or ambiguity in module resolution
+# - If you wish to change the global library path
+#   feel free to delve into info.py and change LIB_DIR
 #
-# If you’re thinking “but even C does it differently...” —
+# If you’re thinking “but even C does it differently...” -
 # well, this ain’t C, is it now?
 #
 # DPL’s inclusion philosophy: simplicity and clarity over legacy complexity.
+# Why no legacy support? We cant let the past influence the future.
+# Basically for the name of progress.
 
 import itertools
 import time
@@ -39,6 +43,54 @@ arguments_handler = py_argument_handler.arguments_handler
 
 if "no-lupa" not in info.program_flags:
     import lupa
+
+global_ffi = None 
+if "no-cffi" not in info.program_flags:
+    from shlex import split as parse_line
+    from cffi import FFI
+    global_ffi = FFI()
+
+def get_path(path, local=None):
+    "Strictly for cdef files"
+    if local is None:
+        local = os.getcwd()
+    if "@" in path:
+        file_path, _, scope = path.partition("@")
+        if scope == "global":
+            return os.path.join(info.LIB_DIR, file_path)
+        elif scope == "local":
+            return os.path.join(local, file_path)
+        else:
+            return os.path.join(local, path)
+    else:
+        return os.path.join(local, path)
+
+def process_cdef(frame, code, local=None):
+    lines = []
+    data = {
+        "_name": "_unloaded",
+        "_version": (float("-inf"),)*3, # assume always the lowest (oldest)
+        "_path": None,
+        "_foreign": [], # all types and functions
+                        # helps us build the lib scope
+    }
+    for line in code.split("\n"):
+        if line.startswith("#"):
+            ins, *args = parse_line(line[1:])
+            argc = len(args)
+            if ins == "lib" and argc == 1:
+                data["name"] = args[0]
+            elif ins == "path" and argc == 1:
+                data["path"] = get_path(args[0], local)
+            elif ins == "version" and argc == 1:
+                data["version"] = Version(args[0])
+            elif ins in ("func", "type") and argc == 1:
+                data["_foreign"].append(arhs[0])
+            else:
+                ...
+        else:
+            lines.append(line)
+    global_ffi.cdef(lines)
 
 def register_run(func):
     dpl.run_code = func
@@ -91,6 +143,15 @@ class extension:
             self.__func[self.mangle(name)] = (
                 func
             )
+            names = get_py_params(func)
+            pattern = ""
+            for name in names:
+                if name.endswith("_xbody"):
+                    pattern += "x"
+                elif name.endswith("_body"):
+                    pattern += "b"
+            if pattern:
+                info.PATTERN[name] = pattern
             return func
         return wrap
 

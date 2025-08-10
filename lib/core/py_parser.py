@@ -31,7 +31,7 @@ def register_process_hlir(func):
     process_hlir = func
 
 def get_block(code, current_p, supress=False, start=1):
-    "Get a code block"
+    "Get a code block. Runtime! (helps init become faster)"
     instruction_pointer = current_p + 1
     pos, file, ins, _ = code[instruction_pointer]
     k = start
@@ -44,7 +44,7 @@ def get_block(code, current_p, supress=False, start=1):
         if ins in info.INC_EXT:
             k += 1
         elif ins in info.INC:
-            k -= info.INC[ins]
+            k += info.INC[ins]
         elif ins in info.DEC:
             k -= 1
         if k == 0:
@@ -96,47 +96,6 @@ def pprint(d, l=0, seen=None, hide=True):
             print("  "*l+"]")
         else:
             print("  "*l+f"{name!r} = {value!r}")
-
-def pre_execution(frame, code):
-    instruction_pointer = 0
-    final = len(code)
-    result = []
-    while instruction_pointer < final:
-        line_pos, file, ins, args = line_oc = code[instruction_pointer]
-        if args is not None and args:
-            args = nest_args(exprs_preruntime(args))
-            args = process_args(frame, args)
-            argc = len(args)
-        else:
-            args = []
-            argc = 0
-        if ins == "..set" and argc == 3 and args[1] == "=":
-            name, _, value = args
-            rset(frame[-1], name, value)
-        elif ins == "..if" and argc == 1:
-            temp = get_block(instruction_pointer, code)
-            if temp is None:
-                error.error(instruction_pointer, file, "Block not closed")
-                return []
-            if args[0]:
-                instruction_pointer, body = temp
-                result.extend(pre_execution(frame, body))
-        elif ins == "..while" and argc == 1:
-            temp = get_block(code, instruction_pointer)
-            if temp is None:
-                error.error(instruction_pointer, file, "Block not closed")
-                return []
-            instruction_pointer, body = temp
-            while evaluate(frame, args[0]):
-                result.extend(pre_execution(frame, body))
-        elif ins == "..log":
-            print(*args, sep="\n")
-        elif ins == "..emit":
-            result.append((line_pos, file, args[0], args[1:]))
-        else:
-            result.append(line_oc)
-        instruction_pointer += 1
-    return result
 
 def process(fcode, name="__main__"):
     """
@@ -289,11 +248,10 @@ def process(fcode, name="__main__"):
                 break
         else:
             ins, *args = group(line)
-            if ins != "pass":
-                args = nest_args(exprs_preruntime(args))
-                if preprocessing_flags["EXPRESSION_FOLDING"]: args = to_static(nframe,
-                    args
-                )  # If there are static parts in the arguments run them before runtime.
+            args = nest_args(exprs_preruntime(args))
+            if preprocessing_flags["EXPRESSION_FOLDING"]: args = to_static(nframe,
+                args
+            )  # If there are static parts in the arguments run them before runtime.
             res.append((lpos, name, ins, args if len(args) else None))
     else:
         if multiline:
@@ -303,111 +261,112 @@ def process(fcode, name="__main__"):
                 f"{name!r}:{last_comment}: Unclosed multiline comment!",
             )
             return error.PREPROCESSING_ERROR
-        nres = []
-        if preprocessing_flags["DEAD_CODE_OPT"]:
-            instruction_pointer = 0
-            warn_num = 0
-            nres = []
-            while instruction_pointer < len(res):
-                line = line_pos, file, ins, args = res[instruction_pointer]
-                if args is None:
-                    args = []
-                if (
-                    ins in {"for", "loop", "while"}
-                    and instruction_pointer + 1 < len(res)
-                    and res[instruction_pointer + 1][2] in {"end", "stop", "skip"}
-                ):
-                    if preprocessing_flags["WARNINGS"]:
-                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
-                            line_pos, file,
-                            f"{ins!r} statement is empty!"
-                        )
-                        if preprocessing_flags["STRICT"]:
-                            return error.PREPROCESSING_ERROR
-                    temp = get_block(res, instruction_pointer)
-                    if temp:
-                        instruction_pointer, _ = temp
-                    else:
-                        return []
-                    warn_num += 1
-                elif (
-                    ins in {"if", "module", "body"}
-                    and instruction_pointer + 1 < len(res)
-                    and res[instruction_pointer + 1][2] == "end"
-                ):
-                    if preprocessing_flags["WARNINGS"]:
-                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
-                            line_pos, file,
-                            f"{ins!r} statement is empty!"
-                        )
-                        if preprocessing_flags["STRICT"]:
-                            return error.PREPROCESSING_ERROR
-                    temp = get_block(res, instruction_pointer)
-                    if temp:
-                        instruction_pointer, _ = temp
-                    else:
-                        return []
-                    warn_num += 1
-                elif (
-                    ins in {"case", "match", "with", "default"}
-                    and instruction_pointer + 1 < len(res)
-                    and res[instruction_pointer + 1][2] in {"end", "return"}
-                ):
-                    if ins != "default" and len(args) == 0:
-                        error.error(
-                            line_pos, file,
-                            f"Error: Malformed {ins!r} statement/sub-statements!\nLine {line_pos}\nIn file {file!r}"
-                        )
-                        return error.PREPROCESSING_ERROR
-                    if preprocessing_flags["WARNINGS"]:
-                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
-                            line_pos, file,
-                            f"{ins!r} statement is empty!"
-                        )
-                        if preprocessing_flags["STRICT"]:
-                            return error.PREPROCESSING_ERROR
-                    temp = get_block(res, instruction_pointer)
-                    if temp:
-                        instruction_pointer, _ = temp
-                    else:
-                        return []
-                    warn_num += 1
-                elif (
-                    ins in {"fn", "method"}
-                    and instruction_pointer + 1 < len(res)
-                    and res[instruction_pointer + 1][2] in {"end", "return"}
-                ):
-                    if res[instruction_pointer + 1][2] == "return" and len(res[instruction_pointer + 1][3]) != 0:
-                        nres.append(line)
-                        instruction_pointer += 1
-                        continue
-                    if len(args) == 0:
-                        error.warn(
-                            f"Error: Malformed function definition!\nLine {line_pos}\nIn file {file!r}"
-                        )
-                        return error.PREPROCESSING_ERROR
-                    if preprocessing_flags["WARNINGS"]:
-                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
-                            line_pos, file,
-                            f"{ins!r} statement is empty!"
-                        )
-                        if preprocessing_flags["STRICT"]:
-                            return error.PREPROCESSING_ERROR
-                    temp = get_block(res, instruction_pointer)
-                    if temp:
-                        instruction_pointer, _ = temp
-                    else:
-                        return []
-                    warn_num += 1
-                else:
-                    nres.append(line)
-                instruction_pointer += 1
-            if preprocessing_flags["WARNINGS"] and warn_num:
-                print(f"Warning Info: {warn_num:,} Total warnings.")
-        else:
-            nres = res
+#        nres = []
+# temporary!
+#        if preprocessing_flags["DEAD_CODE_OPT"]:
+#            instruction_pointer = 0
+#            warn_num = 0
+#            nres = []
+#            while instruction_pointer < len(res):
+#                line = line_pos, file, ins, args = res[instruction_pointer]
+#                if args is None:
+#                    args = []
+#                if (
+#                    ins in {"for", "loop", "while"}
+#                    and instruction_pointer + 1 < len(res)
+#                    and res[instruction_pointer + 1][2] in {"end", "stop", "skip"}
+#                ):
+#                    if preprocessing_flags["WARNINGS"]:
+#                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
+#                            line_pos, file,
+#                            f"{ins!r} statement is empty!"
+#                        )
+#                        if preprocessing_flags["STRICT"]:
+#                            return error.PREPROCESSING_ERROR
+#                    temp = get_block(res, instruction_pointer)
+#                    if temp:
+#                        instruction_pointer, _ = temp
+#                    else:
+#                        return []
+#                    warn_num += 1
+#                elif (
+#                    ins in {"if", "module", "body"}
+#                    and instruction_pointer + 1 < len(res)
+#                    and res[instruction_pointer + 1][2] == "end"
+#                ):
+#                    if preprocessing_flags["WARNINGS"]:
+#                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
+#                            line_pos, file,
+#                            f"{ins!r} statement is empty!"
+#                        )
+#                        if preprocessing_flags["STRICT"]:
+#                            return error.PREPROCESSING_ERROR
+#                    temp = get_block(res, instruction_pointer)
+#                    if temp:
+#                        instruction_pointer, _ = temp
+#                    else:
+#                        return []
+#                    warn_num += 1
+#                elif (
+#                    ins in {"case", "match", "with", "default"}
+#                    and instruction_pointer + 1 < len(res)
+#                    and res[instruction_pointer + 1][2] in {"end", "return"}
+#                ):
+#                    if ins != "default" and len(args) == 0:
+#                        error.error(
+#                            line_pos, file,
+#                            f"Error: Malformed {ins!r} statement/sub-statements!\nLine {line_pos}\nIn file {file!r}"
+#                        )
+#                        return error.PREPROCESSING_ERROR
+#                    if preprocessing_flags["WARNINGS"]:
+#                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
+#                            line_pos, file,
+#                            f"{ins!r} statement is empty!"
+#                        )
+#                        if preprocessing_flags["STRICT"]:
+#                            return error.PREPROCESSING_ERROR
+#                    temp = get_block(res, instruction_pointer)
+#                    if temp:
+#                        instruction_pointer, _ = temp
+#                    else:
+#                        return []
+#                    warn_num += 1
+#                elif (
+#                    ins in {"fn", "method"}
+#                    and instruction_pointer + 1 < len(res)
+#                    and res[instruction_pointer + 1][2] in {"end", "return"}
+#                ):
+#                    if res[instruction_pointer + 1][2] == "return" and len(res[instruction_pointer + 1][3]) != 0:
+#                        nres.append(line)
+#                        instruction_pointer += 1
+#                        continue
+#                    if len(args) == 0:
+#                        error.warn(
+#                            f"Error: Malformed function definition!\nLine {line_pos}\nIn file {file!r}"
+#                        )
+#                        return error.PREPROCESSING_ERROR
+#                    if preprocessing_flags["WARNINGS"]:
+#                        (error.warnf if not preprocessing_flags["STRICT"] else error.error)(
+#                            line_pos, file,
+#                            f"{ins!r} statement is empty!"
+#                        )
+#                        if preprocessing_flags["STRICT"]:
+#                            return error.PREPROCESSING_ERROR
+#                    temp = get_block(res, instruction_pointer)
+#                    if temp:
+#                        instruction_pointer, _ = temp
+#                    else:
+#                        return []
+#                    warn_num += 1
+#                else:
+#                    nres.append(line)
+#                instruction_pointer += 1
+#            if preprocessing_flags["WARNINGS"] and warn_num:
+#                print(f"Warning Info: {warn_num:,} Total warnings.")
+#        else:
+#            nres = res
         # pass for switches
-        nres = pre_execution(nframe, nres)
+        nres = res
         res = []
         offset = 0
         whole_offset = 0
@@ -504,6 +463,11 @@ def execute(code, frame=None):
             rset(frame[-1], args[0], rget(frame[-1], args[0], default=0) - 1)
         elif ins == "setref" and argc == 3 and args[1] == "=":
             reference, _, value = args
+            if reference["scope"] >= len(frame) or (
+            frame[reference["scope"]]["_scope_uuid"] != "disabled" and
+            frame[reference["scope"]]["_scope_uuid"] != reference["scope_uuid"]):
+                error.error(pos, file, f"Reference for {reference['name']} is invalid and may have outlived its original scope!")
+                return error.REFERENCE_ERROR
             rset(frame[reference["scope"]], reference["name"], value)
             reference["value"] = value
         elif ins == "fn" and argc == 2:
@@ -530,7 +494,7 @@ def execute(code, frame=None):
             if mod_s.py_import(frame, f, search_path, loc=os.path.dirname(file)):
                 print(f"python: Something wrong happened...\nLine {pos}\nFile {file}")
                 return error.RUNTIME_ERROR
-        elif ins == "use" and argc == 3 and arg[1] == "as":
+        elif ins == "use" and argc == 3 and args[1] == "as":
             if args[0].startswith("{") and args[0].endswith("}"):
                 f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                 search_path = "_std"
@@ -818,13 +782,19 @@ def execute(code, frame=None):
             sys.exit(args[0])
         elif ins == "return":  # Return to the latched names
             if (temp := rget(frame[-1], "_returns")) != constants.nil:
+                if temp == "_":
+                    return error.STOP_FUNCTION
                 if len(temp) == 1:
-                    rset(frame[-1], f"_nonlocal.{temp[0]}", args[0] if isinstance(args, (tuple, list)) and len(args) == 1 else args)
-                    #pprint(rget(frame[-1], f"_nonlocal"), hide=False)
+                    rset(
+                        frame[-1],
+                        f"_nonlocal.{temp[0]}",
+                        args[0]
+                            if isinstance(args, (tuple, list))
+                            and len(args) == 1
+                        else args)
                 else:
-                    if temp != "_":
-                        for name, value in zip(temp, args):
-                            rset(frame[-1], f"_nonlocal.{name}", value, meta=False)
+                    for name, value in zip(temp, args):
+                        rset(frame[-1], f"_nonlocal.{name}", value)
             return error.STOP_FUNCTION
         elif ins == "catch" and argc >= 2:  # catch return value of a function
             rets, func_name, args = args
@@ -940,6 +910,18 @@ def execute(code, frame=None):
                 instruction_pointer, body = temp
             if parse_dict(frame, args[0], body):
                 break
+        elif ins == "struct" and argc == 1:
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                break
+            else:
+                instruction_pointer, body = temp
+            if parse_struct(frame, mod_s.global_ffi, args[0], body):
+                break
+        elif ins == "struct" and argc == 4 and args[2] == "as":
+            struct, args, _, name = args
+            args = process_args(frame, args)
+            rset(frame[-1], name, mod_s.global_ffi.new(struct, args))
         elif ins == "raise" and isinstance(args[0], int) and argc == 2:
             error.error(pos, file, args[1])
             return args[0]
@@ -952,8 +934,8 @@ def execute(code, frame=None):
                 "capture" in temp and
                 argc == 1
             ):  # Call a function
-            nscope(frame)
             args = process_args(frame, args[0])
+            nscope(frame)
             if temp["variadic"]["name"] != constants.nil:
                 if len(args)-1 >= temp["variadic"]["index"]:
                     variadic = []
@@ -989,6 +971,9 @@ def execute(code, frame=None):
         ) != constants.nil and hasattr(
             function, "__call__"
         ):  # call a python function
+        
+            # Even I dont under stand this now...
+            # good luck future me
             args = process_args(frame, args[0])
             try:
                 func_params = mod_s.get_py_params(function)[2:]
@@ -1030,23 +1015,42 @@ def execute(code, frame=None):
                 return error.PYTHON_ERROR
         elif ins == "local" and argc == 1:
             execute(args[0]["body"], frame)
-        elif ins == "end" and argc == 0:
-            error.error(pos, file, "Lingering end statement!")
-            return error.SYNTAX_ERROR
-        elif ins == "!" and argc >= 2:
-            it, func, args = args
-            try:
-                if it == "call":
-                    if args and isinstance(args[0], arguments_handler): args[0].call(func)
-                    else: func(*args)
-                elif it == "catch" and len(args) >= 1:
-                    if len(args) >= 2 and isinstance(args[1], arguments_handler): [frame[-1].__setitem__(name, value)
-                    for name, value in zip(args[0], args[1].call(func))]
-                    else: [frame[-1].__setitem__(name, value)
-                    for name, value in zip(args[0], func(*args[1:]))]
-            except Exception as e:
-                error.error(pos, file, traceback.format_exc())
-                return error.PYTHON_ERROR
+        elif ins == "on_new_scope" and argc == 0:
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                error.error(pos, file, f"on_new_scope expected a block!")
+                return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
+            instruction_pointer, body = temp
+            def make_on_new_scope_fn(ons_b, parent_frame):
+                def on_new_scope_tmp_fn(scope, scope_id):
+                    fr = new_frame()
+                    fr[0]["scope"] = scope
+                    fr[0]["scope_id"] = scope_id
+                    fr[0]["globals"] = parent_frame[0]
+                    return execute(ons_b, fr)
+                return on_new_scope_tmp_fn
+            on_new_scope.append({
+                "func": make_on_new_scope_fn(body, frame),
+                "from":f"dpl:{file}:{pos}"
+            })
+        elif ins == "on_pop_scope" and argc == 0:
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                error.error(pos, file, f"on_new_scope expected a block!")
+                return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
+            instruction_pointer, body = temp
+            def make_on_new_scope_fn(ons_b, parent_frame):
+                def on_new_scope_tmp_fn(scope, scope_id):
+                    fr = new_frame()
+                    fr[0]["scope"] = scope
+                    fr[0]["scope_id"] = scope_id
+                    fr[0]["globals"] = parent_frame[0]
+                    return execute(ons_b, fr)
+                return on_new_scope_tmp_fn
+            on_pop_scope.append({
+                "func": make_on_new_scope_fn(body, frame),
+                "from":f"dpl:{file}:{pos}"
+            })
         else:
             if not isinstance((obj := rget(frame[-1], ins)), dict) and obj in (
                 None,
@@ -1148,6 +1152,6 @@ def get_run():
 # to avoid circular imports
 # basically instead of an "import"
 # is equivalent to "export to"
-mod_s.register_run(run)
+mod_s.register_run(execute)
 mod_s.register_process(process)
-argproc_setter.set_run(run)
+argproc_setter.set_run(execute)

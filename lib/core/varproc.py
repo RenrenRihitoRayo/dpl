@@ -3,10 +3,22 @@
 import threading
 import os
 import sys
+from uuid import uuid4
 from . import constants
 from . import info
 from . import state
 from . import error
+
+'''
+{
+    "func": callable(scope: dict, scope_id: int) -> None,
+    "from": source # str, for ppf write "python:file:?"
+}
+'''
+# functions called on scope create
+on_new_scope = []
+# functions called on scope pop
+on_pop_scope = []
 
 # dependencies (populated by module_handler.py)
 dependencies = {
@@ -112,6 +124,7 @@ def new_frame():
     t["_local"] = t
     values_stack = [t]
     t["_frame_stack"] = values_stack
+    t["_scope_uuid"] = "disabled" # global scope wont just disappear
     return values_stack
 
 
@@ -132,13 +145,23 @@ def set_debug(name, value):
 
 def nscope(frame):
     "New scope"
-    t = {"_meta": meta_attributes}
+    t = {
+        "_meta": meta_attributes,
+        "_scope_uuid": str(uuid4()),
+    }
+    frame.append(t)
     if frame:
         t["_global"] = frame[0]
         t["_nonlocal"] = frame[-1]
-        t["_local"] = t
         t["_frame_stack"] = frame
-    frame.append(t)
+    t["_local"] = t
+    for func in on_new_scope:
+        try:
+            if err:=func["func"](t, len(frame)-1):
+                print(f"{func['from']}: Function raised a dpl error.")
+                raise error.DPLError(err)
+        except Exception as e:
+            raise Exception(f"{func['from']}: Function raised an error.") from e
     if is_debug_enabled("show_scope_updates"):
         error.info(f"New scope created!")
     return t
@@ -146,7 +169,13 @@ def nscope(frame):
 def pscope(frame):
     "Pop the current scope also discarding"
     if len(frame) > 1:
-        frame.pop()
+        for func in on_pop_scope:
+            try:
+                if err:=func["func"](frame.pop(), len(frame)):
+                    print(f"{func['from']}: Function raised a dpl error.")
+                    raise error.DPLError(err)
+            except Exception as e:
+                raise Exception(f"{func['from']}: Function raised an error.") from e
         if is_debug_enabled("show_scope_updates"):
             error.info(f"Scope discarded!")
     else:

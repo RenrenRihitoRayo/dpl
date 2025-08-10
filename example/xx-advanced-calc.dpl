@@ -1,5 +1,5 @@
-&use {std/text_io.py}
-&use {std/formats.py}
+use {std/text_io.py}
+use {std/formats.py}
 
 
 set sym = [! "-", "+", "*", "**", "/", "=", ";"]
@@ -48,9 +48,8 @@ fn evaluate(frame, expr)
         match nil
 	    case [ @ formats:is_identifier :current  ]
 
-            end
+        end
 	end
-    end
 end
 
 loop
