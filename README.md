@@ -147,7 +147,17 @@ Most recent at top.
 
 ## Inline Call Expressions
 
-See `15-functions.dpl` in examples.
+```DuProL
+&use {std}
+
+fn square(num)
+    return [:num ** 2]
+end
+
+set res = [call :square(4)]
+-- 16 --
+io:println(:res)
+```
 
 ## CFFI Support
 

@@ -6,28 +6,11 @@ ext.items["output"] = modules.sys.stdout
 
 @ext.add_func("print", "@ranged $$ :: any ...")
 def myPrint(_, __, *args, end="", sep=" "):
-    args = list(args)
-    for pos, arg in enumerate(args):
-        if isinstance(arg, dict) and helper.has_repr(arg):
-            arg[pos] = helper.get_repr(arg["_im_repr"])
     print(*args, end=end, sep=sep, file=ext.items["output"], flush=True)
+
 
 @ext.add_func(typed="@ranged $$ :: any ...")
 def println(_, __, *args, sep=" "):
-    args = list(args)
-    for pos, arg in enumerate(args):
-        if isinstance(arg, dict) and helper.has_repr(arg):
-            args[pos] = helper.get_repr(arg["_im_repr"])
-    print(*args, sep=sep, file=ext.items["output"], flush=True)
-
-
-@ext.add_func(typed="@ranged $$ :: any ...")
-def rawprint(_, __, *args, sep=" ", end=""):
-    print(*args, sep=sep, file=ext.items["output"], end=end, flush=True)
-
-
-@ext.add_func(typed="@ranged $$ :: any ...")
-def rawprintln(_, __, *args, sep=" "):
     print(*args, sep=sep, file=ext.items["output"], flush=True)
 
 
