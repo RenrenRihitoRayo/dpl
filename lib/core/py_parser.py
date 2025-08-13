@@ -213,6 +213,28 @@ def process(fcode, name="__main__"):
                 if mod_s.luaj_import(nframe, file, search_path, loc="."):
                     print(f"luaj: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
+            elif ins == "use:c" and argc == 1:
+                if args[0].startswith("{") and args[0].endswith("}"):
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
+                    search_path = "_std"
+                else:
+                    if name != "__main__":
+                        file = os.path.join(os.path.dirname(name), args[0])
+                    search_path = "_loc"
+                if mod_s.c_import(nframe, file, search_path, loc="."):
+                    print(f"luaj: Something wrong happened...\nLine {lpos}\nFile {name}")
+                    return error.PREPROCESSING_ERROR
+            elif ins == "use:c" and argc == 3 and args[1] == "as":
+                if args[0].startswith("{") and args[0].endswith("}"):
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
+                    search_path = "_std"
+                else:
+                    if name != "__main__":
+                        file = os.path.join(os.path.dirname(name), args[0])
+                    search_path = "_loc"
+                if mod_s.c_import(nframe, file, search_path, loc=".", alias=args[2]):
+                    print(f"luaj: Something wrong happened...\nLine {lpos}\nFile {name}")
+                    return error.PREPROCESSING_ERROR
             elif ins == "embed" and argc == 3 and args[1] == "as":
                 if args[0] == name:
                     nframe[-1][args[2]] = fcode

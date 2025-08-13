@@ -1,0 +1,6 @@
+&use:c {std-c/test.cdef}
+&use {std/text_io.py}
+
+dump_scope
+
+io:println(:test_c)

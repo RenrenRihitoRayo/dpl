@@ -57,7 +57,7 @@ def get_path(path, local=None):
     if "@" in path:
         file_path, _, scope = path.partition("@")
         if scope == "global":
-            return os.path.join(info.LIB_DIR, file_path)
+            return os.path.join(info.LIBDIR, file_path)
         elif scope == "local":
             return os.path.join(local, file_path)
         else:
@@ -71,26 +71,41 @@ def process_cdef(frame, code, local=None):
         "_name": "_unloaded",
         "_version": (float("-inf"),)*3, # assume always the lowest (oldest)
         "_path": None,
-        "_foreign": [], # all types and functions
-                        # helps us build the lib scope
+        "_foreign": {
+            "func": [],  # all types and functions
+            "type": [],  # helps us build the lib scope
+        },
     }
     for line in code.split("\n"):
         if line.startswith("#"):
             ins, *args = parse_line(line[1:])
             argc = len(args)
             if ins == "lib" and argc == 1:
-                data["name"] = args[0]
+                data["_name"] = args[0]
             elif ins == "path" and argc == 1:
-                data["path"] = get_path(args[0], local)
+                data["_path"] = get_path(args[0], local)
             elif ins == "version" and argc == 1:
-                data["version"] = Version(args[0])
+                data["_version"] = Version(args[0])
             elif ins in ("func", "type") and argc == 1:
-                data["_foreign"].append(arhs[0])
+                data["_foreign"][ins].append(args[0])
             else:
                 ...
         else:
             lines.append(line)
-    global_ffi.cdef(lines)
+    global_ffi.cdef("\n".join(lines))
+    if data["_path"] and os.path.isfile(data["_path"]):
+        lib = global_ffi.dlopen(data["_path"])
+        for name in data["_foreign"]["func"]:
+            def temp():
+                fn = getattr(lib, name, "???")
+                data[name] = lambda _, __, *args: fn(*args)
+            temp()
+        for name in data["_foreign"]["type"]:
+            data[name] = name
+    else:
+        print(f"Library not found: {data['_path']}")
+        return
+    return data
 
 def register_run(func):
     dpl.run_code = func
@@ -337,9 +352,9 @@ def luaj_import(
                 ),
                 file,
             )
-        if not os.path.isfile(file):
-            print("File not found:", file)
-            return 1
+    if not os.path.isfile(file):
+        print("File not found:", file)
+        return 1
     if os.path.isdir(file):
         if os.path.isfile(files:=os.path.join(file, "include-lua.txt")):
             with open(files) as f:
@@ -401,6 +416,22 @@ def luaj_import(
     varproc.dependencies["lua"].add(file)
 
 
+def c_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"], alias=None):
+    if not os.path.isabs(file):
+        if search_path is not None:
+            file = os.path.join(
+                {"_std": info.LINDIR, "_loc": loc}.get(
+                    search_path, search_path
+                ),
+                file,
+            )
+    if not os.path.isfile(file):
+        print("File not found:", file)
+        return 1
+    result = process_cdef(file, open(file).read())
+    name = alias or result["_name"]
+    frame[-1][name] = result
+
 def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"], alias=None):
     if not os.path.isabs(file):
         if search_path is not None:
@@ -410,9 +441,9 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
                 ),
                 file,
             )
-        if not os.path.exists(file):
-            print("Not found:", file)
-            return 1
+    if not os.path.exists(file):
+        print("Not found:", file)
+        return 1
     if os.path.isdir(file):
         if alias:
             frame[-1][alias] = {}
