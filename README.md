@@ -3,7 +3,7 @@
 > "Simplicity is everywhere in DPL, like an airport cutting expenses.
 > DPL gives you freedom. In return, it's your fault when you fail."
 
-Welcome to **DPL**, the programming language that doesn't try to be smart — just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
+Welcome to **DPL**, the programming language that doesn\'t try to be smart - just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
 There are no style rules. There are no guardrails. Just a loosely-held-together interpreter and your own chaotic energy.
 
 ## Philosophy
