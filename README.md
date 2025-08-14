@@ -191,7 +191,7 @@ void print_num(int num) {
 ```
 
 ## /lib/std-c/test_c.cdef
-```Header
+```C
 /*
     test.cdef
     A C library for testing DPL C-Compat
