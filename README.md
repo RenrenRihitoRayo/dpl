@@ -158,7 +158,8 @@ before installing the packages.
 <br><br>
 Third line builds C libraries for your platform.
 Make sure you run this command before using a C
-Library.
+Library. This isnt necessarily needed (DPL has no
+necessary C libraries yet)
 
 ---
 
