@@ -1,8 +1,13 @@
-lupa
+# Core dependencies, when removed may
+# break core features
 dill
+lupa
+cffi
+
+# Unecessary dependencies, ehen removed
+# will break non-core features (like REPL)
 requests
 prompt_toolkit
-# cffi - as of v1.4.8 not needed
 
 # for debugging purposes
 # modulegraph

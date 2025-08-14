@@ -24,8 +24,9 @@ import traceback
 # Simple mode
 if "simple-mode" in prog_flags:
     prog_flags.update((
-        "simple-run",
+        "skip-non-essential",
         "no-lupa",
+        "no-cffi",
     ))
 
 # Debug mode

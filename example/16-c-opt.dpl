@@ -1,6 +1,12 @@
-&use:c {std-c/test.cdef}
+-- Setup is hidden from user.
+   cdef and dlopen is hidden
+   from the user for simplicity --
+&use:c {std-c/test_c.cdef}
+
+-- Include io --
 &use {std/text_io.py}
 
-dump_scope
-
-io:println(:test_c)
+-- Hello, from C! --
+test_c.print_greeting()
+--  Number: 148   --
+test_c.print_num(148)

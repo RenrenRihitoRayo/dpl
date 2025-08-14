@@ -115,9 +115,9 @@ fn greet(name)
     return 420
 end
 
-catch (result) greet Alex
-greet Andrew
-io:println :result
+catch (result) greet(Alex)
+greet(Andrew)
+io:println(:result)
 ```
 
 ## Reasons to use DPL
@@ -136,6 +136,29 @@ Why use DPL?
 > DPL just works.
 > What your code doesnt?
 > Thats on you dumbass not DPL.
+
+## Installation
+
+After cloning this reporsitory
+run the following commands.
+```Plaintext
+[root@localhost dpl]# pip install -r requirements.txt
+[root@localhost dpl]# cd lib/std-c
+[root@localhost dpl/lib/std-c]# python3 _build_.py
+```
+
+First line ensures DPL dependencies are installed.
+However you will need flags to not use them as DPL
+uses these by default.
+* "-no-lupa" disables Lua inyer-opt (via LuaJIT)
+* "-no-cffi" disables C inter-opt
+* use "-simple-mode" to disable most dependencies
+You can also see `requirements.txt` to remove some
+before installing the packages.
+<br><br>
+Third line builds C libraries for your platform.
+Make sure you run this command before using a C
+Library.
 
 ---
 

@@ -1,4 +1,13 @@
+/*
+    test.cdef
+    A C library for testing DPL C-Compat
+*/
+
+
+/* What the library name is */
 #lib "test_c"
+
+/* Where the library file is */
 #path "std-c/lib/test_c.so@global"
 
 #func "print_greeting"
