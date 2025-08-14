@@ -169,6 +169,94 @@ Most recent at top.
 
 # 1.4.9
 
+## CFFI Has been finalized
+
+Using the new ".cdef" file extention.
+Using C with DPL has never been so easier than
+ever before! No "ffi.cdef" nonsense, its been hidden
+from you. Just do "&use:c" and call the functions
+like its any other DPL code.
+
+## /lib/std-c/lib/test_c.c
+```C
+#include <stdio.h>
+
+void print_greeting(void) {
+    printf("Hello, from C!\n");
+}
+
+void print_num(int num) {
+    printf("Number: %i\n", num);
+}
+```
+
+## /lib/std-c/test_c.cdef
+```Header
+/*
+    test.cdef
+    A C library for testing DPL C-Compat
+*/
+
+
+/* What the library name is */
+#lib "test_c"
+
+/* Where the library file is */
+#path "std-c/lib/test_c.so@global"
+
+#func "print_greeting"
+void print_greeting(void);
+
+#func "print_num"
+void print_num(int num);
+```
+
+## 16-c-opt.dpl
+```DuProL
+-- Setup is hidden from user.
+   cdef and dlopen is hidden
+   from the user for simplicity --
+&use:c {std-c/test_c.cdef}
+
+-- Include io --
+&use {std/text_io.py}
+
+-- Hello, from C! --
+test_c.print_greeting()
+--  Number: 148   --
+test_c.print_num(148)
+```
+
+## Added Pre-Evaluation Arguments
+
+This makes argument introspection possible.
+Since the function call syntax change,
+there was a side effect of the argument list
+to be lazily evaluated, DPL 1.4.9 just exposes
+this.
+
+
+```DuProL
+&use {std/text_io.py}
+
+fn test(num) [preserve-args = true]
+    -- [90,] (':arg',) --
+    io:println(:_args, :_raw_args)
+end
+
+set arg = 90
+
+test(:arg)
+```
+
+This enables the users to check how the argument
+was before evaluation if it was a variable or
+a constant.
+<br><br>
+This happens on runtime, and not preruntime however
+provides almost no slowdown (this is a side effect
+not an additional feature)
+
 ## Inline Call Expressions
 
 ```DuProL

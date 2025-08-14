@@ -68,13 +68,14 @@ def make_function(name, body, params):
             "name": name,
             "body": body,
             "args": params,
-            # "self": constants.nil,
-            "memoize": {},
             "capture": constants.nil,
             "variadic":{
                 "name": vname,
                 "index": vindex,
-            }
+            },
+            "tags": { # tags for DPL to treat functions differently.
+                "preserve-args": False, # save un-evaluated arguments?
+            },
         },
         name,
         "builtin-function-object",

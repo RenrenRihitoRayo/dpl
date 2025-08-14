@@ -1,0 +1,17 @@
+&use {std/text_io.py}
+
+# Preserve original un-evaliated args
+# Useful for introspection
+# Or maybe checking for static calls?
+
+# IE some functions can check
+# if an argument should be a constant
+# or a variable
+
+fn test(num) [preserve-args = true]
+    io:println(:_args, :_raw_args)
+end
+
+set arg = 90
+
+test(:arg)

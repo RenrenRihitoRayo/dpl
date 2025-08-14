@@ -492,14 +492,22 @@ def execute(code, frame=None):
                 return error.REFERENCE_ERROR
             rset(frame[reference["scope"]], reference["name"], value)
             reference["value"] = value
-        elif ins == "fn" and argc == 2:
-            name, params = args
+        elif ins == "fn" and argc >= 2:
+            name, params, *tags = args
             block = get_block(code, instruction_pointer)
             if block is None:
                 break
             else:
                 instruction_pointer, body = block
             func = objects.make_function(name, body, params)
+            for tag in tags:
+                if isinstance(tag, str):
+                    func["tags"][tag] = True
+                elif isinstance(tag, dict):
+                    (tag, value), = tag.items()
+                    func["tags"][tag] = value
+                else:
+                    error.error(pos, file, f"Invalid tag: {tag!r}")
             rset(frame[-1], name, func)
         elif ins == "use" and argc == 1:
             if args[0].startswith("{") and args[0].endswith("}"):
@@ -820,11 +828,16 @@ def execute(code, frame=None):
             return error.STOP_FUNCTION
         elif ins == "catch" and argc >= 2:  # catch return value of a function
             rets, func_name, args = args
-            args = process_args(frame, args)
             if (temp := rget(frame[-1], func_name, default=rget(frame[0], func_name))) == constants.nil or not isinstance(temp, dict):
                 error.error(pos, file, f"Invalid function {func_name!r}!")
                 break
+            if temp["tags"]["preserve-args"]:
+                raw_args = args[0]
+            args = process_args(frame, args)
             nscope(frame)
+            if temp["tags"]["preserve-args"]:
+                frame[-1]["_raw_args"] = raw_args
+            frame[-1]["_args"] = args
             if temp["capture"] != constants.nil:
                 frame[-1]["_capture"] = temp["capture"]
             if temp["variadic"]["name"] != constants.nil:
@@ -956,8 +969,13 @@ def execute(code, frame=None):
                 "capture" in temp and
                 argc == 1
             ):  # Call a function
+            if temp["tags"]["preserve-args"]:
+                raw_args = args[0]
             args = process_args(frame, args[0])
             nscope(frame)
+            if temp["tags"]["preserve-args"]:
+                frame[-1]["_raw_args"] = raw_args
+            frame[-1]["_args"] = args
             if temp["variadic"]["name"] != constants.nil:
                 if len(args)-1 >= temp["variadic"]["index"]:
                     variadic = []
