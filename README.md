@@ -177,7 +177,7 @@ ever before! No "ffi.cdef" nonsense, its been hidden
 from you. Just do "&use:c" and call the functions
 like its any other DPL code.
 
-## /lib/std-c/lib/test_c.c
+#### /lib/std-c/lib/test_c.c
 ```C
 #include <stdio.h>
 
@@ -190,7 +190,7 @@ void print_num(int num) {
 }
 ```
 
-## /lib/std-c/test_c.cdef
+#### /lib/std-c/test_c.cdef
 ```C
 /*
     test.cdef
@@ -211,7 +211,7 @@ void print_greeting(void);
 void print_num(int num);
 ```
 
-## 16-c-opt.dpl
+#### 16-c-opt.dpl
 ```DuProL
 -- Setup is hidden from user.
    cdef and dlopen is hidden
