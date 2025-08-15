@@ -871,44 +871,38 @@ def execute(code, frame=None):
             pscope(frame)
         elif ins == "DEFINE_ERROR" and 0 < argc < 3:
             error.register_error(*args)
-        elif ins == "pycatch" and argc >= 2:  # catch return value of a python function
-            rets, name, *args = args
+        elif ins == "pycatch" and argc == 3:  # catch return value of a python function
+            rets, name, args = args
+            args = process_args(frame, args)
             if (function := rget(frame[-1], name, default=rget(frame[0], name))) == constants.nil or not hasattr(function, "__call__"):
                 error.error(pos, file, f"Invalid function {name!r}!")
                 return error.NAME_ERROR
             try:
-                if argc == 3 and isinstance(args[0], dict) and args[0].get("[RGS]"):
-                    args[0].pop("[RGS]")
-                    pa = args[0].pop("[PARGS]", tuple())
-                    res = mod_s.call(
-                        function, frame, meta_attributes["internal"]["main_path"], pa, args[0]
-                    )
+                func_params = mod_s.get_py_params(function)[2:]
+                if func_params and any(map(lambda x: x.endswith("_body") or x.endswith("_xbody"), func_params)):
+                    t_args = []
+                    for i, _ in zip(func_params, args):
+                        if i.endswith("_xbody"):
+                            temp = get_block(code, instruction_pointer, start=0)
+                            if temp is None:
+                                error.error(pos, file, f"Function '{function.__name__}' expected a block!")
+                                return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
+                            instruction_pointer, body = temp
+                            t_args.append(body)
+                        elif i.endswith("_body"):
+                            temp = get_block(code, instruction_pointer)
+                            if temp is None:
+                                error.error(pos, file, f"Function '{function.__name__}' expected a block!")
+                                return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
+                            instruction_pointer, body = temp
+                            t_args.append(body)
+                        else:
+                            t_args.append(args.pop(0))
                 else:
-                    func_params = mod_s.get_py_params(function)[2:]
-                    if func_params and any(map(lambda x: x.endswith("_body") or x.endswith("_xbody"), func_params)):
-                        t_args = []
-                        for i, _ in zip(func_params, args):
-                            if i.endswith("_xbody"):
-                                temp = get_block(code, instruction_pointer, start=0)
-                                if temp is None:
-                                    error.error(pos, file, f"Function '{function.__name__}' expected a block!")
-                                    return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
-                                instruction_pointer, body = temp
-                                t_args.append(body)
-                            elif i.endswith("_body"):
-                                temp = get_block(code, instruction_pointer)
-                                if temp is None:
-                                    error.error(pos, file, f"Function '{function.__name__}' expected a block!")
-                                    return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
-                                instruction_pointer, body = temp
-                                t_args.append(body)
-                            else:
-                                t_args.append(args.pop(0))
-                    else:
-                        t_args = args
-                    res = mod_s.call(
-                        function, frame, meta_attributes["internal"]["main_path"], t_args
-                    )
+                    t_args = args
+                res = mod_s.call(
+                    function, frame, meta_attributes["internal"]["main_path"], t_args
+                )
                 if (
                     res is None
                     and info.WARNINGS

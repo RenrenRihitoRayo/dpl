@@ -70,7 +70,10 @@ def process_cdef(frame, code, local=None):
     data = {
         "_name": "_unloaded",
         "_version": (float("-inf"),)*3, # assume always the lowest (oldest)
-        "_path": None,
+        "_path": {
+            "nt": None,
+            "posix": None,
+        },
         "_foreign": {
             "func": [],  # all types and functions
             "type": [],  # helps us build the lib scope
@@ -82,8 +85,14 @@ def process_cdef(frame, code, local=None):
             argc = len(args)
             if ins == "lib" and argc == 1:
                 data["_name"] = args[0]
+            elif ins == "path-nt" and argc == 1:
+                data["_path"]["nt"] = get_path(args[0], local)
+            elif ins == "path-posix" and argc == 1:
+                data["_path"]["posix"] = get_path(args[0], local)
+            elif ins.startswith("path-") and argc == 1:
+                data["_path"][ins[5:]] = get_path(args[0], local)
             elif ins == "path" and argc == 1:
-                data["_path"] = get_path(args[0], local)
+                data["_path"][os.name] = get_path(args[0], local)
             elif ins == "version" and argc == 1:
                 data["_version"] = Version(args[0])
             elif ins in ("func", "type") and argc == 1:
@@ -93,12 +102,16 @@ def process_cdef(frame, code, local=None):
         else:
             lines.append(line)
     global_ffi.cdef("\n".join(lines))
-    if data["_path"] and os.path.isfile(data["_path"]):
-        lib = global_ffi.dlopen(data["_path"])
+    if data["_path"][os.name] and os.path.isfile(data["_path"][os.name]):
+        try:
+            lib = global_ffi.dlopen(data["_path"][os.name])
+        except:
+            print(traceback.format_exc())
+            return
         for name in data["_foreign"]["func"]:
             def temp():
                 fn = getattr(lib, name, "???")
-                data[name] = lambda _, __, *args: fn(*args)
+                data[name] = lambda _, __, *args: (fn(*args),)
             temp()
         for name in data["_foreign"]["type"]:
             data[name] = name
@@ -429,6 +442,8 @@ def c_import(frame, file, search_path=None, loc=varproc.meta_attributes["interna
         print("File not found:", file)
         return 1
     result = process_cdef(file, open(file).read())
+    if result is None:
+        return 1
     name = alias or result["_name"]
     frame[-1][name] = result
 
@@ -500,13 +515,5 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
 
 
 def call(func, frame, file, args):
-    if args and isinstance(args[0], arguments_handler):
-        if args[0].args:
-            args[0].args.insert(0, file)
-            args[0].args.insert(0, frame)
-        else:
-            args[0].args = [frame, file]
-        ret = args[0].call(func)
-    else:
-        ret = func(frame, file, *args)
+    ret = func(frame, file, *args)
     return ret

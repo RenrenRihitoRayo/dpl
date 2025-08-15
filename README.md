@@ -150,7 +150,7 @@ run the following commands.
 First line ensures DPL dependencies are installed.
 However you will need flags to not use them as DPL
 uses these by default.
-* "-no-lupa" disables Lua inyer-opt (via LuaJIT)
+* "-no-lupa" disables Lua inter-opt (via LuaJIT)
 * "-no-cffi" disables C inter-opt
 * use "-simple-mode" to disable most dependencies
 You can also see `requirements.txt` to remove some
@@ -171,7 +171,7 @@ Most recent at top.
 
 ## CFFI Has been finalized
 
-Using the new ".cdef" file extention.
+Using the new ".cdef" file extension.
 Using C with DPL has never been so easier than
 ever before! No "ffi.cdef" nonsense, its been hidden
 from you. Just do "&use:c" and call the functions
