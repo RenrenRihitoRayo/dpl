@@ -871,7 +871,7 @@ def execute(code, frame=None):
             pscope(frame)
         elif ins == "DEFINE_ERROR" and 0 < argc < 3:
             error.register_error(*args)
-        elif ins == "pycatch" and argc == 3:  # catch return value of a python function
+        elif ins == "ecatch" and argc == 3:  # catch return value of a python function
             rets, name, args = args
             args = process_args(frame, args)
             if (function := rget(frame[-1], name, default=rget(frame[0], name))) == constants.nil or not hasattr(function, "__call__"):
