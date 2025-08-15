@@ -11,5 +11,5 @@ test_c.print_greeting()
 --  Number: 148   --
 test_c.print_num(148)
 
-ecatch (test) test_c.fib(10)
+ecatch (result) test_c.fib(10)
 io:println('fib(10) = ${result}')
