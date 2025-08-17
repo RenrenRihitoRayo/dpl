@@ -1,4 +1,5 @@
 from io import StringIO
+from . import constants
 
 def old_format(template, vars):
     for name, value in vars.items(): # expect a flattened dict
@@ -56,7 +57,7 @@ def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
                 var_part[-1], default_text = var_part[-1].split(":", 1)
 
             for name in var_part:
-                if name in data:
+                if name in data and data[name] != constants.nil:
                     result.write(str(data[name]) if is_str else repr(data[name]))
                     break
             else:

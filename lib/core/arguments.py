@@ -593,14 +593,12 @@ def evaluate(frame, expression):
             if not obj:
                 return constants.nil
             index = process_arg(frame, index[0])
-            if not isinstance(obj, (tuple, list, str, dict)):
-                return constants.nil
-            if isinstance(obj, (tuple, list, str)) and isinstance(index, int) and index >= len(obj) and abs(index)-1 >= len(object):
-                return constants.nil
-            elif isinstance(obj, dict) and index not in obj:
-                return constants.nil
+            if isinstance(index, str) and isinstance(obj, dict):
+                return obj.get(index, constants.nil)
+            elif isinstance(index, int) and isinstance(obj, (str, tuple, list)):
+                return obj[index] if abs(index)-1 <= len(obj) else constants.nil
             else:
-                return obj[index]
+                return constants.nil
         # types
         case ["tuple", *lst]:
             return tuple(lst)

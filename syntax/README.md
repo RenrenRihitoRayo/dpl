@@ -2,4 +2,7 @@
 
 Currently Supported Applications:
 * Sublime Text
-* Vim (todo)
+* Vim
+
+Future Support:
+* VScode

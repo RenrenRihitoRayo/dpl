@@ -1177,6 +1177,19 @@ def get_run():
     return run
 
 ##################################
+#       for -get-internals       #
+##################################
+# Do not modify without permission
+
+if "get-internals" in info.program_flags:
+    varproc.meta_attributes["runtime_processing"] = {
+        "process_code": lambda _, __, *args: (process(*args),),
+        "execute_code": lambda _, __, *args: (execute(*args),),
+        "run_code": lambda _, __, *args: (run(*args),),
+        "get_block": lambda _, __, *args: get_block(*args),
+    }
+
+##################################
 #      BEWARE DARK SOURCERY      #
 ##################################
 # this is classified as dark magic...

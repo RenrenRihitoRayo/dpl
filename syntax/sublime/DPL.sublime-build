@@ -1,0 +1,30 @@
+{
+	"cmd" : ["python3.13","C:/Users/estre/OneDrive/Desktop/dpl/dpl.py", "run", "$file"],
+	"variants": [
+		{
+			"name": "Simple Mode",
+			"cmd": ["python3.13","C:/Users/estre/OneDrive/Desktop/dpl/dpl.py", "-simple-mode", "$file"],
+			"working_dir" : "$file_path",
+			"shell" : true,
+			"encoding" : "utf-8"
+		},
+		{
+			"name": "Simple Run",
+			"cmd": ["python3.13","C:/Users/estre/OneDrive/Desktop/dpl/dpl.py", "-simple-run", "$file"],
+			"working_dir" : "$file_path",
+			"shell" : true,
+			"encoding" : "utf-8"
+		},
+		{
+			"name": "Pure DPL Mode",
+			"cmd": ["python3.13","C:/Users/estre/OneDrive/Desktop/dpl/dpl.py", "-no-cffi", "-no-lupa", "-simple-run", "$file"],
+			"working_dir" : "$file_path",
+			"shell" : true,
+			"encoding" : "utf-8"
+		},
+	],
+	"selector" : "source.dpl",
+	"working_dir" : "$file_path",
+	"shell" : true,
+	"encoding" : "utf-8",
+}

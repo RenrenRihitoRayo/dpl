@@ -213,6 +213,20 @@ def ez_run(code, process=True, file="???"):
         else:
             exit(err)
 
+def get_start_path(start):
+    if os.path.isfile(start):
+        return start
+    elif os.path.isdir(start):
+        if os.path.isfile(start_file:=os.path.join(start, "dpl_start.txt")):
+            return os.path.join(start, open(start_file, "r").read().strip())
+        elif os.path.isfile(start_file:=os.path.join(start, "main.dpl")):
+            return start_file
+        else:
+            print(f"{start}: No valid start paths found!\ndpl_start.txt nor main.dpl was found in the directory.")
+            exit(1)
+    print(f"{start}: Path is invalid!")
+    exit(1)
+
 if "instant-help" in prog_flags:
     print(help_str)
     exit(0)
@@ -224,7 +238,7 @@ if "simple-run" in prog_flags:
         END = time.perf_counter() - INIT_START_TIME
         s, u = utils.convert_sec(END)
         print(f"DEBUG: Initialization time: {s}{u}")
-    with open(sys.argv[0], "r") as f:
+    with open(get_start_path(sys.argv[0]), "r") as f:
         varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
         ez_run(f.read(), sys.argv[0])
     exit(0)
@@ -237,9 +251,7 @@ def handle_args():
         return
     match (info.ARGV):
         case ["run", file, *args]:
-            if not os.path.isfile(file):
-                print("Invalid file path:", file)
-                exit(1)
+            file = get_start_path(file)
             info.ARGV.clear()
             info.ARGV.extend([file, *args])
             varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
@@ -256,9 +268,7 @@ def handle_args():
             if not has_pp2:
                 print("Suply the '-use-py-parser2' flag first!")
                 exit(1)
-            if not os.path.isfile(file):
-                print("Invalid file path:", file)
-                exit(1)
+            file = get_start_path(file)
             with open(os.path.basename(file)+".llir", "w") as output:
                 varproc.meta_attributes["internal"]["main_path"] = (
                     os.path.dirname(os.path.abspath(file)) + os.sep
@@ -307,9 +317,7 @@ Pipe line:
                     output.write(pprint.pformat(out))
                     print("Done!")
         case ["dump-hlir", file]:
-            if not os.path.isfile(file):
-                print("Invalid file path:", file)
-                exit(1)
+            file = get_start_path(file)
             with open(os.path.basename(file)+".hlir", "w") as output:
                 varproc.meta_attributes["internal"]["main_path"] = (
                     os.path.dirname(os.path.abspath(file)) + os.sep
@@ -332,16 +340,16 @@ Code format: (
                     output.write(pprint.pformat(parser.process(inputf.read())))
                     print("Done!")
         case ["dump-ast", file]:
+            file = get_start_path(file)
             with open(f"{file}.dplad", "w") as output:
                 with open(file) as input:
                     ast_gen.walk(ast_gen.gen_ast_from_str(input.read()), file=output)
         case ["dump-ast-cdpl", file]:
+            file = get_start_path(file)
             with open(f"{file}.dplad", "w") as output:
                 ast_gen.walk(ast_gen.gen_ast_from_cdpl(file), file=output)
         case ["rc", file, *args]:
-            if not os.path.isfile(file):
-                print("Invalid file path:", file)
-                exit(1)
+            file = get_start_path(file)
             info.ARGV.clear()
             info.ARGV.extend([file, *args])
             varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
@@ -362,9 +370,7 @@ Code format: (
                 print("Error:", repr(e))
                 exit(1)
         case ["compile", file]:
-            if not os.path.isfile(file):
-                print("Invalid file path:", file)
-                exit(1)
+            file = get_start_path(file)
             output = file.rsplit(".", 1)[0] + ".cdpl"
             try:
                 with open(file, "r") as in_file:

@@ -169,6 +169,20 @@ Most recent at top.
 
 # 1.4.9
 
+## DPL Can now run directories!
+
+When DPL gets a directory as the script path.
+It will search for what script it should execute.
+These are the list:
+* "dir/dpl_main.txt" its content should be the script path relative to the root. IE if its in "dir/othername.dpl" it should be "othername.dpl"
+* "dir/main.dpl" will be ran when "dpl_main.txt" doesnt exist in the directory.
+* If it fails to see both of the above it exits and prints an error.
+
+## Syntax Files Updated
+
+The syntax files for both sublime text and vim have been
+updated. From now on both files will be maintained per update.
+
 ## CFFI Has been finalized
 
 Using the new ".cdef" file extension.
