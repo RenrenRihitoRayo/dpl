@@ -33,7 +33,7 @@ fn tokenize(text)
 	        set _ = [ :temp @ append :char ]
 	    end
         end
-	inc p
+	    inc p
     end
     if :temp
         set _ = [ :tokens @ append [ "" @ join :temp ] ]

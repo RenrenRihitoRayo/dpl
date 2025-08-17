@@ -555,13 +555,13 @@ def evaluate(frame, expression):
         return processed[1] % processed[2]
     elif len(processed) == 2 and processed[0] == "len":
         return len(processed[1])
-    elif len(processed) == 2 and processed[0] == "head:rest:tail":
+    elif len(processed) == 2 and processed[0] == "head:body:tail":
         head, *rest, tail = processed[1]
         return head, rest, tail
-    elif len(processed) == 2 and processed[0] == "head:rest":
+    elif len(processed) == 2 and processed[0] == "head:body":
         head, *rest = processed[1]
         return head, rest
-    elif len(processed) == 2 and processed[0] == "rest:tail":
+    elif len(processed) == 2 and processed[0] == "body:tail":
         *res, tail = processed[1]
         return rest, tail
     elif len(processed) == 2 and processed[0] == "head":
@@ -660,11 +660,6 @@ def evaluate(frame, expression):
             return tuple(my_range(num, end))
         case ["drawrange", num, end]:
             return my_range(num, end)
-        case ["length", item]:
-            try:
-                return len(item)
-            except:
-                return 0
         # values
         case ["set", name, "=", value]:
             varproc.rset(frame[-1], name, value)
@@ -684,16 +679,6 @@ def evaluate(frame, expression):
                 return constants.nil
             return getattr(obj, attr)
         # other
-        case ["?args", *args]:
-            lst = []
-            dct = {}
-            for i in args:
-                if isinstance(i, kwarg):
-                    dct[i.name] = i.value
-                else:
-                    lst.append(i)
-            temp = pah.arguments_handler(lst, dct)
-            return temp
         case default:
             for name, fn in matches.items():
                 try:

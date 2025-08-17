@@ -27,6 +27,7 @@ if "simple-mode" in prog_flags:
         "skip-non-essential",
         "no-lupa",
         "no-cffi",
+        "simple-run",
     ))
 
 # Debug mode

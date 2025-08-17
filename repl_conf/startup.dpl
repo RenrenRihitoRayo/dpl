@@ -14,8 +14,8 @@
 &use {std/text_io.py}
 
 # This is the default start up text.
-# Upon startup you might see something like
 
+# Upon startup you might see something like
 # DPL REPL for DPL v1.4.8
 # Python 3.12.0 [...]
 io:println("DPL REPL for DPL" :_meta.internal.version)

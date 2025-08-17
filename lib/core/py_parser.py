@@ -492,6 +492,8 @@ def execute(code, frame=None):
                 return error.REFERENCE_ERROR
             rset(frame[reference["scope"]], reference["name"], value)
             reference["value"] = value
+        elif ins == "sleep" and argc == 1 and isinstance(args[0], (int, float)):
+            time.sleep(args[0])
         elif ins == "fn" and argc >= 2:
             name, params, *tags = args
             block = get_block(code, instruction_pointer)

@@ -51,6 +51,12 @@ meta_attributes["internal"]["os"] = {
     "os_name":info.SYS_OS_NAME.lower(),
 }
 
+meta_attributes["internal"]["os_name"] = os.name
+# Above can be
+# nt - windows based
+# posix - posix compliant systems
+# jython - running on a jython environment
+
 if info.UNIX and info.SYS_OS_NAME == "linux":
     meta_attributes["internal"]["os"]["linux"] = {
         "name": info.LINUX_DISTRO,
