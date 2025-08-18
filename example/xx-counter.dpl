@@ -1,0 +1,29 @@
+&use {std/text_io.py}
+
+
+
+if [ :_meta.argc == 2 ]
+    set message = [:_meta.argv(1)]
+end
+
+if [ nil? :message ]
+    set message = " - please wait! Be right back in a jiff!"
+end
+
+get_time delta
+
+fn stamp_to_time(stamp)
+    set seconds = [ ?int :stamp ]
+    set minutes = [ [ ?string [ :seconds // 60 ] ] @ zfill 2 ]
+    set final_seconds = [ [ ?string [ :seconds % 60 ] ] @ zfill 2 ]
+    return '${minutes}:${final_seconds}'
+end
+
+io:println("PID:", :_meta.internal.pid)
+
+while true
+    get_time now
+    set res = [ :now - :delta ]
+    io:rawoutput("\e[s\e[H\e[K", [call :stamp_to_time(:res)], :message, '\n\e[u')
+    sleep 0.5
+end

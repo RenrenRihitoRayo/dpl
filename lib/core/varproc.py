@@ -118,7 +118,7 @@ def update_globals(stuff):
 
 def new_frame():
     "Generate a new scope frame"
-    t = {"_meta": meta_attributes}
+    t = {"_meta": meta_attributes, "_scope_number": 0}
     t["_global"] = t
     t["_nonlocal"] = t
     t["_local"] = t
@@ -155,6 +155,7 @@ def nscope(frame):
         t["_nonlocal"] = frame[-1]
         t["_frame_stack"] = frame
     t["_local"] = t
+    t["_scope_number"] = len(frame)-1
     for func in on_new_scope:
         try:
             if err:=func["func"](t, len(frame)-1):
@@ -168,10 +169,11 @@ def nscope(frame):
 
 def pscope(frame):
     "Pop the current scope also discarding"
+    scope = frame.pop()
     if len(frame) > 1:
         for func in on_pop_scope:
             try:
-                if err:=func["func"](frame.pop(), len(frame)):
+                if err:=func["func"](scope, len(frame)):
                     print(f"{func['from']}: Function raised a dpl error.")
                     raise error.DPLError(err)
             except Exception as e:
@@ -181,6 +183,7 @@ def pscope(frame):
     else:
         if is_debug_enabled("show_scope_updates"):
             error.info(f"Tried to discard global scope!")
+
 
 
 def rget(dct, full_name, default=constants.nil, sep=".", meta=True):

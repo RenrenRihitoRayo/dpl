@@ -1,15 +1,16 @@
 # A simple way of making objects and methods n stuff...
 
+from itertools import zip_longest
 from . import varproc
 from . import constants
 
 class object_type(dict):
     def __repr__(self):
-        return "<object>"
+        return f"<object {self['_name']}>"
 
 class reference_type(object_type):
     def __repr__(self):
-        return f"<reference {self['name']} in scope {self['scope']}:{self['scope_uuid']}>"
+        return f"<reference {self['name']} = {self['value']!r} in scope {self['scope']}:{self['scope_uuid']}>"
 
 class function_type(object_type):
     def __repr__(self):
@@ -24,50 +25,27 @@ def make_reference(scope_index, scope_uuid, name, value, data=constants.none):
         "tag": data,
     })
 
-def set_repr(frame, name="???", type_name=None, repr=None, func=False):
-    if "_internal" not in frame:
-        frame["_internal"] = {
-            "name": name,
-            "type": f"type:{type_name or name}",
-            "docs": "An object.",
-        }
-    if func:
-        return frame
-    if "_im_repr" not in frame:
-        frame["_im_repr"] = {  # define a boring default _im_repr
-            "name": 0,
-            "args": [],
-            "defaults": 0,
-            # "self": 0,
-            "variadic": {
-                "name": constants.nil,
-                "index": 0
-            },
-            "body": [
-                (
-                    0,
-                    "_internal",
-                    "return",
-                    (repr or f"<{type_name or 'Object'} {name}>",),
-                )
-            ],
-        }
-    return frame
-
 
 def make_function(name, body, params):
     vname = constants.nil
     vindex = 0
-    for pos, an in enumerate(params):
+    defs = {}
+    params_ = []
+    for n in params:
+        if isinstance(n, dict):
+            (n, v), = n.items()
+            defs[n] = v
+        params_.append(n)
+    for pos, an in enumerate(params_):
         if an.startswith("variadic:"):
             vindex = pos
             vname = an[9:]
             break
-    return function_type(set_repr(
+    return function_type(
         {
             "name": name,
             "body": body,
-            "args": params,
+            "args": params_,
             "capture": constants.nil,
             "variadic":{
                 "name": vname,
@@ -76,21 +54,46 @@ def make_function(name, body, params):
             "tags": { # tags for DPL to treat functions differently.
                 "preserve-args": False, # save un-evaluated arguments?
             },
+            "defaults": defs,
+        }
+    )
+
+def make_method(name, body, params, self):
+    vname = constants.nil
+    vindex = 0
+    defs = {}
+    params_ = []
+    for n in params:
+        if isinstance(n, dict):
+            (n, v), = n.items()
+            defs[n] = v
+        params_.append(n)
+    for pos, an in enumerate(params_):
+        if an.startswith("variadic:"):
+            vindex = pos
+            vname = an[9:]
+            break
+    return function_type(
+        {
+            "name": name,
+            "body": body,
+            "args": params_,
+            "capture": constants.nil,
+            "variadic":{
+                "name": vname,
+                "index": vindex,
+            },
+            "tags": { # tags for DPL to treat functions differently.
+                "preserve-args": False, # save un-evaluated arguments?
+            },
+            "defaults": defs,
+            "self": self,
         },
-        name,
-        "builtin-function-object",
-        func=True
-    ))
+    )
 
 def make_object(name):
-    return object_type(set_repr(
+    return object_type(
         {
-            "_internal": {
-                "name": name,
-                "type": f"type:{name}",
-                "instance_name": f"{name}:root"
-            }
+            "_name": name,
         },
-        name,
-        "builtin-object:Object",
-    ))
+    )

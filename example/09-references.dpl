@@ -1,15 +1,19 @@
 &use {std/text_io.py}
 
-set var = 90
-
-fn test(reference)
-    # deref the value
-    set previous_val = reference::deref
-    setref :reference = 80
-    io:println('${reference.name} changed into 80 from ${previous_val}')
+dict person
+    set name = "Darren"
 end
 
-# Prints: var changed into 80 from 90
-test(var::ref)
+fn test(reference, new_val)
+    setref :reference = :new_val
+end
 
-io:println(:var)
+io:println(:person.name)
+
+test(person.name::ref, Andrew)
+
+io:println(:person.name)
+
+test(person.name::ref, Carl)
+
+io:println(:person.name)

@@ -87,7 +87,7 @@ def get_size_of(_, __, object):
 
 try:
     get_size_of(0, 0, 0)
-    meta_attributes["internal"]["SizeOf"] = get_size_of
+    meta_attributes["internal"]["getsizeof"] = get_size_of
 except:
 
     def temp(_, __, ___):
