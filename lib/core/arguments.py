@@ -67,6 +67,7 @@ type_annotations = {
     "py::string": str,
     "py::float": float,
     "py::bool": bool,
+    "py::dict": dict,
     "py::sequence": list | set | tuple,
     "c::int": c_int, "c::uint": c_uint,
     "c::double": c_double,
@@ -76,11 +77,14 @@ type_annotations = {
     "c::short": c_short, "c::ushort": c_ushort,
     "c::long": c_long, "c::ulong": c_ulong,
     "c::bool": c_bool,
+    "py::object": object,
 }
 
 dpl_constants = {
     "py::none": None,
 }
+
+type_backs = {value: name for name, value in (type_annotations | dpl_constants).items()}
 
 from . import state
 from . import constants
@@ -224,6 +228,7 @@ def parse_dict(frame, temp_name, body):
     data = {}
     varproc.rset(frame[-1], temp_name, data)
     for p, [pos, file, ins, args] in enumerate(body):
+        args = process_args(frame, args)
         argc = len(args)
         if ins == "set" and argc == 3 and args[1] == "=":
             name, _, value = args
@@ -329,7 +334,7 @@ def is_id(arg):
     return arg.replace(".", "a").replace("_", "a").replace(":", "a").replace("?", "a").replace("-", "a").isalnum()
 
 
-def is_rvar(arg):
+def is_reference_var(arg):
     if arg.endswith("::ref"):
         arg = arg[:-5]
         if arg.endswith("::tag"):
@@ -342,15 +347,11 @@ def is_deref(arg):
     return arg.endswith("::deref") and is_id(arg[:-7])
 
 
-def is_fvar(arg):
+def is_read_var(arg):
     return arg.startswith(":") and is_id(arg[1:])
 
 
-def is_prvar(arg):
-    return arg.startswith("$") and is_id(arg[1:])
-
-
-def is_pfvar(arg):
+def is_preruntime_read_var(arg):
     return arg.startswith(".:") and is_id(arg[2:])
 
 
@@ -405,7 +406,7 @@ def expr_runtime(frame, arg):
         return evaluate(frame, arg)
     elif not isinstance(arg, str):
         return arg
-    elif is_fvar(arg):
+    elif is_read_var(arg):
         if varproc.debug_settings["allow_automatic_global_name_resolution"]:
             v = varproc.rget(
                 frame[-1],
@@ -417,22 +418,13 @@ def expr_runtime(frame, arg):
         if get_debug("disable_nil_values") and v == constants.nil:
             raise Exception(f"{arg!r} is nil!")
         return v
-    elif is_rvar(arg):
+    elif is_reference_var(arg):
         full_name = arg[:-5]
-        if full_name.endswith("::tag"):
-            full_name, tag_name = full_name[:-5].rsplit(":", maxsplit=1)
-            tag = varproc.rget(
-                frame[-1],
-                tag_name,
-                default=varproc.rget(frame[0], tag_name),
-            )
-        else:
-            tag = constants.none
-        return objects.make_reference(len(frame)-1, frame[-1]["_scope_uuid"], full_name, varproc.rget(
+        return objects.make_reference(frame[-1]["_scope_number"], frame[-1]["_scope_uuid"], full_name, varproc.rget(
                 frame[-1],
                 full_name,
                 default=varproc.rget(frame[0], full_name),
-            ), tag)
+            ), {})
     elif is_deref(arg):
         reference = varproc.rget(
                 frame[-1],
@@ -486,9 +478,9 @@ def is_static(frame, code):
             continue
         elif i in RT_EXPR:
             return False
-        elif is_pfvar(i) and varproc.rget(frame[-1], i[2:], default=None) is None:
+        elif is_preruntime_read_var(i) and varproc.rget(frame[-1], i[2:], default=None) is None:
             return False
-        elif is_fvar(i):
+        elif is_read_var(i):
             return False
     return True
 
@@ -502,7 +494,7 @@ def to_static(frame, code):
                 code[pos] = to_static(frame, i)
         elif not isinstance(i, str):
             continue
-        elif is_pfvar(i) and (not (var:=varproc.rget(frame[-1], i[2:], default=None)) is None):
+        elif is_preruntime_read_var(i) and (not (var:=varproc.rget(frame[-1], i[2:], default=None)) is None):
             code[pos] = var
     return code
 
@@ -581,10 +573,16 @@ def evaluate(frame, expression):
         })
         if func["capture"]:
             frame[-1]["_capture"] = func["capture"]
-        run_code(func["body"], frame=frame)
+        if err:=run_code(func["body"], frame=frame):
+            raise error.DPLError(err)
         varproc.pscope(frame)
         ret = frame[-1]["_intern_result"]
         return ret
+    elif len(processed) == 2 and processed[0] == "typeof":
+        for type in type_backs:
+            if isinstance(processed[1], type):
+                return type_backs[type]
+        return "?::unknown"
     match (processed):
         # conditionals
         case ["if", value, "then", true_v, "else", false_v]:
