@@ -200,7 +200,7 @@ def rec(this, ind=0):
                 )
 
 
-def ez_run(code, process=True, file="???"):
+def ez_run(code, file="???", process=True):
     "Run a DPL script in an easier way, hence ez_run"
     if process:
         code = parser.process_code(code)

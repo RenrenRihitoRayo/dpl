@@ -421,41 +421,29 @@ def execute(code, frame=None):
             if entry_point:
                 function_obj = func
                 raw_args = args = (meta_attributes["argc"], meta_attributes["argv"])
-                nscope(frame)
+                nscope(frame).update({
+                    "_returns": ("_return_code",)
+                })
                 if function_obj["tags"]["preserve-args"]:
                     frame[-1]["_raw_args"] = raw_args
                 frame[-1]["_args"] = args
-                if function_obj["variadic"]["name"] != constants.nil:
-                    if len(args)-1 >= function_obj["variadic"]["index"]:
-                        variadic = []
-                        for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
-                            if variadic:
-                                variadic.append(value)
-                            elif line_position >= function_obj["variadic"]["index"]:
-                                variadic.append(value)
-                            else:
-                                frame[-1][name] = value
-                        frame[-1][function_obj["variadic"]["name"]] = variadic
-                    else:
-                        error.error(line_position, module_name, f"Function {ins} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
-                        return error.RUNTIME_ERROR
-                else:
-                    if len(args) != len(function_obj["args"]) and not function_obj["defaults"]:
-                        text = "more" if len(args) > len(function_obj["args"]) else "less"
-                        error.error(line_position, module_name, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
-                        return error.RUNTIME_ERROR
-                    for n, v in function_obj["defaults"].items():
-                        frame[-1][n] = v
-                    for name, value in itertools.zip_longest(function_obj["args"], args, fillvalue=constants.nil):
-                        if name == constants.nil:
-                            break
-                        frame[-1][name] = value
+                for n, v in function_obj["defaults"].items():
+                    frame[-1][n] = v
+                for name, value in itertools.zip_longest(function_obj["args"], args, fillvalue=constants.nil):
+                    if name == constants.nil:
+                        break
+                    frame[-1][name] = value
                 if function_obj["capture"] != constants.nil:
                     frame[-1]["_capture"] = function_obj["capture"]
                 err = execute(function_obj["body"], frame)
                 if err and err != error.STOP_FUNCTION:
                     if err > 0: error.error(line_position, module_name, f"Error in function {ins!r}")
                     return err
+                if "_return_code" in frame[-1]["_nonlocal"]:
+                    if not isinstance(frame[-1]["_return_code"], int):
+                        error.error(line_position, module_name, "entry point returned non int return code.")
+                        return error.TYPE_ERROR
+                    return frame[-1]["_return_code"]
                 pscope(frame)
         elif ins == "use" and argc == 1:
             if args[0].startswith("{") and args[0].endswith("}"):
