@@ -9,8 +9,6 @@ fn stamp_to_time(stamp)
     return '${minutes}:${final_seconds}'
 end
 
-# ran as soon as it is defined
-# also recieves argc and argv
 fn main(argc, argv) entry_point
     while true
         get_time now

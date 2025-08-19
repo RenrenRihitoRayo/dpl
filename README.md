@@ -6,6 +6,24 @@
 Welcome to **DPL**, the programming language that doesn\'t try to be smart - just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
 There are no style rules. There are no guardrails. Just a loosely-held-together interpreter and your own chaotic energy.
 
+## NEW IN DPL 1.4.9!!
+
+* in-expression calls!
+
+You can now call DPL function inside expressions!
+
+* entry point functions
+
+Tired of manually calling a main function and struggling
+with colliding global variables? No need to worry!
+Functions now support the "entry_point" tag!
+
+* Tired of manually binding C code?
+
+DPL has a special syntax for header files!
+All you need to do is tell DPL where the file is and
+bam! Your C library is callable in DPL!
+
 ## Philosophy
 
 - The **language** shouldnt have standards.  
