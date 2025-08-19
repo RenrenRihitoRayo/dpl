@@ -10,19 +10,19 @@ There are no style rules. There are no guardrails. Just a loosely-held-together 
 
 * in-expression calls!
 
-You can now call DPL function inside expressions!
+    You can now call DPL function inside expressions!
 
 * entry point functions
 
-Tired of manually calling a main function and struggling
-with colliding global variables? No need to worry!
-Functions now support the "entry_point" tag!
+    Tired of manually calling a main function and struggling
+    with colliding global variables? No need to worry!
+    Functions now support the "entry_point" tag!
 
 * Tired of manually binding C code?
 
-DPL has a special syntax for header files!
-All you need to do is tell DPL where the file is and
-bam! Your C library is callable in DPL!
+    DPL has a special syntax for header files!
+    All you need to do is tell DPL where the file is and
+    bam! Your C library is callable in DPL!
 
 ## Philosophy
 
