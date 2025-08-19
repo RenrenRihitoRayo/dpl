@@ -6,7 +6,7 @@
 Welcome to **DPL**, the programming language that doesn\'t try to be smart - just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
 There are no style rules. There are no guardrails. Just a loosely-held-together interpreter and your own chaotic energy.
 
-## NEW IN DPL 1.4.9!!
+## !! ✨✨NEW IN DPL 1.4.9✨✨ !!
 
 * in-expression calls!
 
