@@ -87,7 +87,7 @@ if "skip-non-essential" not in prog_flags:
     import misc.dpl_linter as linter
 
 # removed try except here.
-if "use-py-parser2" in prog_flags:
+if "use-parser2" in prog_flags:
     import lib.core.py_parser2 as parser
     has_pp2 = True
     if "ignore-expiramental" not in prog_flags: print("!!! WARNING: USING NEW EXPIRAMENTAL PARSER !!!\n")
@@ -203,8 +203,8 @@ def rec(this, ind=0):
 def ez_run(code, process=True, file="???"):
     "Run a DPL script in an easier way, hence ez_run"
     if process:
-        code = parser.process(code)
-    if err := parser.run(code):
+        code = parser.process_code(code)
+    if err := parser.run_code(code):
         print(f"\n[{file}]\nFinished with an error: {err}")
         rec(err)
     if err:
@@ -311,7 +311,7 @@ Pipe line:
                         output.write(f"    {index:04} => {func.__name__}\n")
                     output.write("\n\n")
                     print("Processing and HLIR Generation...")
-                    out = parser.process(inputf.read())
+                    out = parser.process_code(inputf.read())
                     print("LLIR Transformation...")
                     parser.process_hlir(out)
                     output.write(pprint.pformat(out))
@@ -337,7 +337,7 @@ Code format: (
     instruction,
     arguments)\n\n""")
                     print("Processing and HLIR Generation...")
-                    output.write(pprint.pformat(parser.process(inputf.read())))
+                    output.write(pprint.pformat(parser.process_code(inputf.read())))
                     print("Done!")
         case ["dump-ast", file]:
             file = get_start_path(file)
@@ -375,7 +375,7 @@ Code format: (
             try:
                 with open(file, "r") as in_file:
                     with open(output, "wb") as f:
-                        f.write(cereal.serialize(parser.process(in_file.read())))
+                        f.write(cereal.serialize(parser.process_code(in_file.read())))
             except Exception as e:
                 print("Something went wrong:", file)
                 print("Error:", repr(e))
@@ -467,7 +467,7 @@ Code format: (
                 try:
                     with parser.IsolatedParser(file_name="start_up_script") as pip:
                         with open(START_FILE, "r") as f:
-                            pip.run(f.read(), frame)
+                            pip.run_code(f.read(), frame)
                 except Exception as e:
                     print("something went wrong while running start up script!\n:", e)
                     with open("repl_startup_error.txt", "w") as err_f:
@@ -523,12 +523,12 @@ Code format: (
                         try:
                             with parser.IsolatedParser(file_name="start_up_script") as pip:
                                 with open(START_FILE, "r") as f:
-                                    pip.run(f.read(), frame)
+                                    pip.run_code(f.read(), frame)
                         except:
                             print("something went wrong while running start up script!")
                     continue
                 try:
-                    if err := parser.run(parser.process(act, "./repr.dpl-instance"), frame=frame):
+                    if err := parser.run_code(parser.process_code(act, "./repr.dpl-instance"), frame=frame):
                         rec(err)
                     if not "disable-auto-complete" in prog_flags:
                         acc = []
@@ -540,7 +540,7 @@ Code format: (
         case ["extract", file]:
             with open(file) as f:
                 linter.set_main(os.path.realpath(file))
-                program = linter.Program(parser.process(f.read()))
+                program = linter.Program(parser.process_code(f.read()))
                 program.update()
                 print("Runtime Imports:")
                 for v in program.runtime_imports:

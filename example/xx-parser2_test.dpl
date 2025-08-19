@@ -1,0 +1,18 @@
+&use {std/text_io.py}
+
+fn test(n)
+    set a = 1
+    set b = 0
+    set c = 0
+
+    while (:n > 0)
+        set c = [:a + :b]
+        set b = :a
+        set a = :c
+    end
+
+    return :b
+end
+
+(res) = test(10)
+io:println(:res)

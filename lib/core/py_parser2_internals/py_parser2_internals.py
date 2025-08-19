@@ -2,10 +2,10 @@
 # prototype for the new execution loop
 
 from ..runtime import *
-from ..py_parser import process, register_execute, register_process_hlir, get_run
+from ..py_parser import process_code, register_execute, register_process_hlir, get_run
 
 hlir_matcher_registry = []
-def end_block(): _ # not meant to do anything
+def end_block(): ... # not meant to do anything
 op_code_registry = [end_block]
 run = get_run()
 inc_op_code = set()
@@ -86,7 +86,7 @@ def process_line(line):
 
 def process_hlir(frame):
     """
-    Takes output from process (the HLIR)
+    Takes output from process_code (the HLIR)
     and compiles it down to an even more
     low level ir now LLIR, this to achive
     an even faster execution via dictionary
