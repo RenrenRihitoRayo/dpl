@@ -11,4 +11,4 @@ fn square(val)
     return [:val ** 2]
 end
 
-io:println([call :square( [call :square(2) ] )])
+io:println([call :square( [call :square( 4 )] )])

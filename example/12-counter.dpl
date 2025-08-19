@@ -1,0 +1,21 @@
+&use {std/text_io.py}
+
+get_time delta
+
+fn stamp_to_time(stamp)
+    set seconds = [ ?int :stamp ]
+    set minutes = [ [ ?string [ :seconds // 60 ] ] @ zfill 2 ]
+    set final_seconds = [ [ ?string [ :seconds % 60 ] ] @ zfill 2 ]
+    return '${minutes}:${final_seconds}'
+end
+
+# ran as soon as it is defined
+# also recieves argc and argv
+fn main(argc, argv) entry_point
+    while true
+        get_time now
+        set res = [ :now - :delta ]
+        io:rawoutput("\e[s\e[H\e[K", [call :stamp_to_time(:res)], '\n\e[u')
+        sleep 0.5
+    end
+end

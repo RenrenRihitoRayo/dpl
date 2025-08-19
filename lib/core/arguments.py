@@ -84,7 +84,7 @@ dpl_constants = {
     "py::none": None,
 }
 
-type_backs = {value: name for name, value in (type_annotations | dpl_constants).items()}
+type_to_name = {value: name for name, value in (type_annotations | dpl_constants).items()}
 
 from . import state
 from . import constants
@@ -574,14 +574,17 @@ def evaluate(frame, expression):
         if func["capture"]:
             frame[-1]["_capture"] = func["capture"]
         if err:=run_code(func["body"], frame=frame):
-            raise error.DPLError(err)
+            if err < 0: # control codes
+                ...
+            else:
+                raise error.DPLError(err)
+        ret = frame[-1]["_nonlocal"]["_intern_result"]
         varproc.pscope(frame)
-        ret = frame[-1]["_intern_result"]
         return ret
     elif len(processed) == 2 and processed[0] == "typeof":
-        for type in type_backs:
+        for type in type_to_name:
             if isinstance(processed[1], type):
-                return type_backs[type]
+                return type_to_name[type]
         return "?::unknown"
     match (processed):
         # conditionals

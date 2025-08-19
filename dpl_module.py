@@ -17,7 +17,7 @@ import dpl.misc.dpl_pygments as dpl_pygments
 
 def process(*args, **kwargs):
     "Wrapper for dpl.lib.core.py_parser.process(...)"
-    return parser.process(*args, **kwargs)
+    return parser.process_code(*args, **kwargs)
 
 def run(*args, **kwargs):
     "Run a DPL script in an easier way"
