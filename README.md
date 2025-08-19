@@ -169,6 +169,29 @@ Most recent at top.
 
 # 1.4.9
 
+## In-expression Calls
+
+_In-expression Calls_ no longer treats control codes as error codes.
+See below
+
+```DuProL
+
+fn test()
+    break
+end
+
+# This would error out with the control code for break
+# since return also returns a control code, this breaks
+# for all functions that have return values
+# this has been fixed in the recent commit of DPL 1.4.9
+set result = [call :test()]
+```
+
+## Notice for the code base
+
+The code base has been partially rewritten for readability.
+"py_parser2.py" have been updated partially.
+
 ## DPL Can now run directories!
 
 When DPL gets a directory as the script path.
