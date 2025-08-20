@@ -1,0 +1,34 @@
+&use {std/text_io.py}
+
+# DPL Now suports
+# Globbing.
+# Simple but effective.
+
+# * matches any number of any characters
+# ! at the start of the pattern will negate it
+# escape with \
+# \* literally matches *
+# \! literally matches !
+
+list my_list
+    "test.txt",
+    "test.md",
+    "test.eh",
+    "!.txt",
+    "*.txt",
+end
+
+list my_patterns
+    "*.txt",
+    "\*.txt",
+    "!*.txt",
+    "\!.txt",
+    "*",
+end
+
+for pattern in :my_patterns
+    io:println(:pattern)
+    for name in :my_list
+        io:println(" ", :name, "=", [ if [:name => :pattern] then "match" else "no match" ])
+    end
+end

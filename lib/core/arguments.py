@@ -15,6 +15,39 @@ inf = float("inf")
 class Expression(list):
     ...
 
+def glob_match(pattern, text):
+    negate = False
+    if pattern.startswith("\\!"):
+        pattern = pattern[1:]
+    elif pattern.startswith("!"):
+        pattern = pattern[1:]
+        negate = True
+
+    def match(p, t):
+        if p == "*":
+            return True
+        if "*" not in p:
+            return p.replace("\xFF\u200B", "*") == t
+
+        pre, _, post = p.partition("*")
+
+        if not t.startswith(pre):
+            return False
+
+        t = t[len(pre):]
+        if post == "":
+            return True
+        for i in range(len(t) + 1):
+            if match(post, t[i:]):
+                return True
+        return False
+    pattern = pattern.replace("\\*", "\xFF\u200B")
+    if pattern == "*":
+        result = True
+    else:
+        result = match(pattern, text)
+    return not result if negate else result
+
 simple_ops = {
     '+': operator.add,
     '-': operator.sub,
@@ -23,19 +56,19 @@ simple_ops = {
     '//': operator.floordiv,
     '%': operator.mod,
     '%%': lambda x, y: constants.true if x % y == 0 else constants.false,
-    '<': lambda *x: constants.true if operator.lt(*x) else constants.false,
-    '<=': lambda *x: constants.true if operator.le(*x) else constants.false,
-    '>': lambda *x: constants.true if operator.gt(*x) else constants.false,
-    '>=': lambda *x: constants.true if operator.ge(*x) else constants.false,
-    '==': lambda *x: constants.true if operator.eq(*x) else constants.false,
-    '!=': lambda *x: constants.true if operator.ne(*x) else constants.false,
+    '<': lambda a, b: constants.true if operator.lt(a, b) else constants.false,
+    '<=': lambda a, b: constants.true if operator.le(a, b) else constants.false,
+    '>': lambda a, b: constants.true if operator.gt(a, b) else constants.false,
+    '>=': lambda a, b: constants.true if operator.ge(a, b) else constants.false,
+    '==': lambda a, b: constants.true if operator.eq(a, b) else constants.false,
+    '!=': lambda a, b: constants.true if operator.ne(a, b) else constants.false,
     'and': lambda a, b: constants.true if a and b else constants.false,
     'or': lambda a, b: constants.true if a or b else constants.false,
     'in': lambda a, b: constants.true if a in b else constants.false,
     'is': lambda a, b: constants.true if a is b else constants.false,
     "**": operator.pow,
     "=": lambda name, value: {name: value},
-    "=>": lambda *x: kwarg(*x)
+    "=>": lambda text, pattern: constants.true if glob_match(pattern, text) else constants.false,
 }
 
 chars = {
@@ -240,6 +273,21 @@ def parse_dict(frame, temp_name, body):
             else:
                 # TODO: check if previous item is a int
                 data[name] = tuple(data.items())[-1][1] + 1
+        else:
+            error.error(pos, file, f"Invalid statement!")
+            return 1
+
+
+def parse_list(frame, temp_name, body):
+    data = []
+    varproc.rset(frame[-1], temp_name, data)
+    for p, [pos, file, ins, args] in enumerate(body):
+        ins, *args = process_args(frame, [ins, *(args or [])])
+        argc = len(args[0]) if args else 0
+        if ins == "expand" and argc == 1:
+            data.extend(args[0])
+        elif argc == 0:
+            data.append(ins)
         else:
             error.error(pos, file, f"Invalid statement!")
             return 1
@@ -702,6 +750,7 @@ def group(text):
     for i in text:
         if str_tmp:
             if this:
+                i = "\\"+i
                 if i in chars:
                     str_tmp.append(chars[i])
                 else:

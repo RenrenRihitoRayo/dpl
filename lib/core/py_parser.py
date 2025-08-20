@@ -836,6 +836,14 @@ def execute(code, frame=None):
                 instruction_pointer, body = temp
             if parse_dict(frame, args[0], body):
                 break
+        elif ins == "list" and argc == 1:
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                break
+            else:
+                instruction_pointer, body = temp
+            if parse_list(frame, args[0], body):
+                break
         elif ins == "struct" and argc == 1:
             temp = get_block(code, instruction_pointer)
             if temp is None:

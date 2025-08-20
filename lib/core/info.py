@@ -50,10 +50,7 @@ INC_EXT_BUILTIN = {
     "begin",
     "on_new_scope",
     "on_pop_scope",
-    ".while",
-    ".if",
-    ".macro",
-    ".emit_block",
+    "list"
 }
 
 # multiple increments
@@ -75,7 +72,7 @@ RT_EXPR = {
     "len", "type", "range", "rawrange", "drange",
     "drawrange", 'nil?', 'none?', 'def?',
     "eval", "oldformat",
-    "!", "call"
+    "!", "call",
 }
 
 def add_runtime_dependent_method(keyword):
@@ -98,15 +95,16 @@ KEYWORDS = {
     'stop',
     'in', 'as', 'not', 'and', 'or',
     'raise', 'tc_register',
-    'export',
-    'set',
-    'del',
+    'set', 'del',
+    'struct', 'dict', 'list',
 }
 
 ALL_INTRINSICS = INC_EXT | set(INC.keys()) | DEC | KEYWORDS
 
 CHARS = {
     "\\\\": "\\[lit_slash]",
+    "\\*": "\xFF\u200B",
+    "\\!": "\\!",
     "\\n": "\n",
     "\\t": "\t",
     "\\s": " ",
