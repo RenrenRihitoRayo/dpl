@@ -104,7 +104,7 @@ def dpl_matcher(line):
             return op_dpl_fn(name, params)
         case [func, tuple(args)]:
             return op_call(func, args)
-        case ["catch", tuple(names), "=", name, tuple(args)]:
+        case ["catch", tuple(names), name, tuple(args)]:
             return op_catch(name, names, args)
         case ["return", values]:
             return op_return(values)

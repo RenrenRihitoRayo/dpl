@@ -50,7 +50,7 @@ INC_EXT_BUILTIN = {
     "begin",
     "on_new_scope",
     "on_pop_scope",
-    "list"
+    "list",
 }
 
 # multiple increments
@@ -126,7 +126,7 @@ class flags:
     WARNINGS = True      # Specific to warnings.
     ERRORS = True        # Logs, Warnings and Such
 
-VERSION_STRING = "1.4.9"
+VERSION_STRING = "2.0.0"
 
 class Version:
     def __init__(self, ver_str):

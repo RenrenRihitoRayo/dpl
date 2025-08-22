@@ -1,27 +1,48 @@
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+typedef struct Person Person;
 
-void print_greeting(void) {
-    printf("Hello, from C!\n");
+struct Person {
+    char *  name;
+    int age;
+    void (*init)(Person * self, const char * name, int age);
+    void (*greet)(Person * self);
+    void (*destroy)(Person * self);
+};
+
+void __ceq_method_Person_init(Person * self, char * name, int age) {
+        self->name = (char*)malloc(sizeof(char) * strlen(name)+1);
+        strcpy(self->name, name);
+        self->age = age;
 }
 
-void print_num(int num) {
-    printf("Number: %i\n", num);
+void __ceq_method_Person_greet(Person * self) {
+printf("Hello, I am %s (%d)\n", self->name, self->age);
 }
 
-int fib(int n) {
-    int a = 1;
-    int b = 0;
-    int c = 0;
-    
-    while (n) {
-        c = a + b;
-        a = b;
-        b = c;
-        n--;
-    }
-    return b;
+void __ceq_method_Person_destroy(Person * self) {
+free(self->name);
+free(self);
 }
 
-int main() {
-    printf("fib(10) = %i\n", fib(10));
+void __ceq_bind_Person(Person* self) {
+    self->init = __ceq_method_Person_init;
+    self->greet = __ceq_method_Person_greet;
+    self->destroy = __ceq_method_Person_destroy;
+}
+
+int
+main
+(
+)
+{
+    Person* human = (Person*)malloc(sizeof(Person));
+    __ceq_bind_Person(human);
+    human->init(human, "Andrew" , 16);
+    human->greet(human);
+    human->destroy(human);
+return
+0
+;
 }

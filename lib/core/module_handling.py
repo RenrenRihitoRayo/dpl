@@ -492,7 +492,7 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
     with open(file, "r") as f:
         obj = compile(f.read(), file, "exec")
         try:
-            d = {"modules": modules, "dpl": dpl, "__alias__":alias, "frame_stack": frame}
+            d = {"modules": modules, "dpl": dpl, "__alias__":alias, "frame_stack": frame, "__name__": "__dpl__"}
             exec(obj, d)
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -507,8 +507,9 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
             elif ext.name in frame[-1]:
                 raise Exception(f"Name clashing! For name {ext.name!r}")
             elif ext.name:
-                varproc.rset(frame[-1], ext.name, (temp := {}))
-                temp.update(ext.functions)
+                varproc.rset(frame[-1], ext.name, {})
+                for func, value in ext.functions.items():
+                    varproc.rset(frame[-1], func, value)
     frame[-1].update(funcs)
     file = os.path.realpath(file)
     varproc.dependencies["python"].add(file)

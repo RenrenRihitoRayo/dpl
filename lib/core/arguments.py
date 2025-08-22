@@ -69,6 +69,7 @@ simple_ops = {
     "**": operator.pow,
     "=": lambda name, value: {name: value},
     "=>": lambda text, pattern: constants.true if glob_match(pattern, text) else constants.false,
+    "isinstanceof": lambda ins, typ: constants.true if isinstance(ins, typ) else constants.false,
 }
 
 chars = {
@@ -258,9 +259,11 @@ def parse_match(frame, body, value):
 
 
 def parse_dict(frame, temp_name, body):
-    data = {}
+    data = {} if not isinstance(temp_name, objects.object_type) else temp_name
     varproc.rset(frame[-1], temp_name, data)
-    for p, [pos, file, ins, args] in enumerate(body):
+    p = 0
+    while p < len(body):
+        [pos, file, ins, args] = body[p]
         args = process_args(frame, args)
         argc = len(args)
         if ins == "set" and argc == 3 and args[1] == "=":
@@ -271,27 +274,71 @@ def parse_dict(frame, temp_name, body):
             if not data:
                 data[name] = 0
             else:
-                # TODO: check if previous item is a int
                 data[name] = tuple(data.items())[-1][1] + 1
+        elif ins == "defi" and argc == 1:
+            val, = args
+            if not data:
+                data[0] = val
+            else:
+                data[tuple(data.items())[-1][0] + 1] = val
+        elif ins == "declare" and argc > 0:
+            for name in args:
+                data[name] = constants.nil
+        elif ins == "dict" and argc == 1:
+            temp = get_block(body, p)
+            if temp is None:
+                return 1
+            p, block = temp
+            tmp = [data]
+            if parse_dict(tmp, args[0], block):
+                return 1
+        elif ins == "list" and argc == 1:
+            temp = get_block(body, p)
+            if temp is None:
+                return 1
+            p, block = temp
+            tmp = [data]
+            if parse_list(tmp, args[0], block):
+                return 1
         else:
             error.error(pos, file, f"Invalid statement!")
             return 1
-
+        p += 1
 
 def parse_list(frame, temp_name, body):
     data = []
     varproc.rset(frame[-1], temp_name, data)
-    for p, [pos, file, ins, args] in enumerate(body):
-        ins, *args = process_args(frame, [ins, *(args or [])])
-        argc = len(args[0]) if args else 0
+    p = 0
+    while p < len(body):
+        [pos, file, ins, args] = body[p]
+        args = process_args(frame, args or [])
+        argc = len(args)
         if ins == "expand" and argc == 1:
             data.extend(args[0])
-        elif argc == 0:
-            data.append(ins)
+        elif ins == "." and argc == 1:
+            data.append(args[0])
+        elif ins == "dict" and argc == 0:
+            temp = get_block(body, p)
+            if temp is None:
+                return 1
+            p, block = temp
+            tmp = [{}]
+            if parse_dict(tmp, "???", block):
+                return 1
+            data.append(tmp[-1]["???"])
+        elif ins == "list" and argc == 0:
+            temp = get_block(body, p)
+            if temp is None:
+                return 1
+            p, block = temp
+            tmp = [{}]
+            if parse_list(tmp, "???", block):
+                return 1
+            data.append(tmp[-1]["???"])
         else:
             error.error(pos, file, f"Invalid statement!")
             return 1
-
+        p += 1
 
 def parse_struct(frame, ffi, s_name, body):
     names = ["typedef struct {"]
@@ -491,11 +538,9 @@ def expr_runtime(frame, arg):
         return t
     elif arg.startswith("'") and arg.endswith("'"):
         text = arg[1:-1]
-        data = flatten_dict(frame[-1])
-        text = arg[1:-1]
         for c, cc in CHARS.items():
             text = text.replace(c, cc)
-        return fmt_format(text, data, expr_fn=lambda text, _: handle_in_string_expr(text, frame))
+        return fmt_format(text, frame, expr_fn=lambda text, _: handle_in_string_expr(text, frame))
     elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
         return arg
     elif arg in ("?tuple", "?args", "?float", "?int", "?string", "?bytes", "?set", "?list", "nil?", "none?", "def?") or arg in sym:
@@ -608,6 +653,10 @@ def evaluate(frame, expression):
         return processed[1][0]
     elif len(processed) == 2 and processed[0] == "tail":
         return processed[1][-1]
+    elif len(processed) == 3 and processed[0] == "pycall":
+        args = pah.arguments_handler()
+        args.parse(process_args(frame, processed[2]))
+        return args.call(processed[1])
     elif len(processed) == 3 and processed[0] == "call":
         func, args = processed[1:]
         args = process_args(frame, args)
@@ -621,6 +670,8 @@ def evaluate(frame, expression):
         })
         if func["capture"]:
             frame[-1]["_capture"] = func["capture"]
+        if func["self"] is not None:
+            frame[-1]["self"] = func["self"]
         if err:=run_code(func["body"], frame=frame):
             if err < 0: # control codes
                 ...
@@ -642,7 +693,7 @@ def evaluate(frame, expression):
             if not obj:
                 return constants.nil
             index = process_arg(frame, index[0])
-            if isinstance(index, str) and isinstance(obj, dict):
+            if isinstance(index, (str, int, float, tuple)) and isinstance(obj, dict):
                 return obj.get(index, constants.nil)
             elif isinstance(index, int) and isinstance(obj, (str, tuple, list)):
                 return obj[index] if abs(index)-1 <= len(obj) else constants.nil
@@ -711,20 +762,19 @@ def evaluate(frame, expression):
         case ["set", name, "=", value]:
             varproc.rset(frame[-1], name, value)
             return value
-        case ["@", method, *args] if method in methods:
-            return methods[method](frame, args)
-        case ["@", ins, *args]:
-            return ins(frame, None, *args)[0]
-        case [obj, "@", method, *args] if hasattr(
-            obj, method
-        ):  # direct python method calling
-            if args and isinstance(args[0], pah.arguments_handler):
-                return args[0].call(getattr(obj, method))
-            return getattr(obj, method)(*args)
+        case ["@", method, tuple(args)] if method in methods:
+            return methods[method](frame, process_args(frame, args))
+        case ["?", method, tuple(args)]:
+            return method(*process_args(frame, args))
+        case ["@", ins, tuple(args)]:
+            return ins(frame, None, *process_args(frame, args))[0]
+        case [obj, "@", method, tuple(args)]:
+            args = pah.arguments_handler(process_args(frame, args))
+            return args.call(getattr(obj, method))
         case [obj, "->", attr]:
             if not hasattr(obj, attr):
                 return constants.nil
-            return getattr(obj, attr)
+            return obj.__getattr__(attr)
         # other
         case default:
             for name, fn in matches.items():

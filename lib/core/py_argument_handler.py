@@ -2,9 +2,9 @@ from typing import Any
 
 
 class arguments_handler:
-    def __init__(self, args: list[Any] | None, kwargs: dict | None) -> None:
-        self.args = args
-        self.kwargs = kwargs
+    def __init__(self, args: list[Any] | None = None, kwargs: dict | None = None) -> None:
+        self.args = args or []
+        self.kwargs = kwargs or {}
 
     def parse(self, args) -> None:
         if self.kwargs is None:

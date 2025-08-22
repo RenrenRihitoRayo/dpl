@@ -20,6 +20,7 @@ from . import info
 import traceback
 import sys
 import os
+import gc
 
 pp2_execute = None
 process_hlir = None
@@ -66,39 +67,54 @@ def pprint(d, l=0, seen=None, hide=True):
     if id(d) in seen:
         print("  "*l+"...")
         return
+    if isinstance(d, objects.objects):
+        print(("  "*l+repr(d))+",")
+        return
     seen.add(id(d))
     if isinstance(d, list):
         for i in d:
             if isinstance(i, list):
                 print("  "*l+"[")
                 pprint(i, l+1, seen)
-                print("  "*l+"]")
+                print("  "*l+"],")
+            elif isinstance(d, objects.objects):
+                print(("  "*l+repr(d))+",")
+            elif isinstance(i, objects.object_type):
+                print("  "*l+f"{i['_type_name']}{{")
+                pprint(i, l+1, seen)
+                print("  "*l+"},")
             elif isinstance(i, dict):
                 print("  "*l+"{")
                 pprint(i, l+1, seen)
-                print("  "*l+"}")
+                print("  "*l+"},")
             else:
-                print("  "*l+repr(i))
+                print("  "*l+repr(i)+",")
         return
     elif not isinstance(d, dict):
-        print("  "*l+repr(d))
+        print("  "*l+repr(d)+",")
         return
     if not d:
-        print("{}")
+        print("{},")
         return
     for name, value in d.items():
         if isinstance(name, str) and name.startswith("_") and hide:
             ...
+        elif isinstance(value, objects.objects):
+            print(("  "*l+f"{name!r}: " + repr(value))+",")
+        elif isinstance(value, objects.object_type):
+            print("  "*l+f"{name!r}: {value['_type_name']}{{")
+            pprint(value, l+1, seen)
+            print("  "*l+"},")
         elif isinstance(value, dict):
-            print("  "*l+f"{name!r} => {{")
+            print("  "*l+f"{name!r}: {{")
             pprint(value, l+1, seen)
-            print("  "*l+"}")
+            print("  "*l+"},")
         elif isinstance(value, list):
-            print("  "*l+f"{name!r} => [")
+            print("  "*l+f"{name!r}: [")
             pprint(value, l+1, seen)
-            print("  "*l+"]")
+            print("  "*l+"],")
         else:
-            print("  "*l+f"{name!r} = {value!r}")
+            print("  "*l+f"{name!r}: {value!r},")
 
 def process_code(fcode, name="__main__"):
     """
@@ -204,6 +220,16 @@ def process_code(fcode, name="__main__"):
                     return error.PREPROCESSING_ERROR
                 if mod_s.py_import(nframe, file, search_path, loc=os.path.dirname(name), alias=args[2]):
                     print(f"python: Something wrong happened...\nLine {lpos}\nFile {name}")
+                    return error.PREPROCESSING_ERROR
+            elif ins == "import" and argc == 1:
+                vname = args[0].rsplit(".", 1)[-1]
+                try:
+                    nframe[-1][vname] = dict(__import__(args[0]).__dict__)
+                except ModuleNotFoundError:
+                    error.pre_error(lpos, file, f"Module {args[0]!r} not found.")
+                    return error.PREPROCESSING_ERROR
+                except:
+                    error.pre_error(lpos, file, f"{traceback.format_exc()}\nSomething went wrong while importing {args[0]!r}.")
                     return error.PREPROCESSING_ERROR
             elif ins == "use:luaj" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
@@ -357,11 +383,11 @@ def execute(code, frame=None):
     Run HLIR,
     Not LLIR.
     This is used internally.
-    Use run instead for more logic.
+    Use run_code instead for more logic.
     """
     
     instruction_pointer = 0
-    # the contents of the new run function
+    # the contents of the new run_code function
     # was previously here
     if frame is None:
         frame = new_frame()
@@ -378,7 +404,7 @@ def execute(code, frame=None):
                 error.error(
                     line_position,
                     module_name,
-                    f"Something went wrong when arguments were processed:\n{e}\n> {oargs!r}",
+                    f"{traceback.format_exc()}\nSomething went wrong when arguments were processed:\n{e}\n> {oargs!r}",
                 )
                 return error.PYTHON_ERROR
         else:
@@ -589,6 +615,8 @@ def execute(code, frame=None):
             pprint(frame[-1])
         elif ins == "dump_vars" and argc == 1 and isinstance(args[0], dict):
             pprint(args[0], hide=False)
+        elif ins == "dump_vars_fancy" and argc == 1:
+            pprint({args[0]: rget(frame[-1], args[0])}, hide=False)
         elif ins == "loop" and argc == 1:
             temp = get_block(code, instruction_pointer)
             if temp is None:
@@ -650,7 +678,7 @@ def execute(code, frame=None):
             return error.FALLTHROUGH
         elif ins == "set" and argc == 3 and args[1] == "=":
             if args[0] != "_":
-                if isinstance(args[0], tuple):
+                if isinstance(args[0], (tuple, list)):
                     for name, value in zip(args[0], args[2]):
                         rset(frame[-1], name, value)
                 else:
@@ -659,13 +687,29 @@ def execute(code, frame=None):
             for name in args:
                 rpop(frame[-1], name)
         elif ins == "object" and argc == 1:
-            rset(frame[-1], args[0], objects.make_object(args[0]))
+            rset(frame[-1], args[0], objects.make_object(args[0], frame))
         elif ins == "new" and argc == 2:
-            object_scope = args[0]
+            object_scope, object_name = args
             if object_scope == constants.nil:
                 error.error(line_position, module_name, f"Unknown object")
                 break
-            rset(frame[-1], args[1], copy(object_scope))
+            obj = copy(object_scope)
+            for name, value in obj.items():
+                if isinstance(value, objects.function_type):
+                    value["self"] = obj
+            obj["_instance_name"] = object_name
+            rset(frame[-1], object_name, obj)
+        elif ins == "make_cons" and argc == 1:
+            attrs = list(name for name, value in args[0].items() if not name.startswith("_") and not isinstance(value, objects.function_type))
+            func = objects.make_method("new", [
+                (line_position, f"{module_name}:internal", "new", [":self", "tmp"]),
+                *[
+                    (line_position, f"{module_name}:internal", "set", [f"tmp.{name}", "=", f":{name}"])
+                    for name in attrs
+                ],
+                (line_position, f"{module_name}:internal", "return", [":tmp"]),
+            ] , attrs, args[0])
+            args[0]["new"] = func
         elif ins == "method" and argc >= 2:
             name, params = args
             scope_name, method_name = name.rsplit(".", 1)
@@ -682,6 +726,23 @@ def execute(code, frame=None):
                 instruction_pointer, body = temp
             func = objects.make_method(method_name, body, process_args(frame, params), self)
             self[method_name] = func
+        elif ins == "inherit" and argc == 5 and args[1] == "from" and args[3] == "for":
+            attrs, _, parent, _, child = args
+            if attrs == "all":
+                for attr in parent:
+                    if attr.startswith("_"):
+                        continue
+                    val = copy(rget(parent, attr))
+                    if isinstance(val, objects.function_type):
+                        val["self"] = child
+                    rset(child, attr, val)
+            else:
+                for attr in attrs:
+                    if attr in parent:
+                        val = copy(rget(parent, attr))
+                        if isinstance(val, objects.function_type):
+                            val["self"] = child
+                        rset(child, attr, val)
         elif ins == "START_TIME" and argc == 0:
             start_time = time.perf_counter()
         elif ins == "STOP_TIME" and argc == 0:
@@ -711,15 +772,15 @@ def execute(code, frame=None):
                     return error.STOP_FUNCTION
                 if len(latched_names) == 1:
                     rset(
-                        frame[-1],
-                        f"_nonlocal.{latched_names[0]}",
+                        frame[-1]["_nonlocal"],
+                        latched_names[0],
                         args[0]
                             if isinstance(args, (tuple, list))
                             and len(args) == 1
                         else args)
                 else:
                     for name, value in zip(latched_names, args):
-                        rset(frame[-1], f"_nonlocal.{name}", value)
+                        rset(frame[-1]["_nonlocal"], name, value)
             return error.STOP_FUNCTION
         elif ins == "catch" and argc >= 2:  # catch return value of a function
             rets, func_name, args = args
@@ -730,6 +791,8 @@ def execute(code, frame=None):
                 raw_args = args[0]
             args = process_args(frame, args)
             nscope(frame)
+            if function_obj["self"] is not None:
+                frame[-1]["self"] = function_obj["self"]
             if function_obj["tags"]["preserve-args"]:
                 frame[-1]["_raw_args"] = raw_args
             frame[-1]["_args"] = args
@@ -874,6 +937,8 @@ def execute(code, frame=None):
             nscope(frame)
             if function_obj["tags"]["preserve-args"]:
                 frame[-1]["_raw_args"] = raw_args
+            if function_obj["self"] is not None:
+                frame[-1]["self"] = function_obj["self"]
             frame[-1]["_args"] = args
             if function_obj["variadic"]["name"] != constants.nil:
                 if len(args)-1 >= function_obj["variadic"]["index"]:
@@ -1086,6 +1151,13 @@ def get_run():
 ##################################
 # Do not modify without permission
 
+# this allows the user
+# to basically give them the freedom
+# to make internal tooling
+# in DPL possible
+# in the future especially for LLIR
+# even define their own DSLs in DPL
+
 if "get-internals" in info.program_flags:
     varproc.meta_attributes["runtime_processing"] = {
         "process_code": lambda _, __, *args: (process_code(*args),),
@@ -1109,3 +1181,4 @@ if "get-internals" in info.program_flags:
 mod_s.register_run(execute)
 mod_s.register_process(process_code)
 argproc_setter.set_run(execute)
+objects.register_run(execute)

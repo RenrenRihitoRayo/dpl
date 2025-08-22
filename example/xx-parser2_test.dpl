@@ -1,3 +1,8 @@
+--
+  This file is for testing the new parser!
+  Please do not touch this as this is a test!
+--
+
 &use {std/text_io.py}
 
 fn test(n)
@@ -9,10 +14,11 @@ fn test(n)
         set c = [:a + :b]
         set b = :a
         set a = :c
+        dec n
     end
 
     return :b
 end
 
-(res) = test(10)
+catch (res) test(10000)
 io:println(:res)

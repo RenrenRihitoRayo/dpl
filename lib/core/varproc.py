@@ -149,11 +149,11 @@ def nscope(frame):
         "_meta": meta_attributes,
         "_scope_uuid": str(uuid4()),
     }
-    frame.append(t)
     if frame:
         t["_global"] = frame[0]
         t["_nonlocal"] = frame[-1]
         t["_frame_stack"] = frame
+    frame.append(t)
     t["_local"] = t
     t["_scope_number"] = len(frame)-1
     for func in on_new_scope:

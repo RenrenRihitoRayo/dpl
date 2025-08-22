@@ -6,23 +6,48 @@
 Welcome to **DPL**, the programming language that doesn\'t try to be smart - just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
 There are no style rules. There are no guardrails. Just a loosely-held-together interpreter and your own chaotic energy.
 
-## !! ✨✨NEW IN DPL 1.4.9✨✨ !!
+## !! ✨✨NEW IN DPL 2.0.0✨✨ !!
 
-* in-expression calls!
+* Objects now have short\-hand constructors!
 
-    You can now call DPL function inside expressions!
+    You can use `make_cons object` to automatically make a constructor for that object,
+    given that you have defined them implicitly in the object.
 
-* entry point functions
+* New debug output!
 
-    Tired of manually calling a main function and struggling
-    with colliding global variables? No need to worry!
-    Functions now support the "entry_point" tag!
+    Using `io:debug(object)` in `std/text_io.py`,
+    will yield more interesting output for objects.
 
-* Tired of manually binding C code?
+* `declare` in multiline dictionaries.
 
-    DPL has a special syntax for header files!
-    All you need to do is tell DPL where the file is and
-    bam! Your C library is callable in DPL!
+    You can use declare to define keys that would be
+    implicitly defined.
+
+* Multiline dictionaries and lists can now be nested!
+
+```DuProL
+
+dict d1
+    set depth = 1
+    dict d2
+        set depth = 2
+    end
+    list test
+        . item1
+        . item2
+        . item3
+        list
+            . item4
+            . item5
+        end
+    end
+end
+
+```
+
+<!-- ************************ TODO: ACTUALLY DO THIS *****************************
+    * New parser has been fully implemented
+-->
 
 ## Philosophy
 
@@ -35,7 +60,7 @@ There are no style rules. There are no guardrails. Just a loosely-held-together 
 
 - Functions? Yes, and they sometimes even work.  
 - Syntax? Let\'s call it... *flexible*.  
-- Naming conventions? **Snake case**, **PascalCase**, **camelCase**, or **whoknows_case** — all welcome.
+- Naming conventions? **snake\_case**, **PascalCase**, **camelCase**, or **whoknows\_\_\_???case** - all welcome.
 
 ## Types
 

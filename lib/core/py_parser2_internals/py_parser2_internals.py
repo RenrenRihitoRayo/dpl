@@ -2,7 +2,7 @@
 # prototype for the new execution loop
 
 from ..runtime import *
-from ..py_parser import process_code, register_execute, register_process_hlir, get_run
+from ..py_parser import process_code, register_execute, register_process_hlir, get_run, run_code
 
 hlir_matcher_registry = []
 def end_block(): ... # not meant to do anything

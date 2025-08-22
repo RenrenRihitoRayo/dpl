@@ -1,7 +1,7 @@
 ext = dpl.extension(meta_name="to_py", alias=__alias__)
 
 
-@ext.add_func(typed="$$ :: str")
+@ext.add_func()
 def define(frame, __, name, func_body):
     def func(*args, **kwargs):
         dpl.varproc.nscope(frame)
@@ -14,7 +14,7 @@ def define(frame, __, name, func_body):
     dpl.varproc.rset(frame[-1], name, func)
 
 
-@ext.add_func(typed="$$ :: dict")
+@ext.add_func()
 def to_py(frame, _, temp):
     def func(*args):
         dpl.varproc.nscope(frame)
@@ -31,10 +31,10 @@ def to_py(frame, _, temp):
                 return 1
             for name, value in modules.itertools.zip_longest(temp["args"], args):
                 dpl.varproc.rset(frame[-1], name, value)
-        if temp["self"] != dpl.state.bstate("nil"):
-            varproc.rset(frame[-1], "self", temp["self"])
+        if temp["self"] != dpl.state_nil:
+            dpl.varproc.rset(frame[-1], "self", temp["self"])
         if temp["capture"] != dpl.state.bstate("nil"):
-            varproc.rset(frame[-1], "_capture", temp["capture"])
+            dpl.varproc.rset(frame[-1], "_capture", temp["capture"])
         err = dpl.run_code(temp["body"], frame)
         if err:
             return err
