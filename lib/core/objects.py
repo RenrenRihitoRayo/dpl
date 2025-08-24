@@ -41,7 +41,7 @@ class object_type(dict):
                     implicit.append(name)
                 else:
                     attributes.append(name)
-        return f'<object {self["_type_name"]}\n  instance name: {self["_instance_name"] if "_instance_name" in self else "class definition"}\n  attrs: {", ".join(attributes) or "no attributes"}\n  implicit attributes: {", ".join(implicit) if implicit else "no implicit attributes"}\n  methods:\n    {","+chr(10)+"    ".join(methods)}>'
+        return f'<object {self["_type_name"]}\n  instance name: {self["_instance_name"] if "_instance_name" in self else "class definition"}\n  attrs: {", ".join(attributes) or "no attributes"}\n  implicit attributes: {", ".join(implicit) if implicit else "no implicit attributes"}\n  methods:\n    {(","+chr(10)+"    ").join(methods) if methods else "no methods"}>'
 
 
 class reference_type(object_type):

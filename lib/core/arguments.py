@@ -134,7 +134,7 @@ fmt_old_format = fmt.old_format
 rget = varproc.rget
 get_debug = varproc.get_debug
 
-run_code = None  # to be set by py_parser
+execute_code = None  # to be set by py_parser
 
 def nest_args(tokens):
     "Magic thing."
@@ -207,7 +207,7 @@ def parse_match(frame, body, value):
                     if temp is None:
                         error.error(pos, file, "Expected a case block!")
                         return error.SYNTAX_ERROR
-                    res = run_code(temp[1], frame=frame)
+                    res = execute_code(temp[1], frame=frame)
                     if res != error.FALLTHROUGH:
                         return res
                     ft = True
@@ -219,7 +219,7 @@ def parse_match(frame, body, value):
                     if temp is None:
                         error.error(pos, file, "Expected a case block!")
                         return error.SYNTAX_ERROR
-                    res = run_code(temp[1], frame=frame)
+                    res = execute_code(temp[1], frame=frame)
                     if res != error.FALLTHROUGH:
                         return res
                     ft = True
@@ -230,7 +230,7 @@ def parse_match(frame, body, value):
                     return error.SYNTAX_ERROR
                 if name:
                     frame[-1][name] = value
-                return run_code(temp[1], frame=frame)
+                return execute_code(temp[1], frame=frame)
     else:
         for p, [pos, file, ins, args] in enumerate(body):
             if ins == "case":
@@ -243,7 +243,7 @@ def parse_match(frame, body, value):
                         return error.SYNTAX_ERROR
                     if name:
                         frame[-1][name] = value
-                    res = run_code(temp[1], frame=frame)
+                    res = execute_code(temp[1], frame=frame)
                     if res != error.FALLTHROUGH:
                         return res
                     ft = True
@@ -254,7 +254,7 @@ def parse_match(frame, body, value):
                     return error.SYNTAX_ERROR
                 if name:
                     frame[-1][name] = value
-                return run_code(temp[1], frame=frame)
+                return execute_code(temp[1], frame=frame)
     return 0
 
 
@@ -339,6 +339,16 @@ def parse_list(frame, temp_name, body):
             error.error(pos, file, f"Invalid statement!")
             return 1
         p += 1
+
+def parse_string(frame, temp_name, body, new_line=False, sep="\n"):
+    data = []
+    p = 0
+    while p < len(body):
+        [pos, file, ins, _] = body[p]
+        line = process_arg(frame, ins)
+        data.append(line)
+        p += 1
+    varproc.rset(frame[-1], temp_name, sep.join(data) if new_line else "".join(data))
 
 def parse_struct(frame, ffi, s_name, body):
     names = ["typedef struct {"]
@@ -575,6 +585,9 @@ def is_static(frame, code):
             return False
         elif is_read_var(i):
             return False
+        # formatted string, must always be on runtime
+        elif i.startswith("'") and i.startswith("'"):
+            return False
     return True
 
 
@@ -582,7 +595,11 @@ def to_static(frame, code):
     for pos, i in enumerate(code):
         if isinstance(i, list):
             if is_static(frame, i):
-                code[pos] = evaluate(frame, to_static(frame, i))
+                value = evaluate(frame, to_static(frame, i))
+                if isinstance(value, str):
+                    code[pos] = f'"{value}"'
+                else:
+                    code[pos] = value
             else:
                 code[pos] = to_static(frame, i)
         elif not isinstance(i, str):
@@ -672,7 +689,7 @@ def evaluate(frame, expression):
             frame[-1]["_capture"] = func["capture"]
         if func["self"] is not None:
             frame[-1]["self"] = func["self"]
-        if err:=run_code(func["body"], frame=frame):
+        if err:=execute_code(func["body"], frame=frame):
             if err < 0: # control codes
                 ...
             else:
@@ -865,6 +882,7 @@ def process_args(frame, e):
     return list(map(lambda x: process_arg(frame, x), e))
 
 class argproc_setter:
-    def set_run(func):
-        global run_code
-        run_code = func
+    def set_execute(func):
+        global execute_code
+        execute_code = func
+        return func

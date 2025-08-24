@@ -374,6 +374,8 @@ def process_code(fcode, name="__main__"):
     return error.PREPROCESSING_ERROR
 
 
+@mod_s.register_execute
+@argproc_setter.set_execute
 def execute(code, frame=None):
     """
     Low level function to run.
@@ -521,7 +523,7 @@ def execute(code, frame=None):
             if not temp_body:
                 instruction_pointer += 1
                 continue
-            if err:=run(temp_body, frame):
+            if err:=execute(temp_body, frame):
                 error.error(line_position, module_name, f"Error in switch block '{args[1]}'")
                 return err
         elif ins == "if" and argc == 1:
@@ -899,6 +901,30 @@ def execute(code, frame=None):
                 instruction_pointer, body = temp
             if parse_dict(frame, args[0], body):
                 break
+        elif ins == "string" and argc == 1:
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                break
+            else:
+                instruction_pointer, body = temp
+            if parse_string(frame, args[0], body):
+                break
+        elif ins == "string" and argc == 2 and args[1] == "new_line":
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                break
+            else:
+                instruction_pointer, body = temp
+            if parse_string(frame, args[0], body, True):
+                break
+        elif ins == "string" and argc == 4 and args[1] == "new_line" and args[2] == "as":
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                break
+            else:
+                instruction_pointer, body = temp
+            if parse_string(frame, args[0], body, True, args[3]):
+                break
         elif ins == "list" and argc == 1:
             temp = get_block(code, instruction_pointer)
             if temp is None:
@@ -1027,6 +1053,7 @@ def execute(code, frame=None):
                 error.error(line_position, module_name, f"on_new_scope expected a block!")
                 return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
             instruction_pointer, body = temp
+
             def make_on_new_scope_fn(ons_b, parent_frame):
                 def on_new_scope_tmp_fn(scope, scope_id):
                     fr = new_frame()
@@ -1037,7 +1064,7 @@ def execute(code, frame=None):
                 return on_new_scope_tmp_fn
             on_new_scope.append({
                 "func": make_on_new_scope_fn(body, frame),
-                "from":f"dpl:{module_name}:{line_position}"
+                "from": f"dpl:{module_name}:{line_position}"
             })
         elif ins == "on_pop_scope" and argc == 0:
             temp = get_block(code, instruction_pointer)
@@ -1045,6 +1072,7 @@ def execute(code, frame=None):
                 error.error(line_position, module_name, f"on_new_scope expected a block!")
                 return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
             instruction_pointer, body = temp
+
             def make_on_new_scope_fn(ons_b, parent_frame):
                 def on_new_scope_tmp_fn(scope, scope_id):
                     fr = new_frame()
@@ -1055,7 +1083,7 @@ def execute(code, frame=None):
                 return on_new_scope_tmp_fn
             on_pop_scope.append({
                 "func": make_on_new_scope_fn(body, frame),
-                "from":f"dpl:{module_name}:{line_position}"
+                "from": f"dpl:{module_name}:{line_position}"
             })
         else:
             if not isinstance((obj := rget(frame[-1], ins)), dict) and obj in (
@@ -1074,24 +1102,28 @@ def execute(code, frame=None):
     error.error(line_position, module_name, "Error was raised!")
     return error.SYNTAX_ERROR
 
+
 class IsolatedParser:
     def __init__(self, file_name="__main__", main_path=".", libdir=info.PERM_LIBDIR, argv=None):
         self.defaults = {
-            "libdir":info.PERM_LIBDIR,
-            "argv":info.ARGV.copy(),
-            "main_file":varproc.internal_attributes["main_file"],
-            "main_path":varproc.internal_attributes["main_path"],
-            "meta":copy(varproc.meta_attributes),
+            "libdir": info.PERM_LIBDIR,
+            "argv": info.ARGV.copy(),
+            "main_file": varproc.internal_attributes["main_file"],
+            "main_path": varproc.internal_attributes["main_path"],
+            "meta": copy(varproc.meta_attributes),
         }
         varproc.internal_attributes["main_file"] = file_name
         varproc.internal_attributes["main_path"] = main_path
         info.LIBDIR = libdir
+
     def __enter__(self):
         return self
+
     def run(self, code, frame=None):
         if isinstance(code, str):
             code = process_code(code)
         return run(code, frame=frame)
+
     def __exit__(self, exc, exc_ins, tb):
         info.LIBDIR = self.defaults["libdir"]
         info.ARGV = self.defaults["argv"]
@@ -1099,6 +1131,7 @@ class IsolatedParser:
         varproc.internal_attributes["main_path"] = self.defaults["main_path"]
         varproc.meta_attributes.update(self.defaults["meta"])
         return False
+
 
 # Versions below 1.4.8 and some 1.4.8
 # builds ran the code inside this function
@@ -1111,12 +1144,13 @@ def run_code(code, frame=None):
     every scope that needs to run.
     More performance! Yum ;)
     """
-    instruction_pointer = 0
     if isinstance(code, int):
         return code
-    if isinstance(code, dict):
+    elif isinstance(code, dict):
         is_llir = code["llir"]
         code, nframe = code["code"], code["frame"]
+    elif isinstance(code, list):
+        return execute(code, frame)
     else:
         is_llir = False
         nframe = new_frame()
@@ -1143,8 +1177,10 @@ def run_code(code, frame=None):
     # in the doc string.
     return execute(code, frame)
 
+
 def get_run():
     return run_code
+
 
 ##################################
 #       for -get-internals       #
@@ -1171,14 +1207,4 @@ if "get-internals" in info.program_flags:
 ##################################
 # this is classified as dark magic...
 
-# Doesnt use module.name = value
-# so that when we change the names
-# we dont need to go scour every file.
-
-# to avoid circular imports
-# basically instead of an "import"
-# is equivalent to "export to"
-mod_s.register_run(execute)
-mod_s.register_process(process_code)
-argproc_setter.set_run(execute)
-objects.register_run(execute)
+# All the functions shere have been turned into decorators

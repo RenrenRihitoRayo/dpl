@@ -120,12 +120,19 @@ def process_cdef(frame, code, local=None):
         return
     return data
 
+def register_execute(func):
+    dpl.execute_code = func
+    return func
+
+
 def register_run(func):
     dpl.run_code = func
+    return func
 
 
 def register_process(func):
     dpl.process_code = func
+    return func
 
 
 class modules:
@@ -183,6 +190,9 @@ class extension:
             return func
         return wrap
 
+    def add_function(self, *args, **kwargs):
+        return self.add_func(*args, **kwargs)
+
     def add_method(self, name=None, from_func=False):
         "Add a method."
         def wrap(func):
@@ -198,11 +208,12 @@ class extension:
         return self.__data.get(name, default)
 
     def mangle(self, name):
-        return (
-            f"{self._name}.{name}"
-            if not self.meta_name
-            else f"{self.meta_name}:{name}"
-        )
+        if self._name:
+            return f"{self._name}.{name}"
+        elif self.meta_name:
+            return f"{self.meta_name}:{name}"
+        else:
+            return name
 
     @property
     def name(self):

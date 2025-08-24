@@ -1,0 +1,35 @@
+
+# In my own programming language!
+
+&use {std/to_py.py}
+&use {std/text_io.py}
+
+# No wrappers, raw import
+&import "tkinter"
+
+--
+  Da komter lichten von lomco ist Mis.
+  :D
+
+  Tu jim darios Mis namme, ya?
+
+  miTu vi ist maclino, da ist Mis linguistiko.
+  Mayos namme ist terahali.
+--
+
+set app = [pycall :tkinter.Tk()]
+set _ = [:app@geometry("300x200")]
+set _ = [:app@title("To Mis Vaio")]
+
+set label = [pycall :tkinter.Label(:app, [text="Random Text :D"], [pady=100])]
+
+fn test(event)
+    -- Vora, ya? --
+    io:println("Mis sanlat in sanvas. Eyeni, Mi ji Ai mo Tu.")
+end
+ecatch (test) to_py:to_py(:test)
+
+set _ = [:label@bind("<Double-Button-1>", :test)]
+set _ = [:label@pack()]
+
+set _ = [:app@mainloop()]
