@@ -45,6 +45,10 @@ end
 
 ```
 
+* Flask wrapper is available in `std/other/flask.py`
+
+    There is an example given in the examples directory.
+
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented
 -->
