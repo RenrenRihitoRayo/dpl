@@ -35,7 +35,7 @@ def to_py(frame, _, temp):
             dpl.varproc.rset(frame[-1], "self", temp["self"])
         if temp["capture"] != dpl.state.bstate("nil"):
             dpl.varproc.rset(frame[-1], "_capture", temp["capture"])
-        err = dpl.run_code(temp["body"], frame)
+        err = dpl.execute_code(temp["body"], frame)
         if err:
             return err
         res = dpl.varproc.rget(frame[-1], "_export", default=None)
