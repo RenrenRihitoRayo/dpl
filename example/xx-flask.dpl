@@ -23,7 +23,7 @@ fn test()
             string template new_line
                 "<style> body { background-color: grey; height: 90%; display: flex; justify-content: center; align-items: center; } .text { color: orange; display: inline-block; } </style>"
                 '<meta name="viewport" content="width=device-width, initial-scale=1">'
-                'You entered <p class="text">${?str}</p> :D'
+                '<h1> You entered <p class="text">${?str}</p> :D </h1>'
             end
             return :template
         end

@@ -8,7 +8,6 @@ from collections import defaultdict
 import time
 import itertools
 from typing import DefaultDict
-import dill
 from copy import deepcopy as copy
 from . import py_argument_handler
 arguments_handler = py_argument_handler.arguments_handler
@@ -1119,10 +1118,10 @@ class IsolatedParser:
     def __enter__(self):
         return self
 
-    def run(self, code, frame=None):
+    def run_code(self, code, frame=None):
         if isinstance(code, str):
             code = process_code(code)
-        return run(code, frame=frame)
+        return run_code(code, frame=frame)
 
     def __exit__(self, exc, exc_ins, tb):
         info.LIBDIR = self.defaults["libdir"]
