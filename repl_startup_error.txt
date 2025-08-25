@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "C:\Users\estre\OneDrive\Desktop\dpl\dpl.py", line 468, in handle_args
-    pip.run_code(f.read(), frame)
-  File "C:\Users\estre\OneDrive\Desktop\dpl\lib\core\py_parser.py", line 1124, in run_code
-    return run(code, frame=frame)
-NameError: name 'run' is not defined
