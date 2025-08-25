@@ -1,7 +1,6 @@
 # Utilities for QOL functions
-# Now includes DSL Config Parser
-
 from . import arguments as argproc
+
 
 def flatten_dict(d, parent_key="", sep=".", seen=None):
     if seen is None:
@@ -21,6 +20,7 @@ def flatten_dict(d, parent_key="", sep=".", seen=None):
             items[new_key] = value
     seen.remove(dict_id)
     return items
+
 
 def convert_sec(sec):
     "Convert seconds to appropriate units"
@@ -51,9 +51,11 @@ def convert_bytes(byte):
     else:
         return byte * 1e-15, "PB"
 
+
 def format_bytes(byte):
     vv, vu = convert_bytes(byte)
     return f"{vv:.2f}{vu}"
+
 
 def format_seconds(byte):
     vv, vu = convert_sec(byte)

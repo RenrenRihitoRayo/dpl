@@ -11,10 +11,10 @@ _file_ = sys.argv[0]
 import lib.core.info as info
 info.original_argv = sys.argv.copy()
 import lib.core.cli_arguments as cli_args
+prog_flags, prog_vflags = cli_args.flags(info.ARGV, remove_first=True)
 import lib.core.module_handling as mod_s
 mod_s.modules.cli_arguments = cli_args
 mod_s.modules.sys = sys
-prog_flags, prog_vflags = cli_args.flags(info.ARGV, remove_first=True)
 info.program_flags = prog_flags
 info.program_vflags = prog_vflags
 info.ARGC = len(info.ARGV)
@@ -27,7 +27,7 @@ if "simple-mode" in prog_flags:
         "skip-non-essential",
         "no-lupa",
         "no-cffi",
-        "simple-run",
+        "disable-auto-complete"
     ))
 
 # Debug mode
@@ -79,12 +79,15 @@ if "skip-non-essential" not in prog_flags:
     mod_s.modules.pstats = pstats
     mod_s.modules.shutil = shutil
     mod_s.modules.subrocess = subprocess
-    import lib.core.suggestions as suggest
     import pprint
     import lib.core.serialize_dpl as cereal # i was hungry
     from lib.core.py_parser2_internals.py_parser2_internals import op_code_registry
     import lib.core.ast_gen as ast_gen
     import misc.dpl_linter as linter
+else:
+    prompt = lambda text=None, *x, **y: input(text)
+    WordCompleter = InMemoryHistory = lambda *x, **y: ...
+    import lib.core.suggestions as suggest
 
 # removed try except here.
 if "use-parser2" in prog_flags:
@@ -454,11 +457,6 @@ Code format: (
             frame = varproc.new_frame()
             cmd_hist = InMemoryHistory()
             acc = []
-            if not "disable-auto-complete" in prog_flags:
-                import lib.core.repl_syntax_highlighter as repl_conf
-                for f in frame:
-                    acc.extend(utils.flatten_dict(f).keys())
-                    acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
             PROMPT_CTL = frame[-1]["_meta"]["repl_conf"] = {}
             PROMPT_CTL["ps1"] = ">>> "
             PROMPT_CTL["ps2"] = "... "
@@ -472,11 +470,14 @@ Code format: (
                     print("something went wrong while running start up script!\n:", e)
                     with open("repl_startup_error.txt", "w") as err_f:
                         err_f.write(traceback.format_exc())
-            inp = lambda text: (
-                prompt(text, completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist, lexer=repl_conf.DPLLexer(), style=repl_conf.style).strip()
-                if not "disable-highlight" in prog_flags
-                else prompt(text, completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern)).strip()
-            )
+            if not "disable-auto-complete" in prog_flags:
+                import lib.core.repl_syntax_highlighter as repl_conf
+                for f in frame:
+                    acc.extend(utils.flatten_dict(f).keys())
+                    acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
+                inp = lambda text: prompt(text, completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist, lexer=repl_conf.DPLLexer(), style=repl_conf.style).strip()
+            else:
+                inp = __builtins__.input
             while True:
                 try:
                     act = inp(PROMPT_CTL["ps1"])

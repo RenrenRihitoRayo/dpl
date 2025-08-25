@@ -44,7 +44,7 @@ arguments_handler = py_argument_handler.arguments_handler
 if "no-lupa" not in info.program_flags:
     import lupa
 
-global_ffi = None 
+global_ffi = None
 if "no-cffi" not in info.program_flags:
     from shlex import split as parse_line
     from cffi import FFI
