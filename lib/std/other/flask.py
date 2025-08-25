@@ -3,7 +3,6 @@ if __name__ != "__dpl__":
 
 from flask import Flask, session, request
 from threading import Lock
-import uuid
 
 
 # Flask runs functions in threads
@@ -12,6 +11,10 @@ run_lock = Lock()
 
 ext = dpl.extension(meta_name="flask")
 app = None
+
+frame_stack["flask"] = {
+    "session": session
+}
 
 
 @ext.add_function()
