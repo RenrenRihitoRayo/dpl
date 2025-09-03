@@ -293,6 +293,7 @@ class dpl:
     truthy = (state_true, True)
     exit = None
     wrap = wrap
+    tag_handler = argproc.tag_handler
 
     def to_bool(obj):
         return constants.true if obj else constants.false

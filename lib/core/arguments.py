@@ -136,6 +136,17 @@ get_debug = varproc.get_debug
 
 execute_code = None  # to be set by py_parser
 
+tag_handlers = {}
+
+def tag_handler(name=None):
+    def _(fn):
+        nonlocal name
+        if name is None:
+            name = fn.__name__
+        tag_handlers[name] = fn
+        return fn
+    return _
+
 def nest_args(tokens):
     "Magic thing."
     stack = [[]]
@@ -492,6 +503,8 @@ def expr_preruntime(arg):
         return []
     elif arg == ".set":
         return set()
+    elif arg == ".tuple":
+        return set()
     elif arg in dpl_constants:
         arg = dpl_constants[arg]
     elif arg in type_annotations:
@@ -694,7 +707,10 @@ def evaluate(frame, expression):
                 ...
             else:
                 raise error.DPLError(err)
-        ret = frame[-1]["_nonlocal"]["_intern_result"]
+        if "_intern_result" in frame[-1]["_nonlocal"]:
+            ret = frame[-1]["_nonlocal"]["_intern_result"]
+        else:
+            ret = constants.nil
         varproc.pscope(frame)
         return ret
     elif len(processed) == 2 and processed[0] == "typeof":
@@ -713,7 +729,10 @@ def evaluate(frame, expression):
             if isinstance(index, (str, int, float, tuple)) and isinstance(obj, dict):
                 return obj.get(index, constants.nil)
             elif isinstance(index, int) and isinstance(obj, (str, tuple, list)):
-                return obj[index] if abs(index)-1 <= len(obj) else constants.nil
+                try:
+                    return obj[index]
+                except:
+                    return constants.nil
             else:
                 return constants.nil
         # types
