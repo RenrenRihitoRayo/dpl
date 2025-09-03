@@ -1,0 +1,61 @@
+# sh*tpost of a hello world
+
+-- DPL stands for Dump Programming Language
+   but would a dumb programming language
+   allow you to define a function _raw_?
+   The only interpreted programming language
+   that doesnt always shout "RUNTIME ERROR"
+   at your face. --
+
+-- Written in my own programming language --
+
+&use {std/text_io.py}
+
+-- Yes you can write HLIR *MANUALLY*
+   because in DPL functions are literally
+   just special types of dictionaries
+   still writable, still readable, AND
+   you can use NORMAL dictionaries to make one.
+   by. hand. --
+dict main
+    set name = main
+    set args = ()
+    set defaults = .dict
+    set capture = nil
+    set self = py::none
+    dict tags
+        set preserve-args = false
+    end
+    dict variadic
+        set name = nil
+        set index = 0
+    end
+    # Write the HLIR (High Level IR) your self.
+    list body
+        . (!::__line__, "!::__file__", io:println, [("Hello, world!")])
+        . (!::__line__, "!::__file__", return, [0])
+    end
+end
+
+if [set this = [call :main()]]
+    raise :this, "Main function returned an error!"
+end
+# exit anyway here
+exit
+
+-- To balance the universe, below is
+   the same code but better! --
+
+&use {std/text_io.py}
+
+# you can tag a function as an entry point using
+# the "::entry_point" suffix
+# or use the "entry_point" tag by adding it
+# after the parameter list
+# like `fn main() entry_point`
+# below handles the error code in python code
+# and is much more faster
+fn main::entry_point(argc, argv)
+    io:println("Hello, world!")
+    return 0
+end

@@ -130,6 +130,7 @@ def process_code(fcode, name="__main__"):
     nframe = new_frame()
     multiline = False
     last_comment = 0
+    fcode = fcode.replace("!::__file__", name)
     for lpos, line in filter(
         lambda x: (
             True
@@ -148,8 +149,7 @@ def process_code(fcode, name="__main__"):
             last_comment = lpos
             multiline = True
             continue
-        line = line.replace("!__line__", str(lpos))
-        line = line.replace("!__file__", name if name != "__main__" else meta_attributes["internal"]["main_file"])
+        line = line.replace("!::__line__", str(lpos))
         if line.startswith("&"):
             ins, *args = group(line[1:].lstrip())
             args = nest_args(exprs_preruntime(args))
@@ -394,7 +394,7 @@ def execute(code, frame=None):
         frame = new_frame()
 
     while instruction_pointer < len(code):
-        line_position, module_name, ins, oargs = code[instruction_pointer]
+        line_position, module_filepath, ins, oargs = code[instruction_pointer]
 
         ins = process_arg(frame, ins)
         if not oargs is None:
@@ -404,7 +404,7 @@ def execute(code, frame=None):
             except Exception as e:
                 error.error(
                     line_position,
-                    module_name,
+                    module_filepath,
                     f"{traceback.format_exc()}\nSomething went wrong when arguments were processed:\n{e}\n> {oargs!r}",
                 )
                 return error.PYTHON_ERROR
@@ -418,21 +418,23 @@ def execute(code, frame=None):
         elif ins == "setref" and argc == 3 and args[1] == "=":
             reference, _, value = args
             if reference["scope"] >= len(frame) or reference["scope_uuid"] != frame[reference["scope"]]["_scope_uuid"]:
-                error.error(line_position, module_name, f"Reference for {reference['name']} is invalid and may have outlived its original scope!")
+                error.error(line_position, module_filepath, f"Reference for {reference['name']} is invalid and may have outlived its original scope!")
                 return error.REFERENCE_ERROR
             rset(frame[reference["scope"]], reference["name"], value)
             reference["value"] = value
         elif ins == "sleep" and argc == 1 and isinstance(args[0], (int, float)):
             time.sleep(args[0])
         elif ins == "fn" and argc >= 2:
-            name, params, *tags = args
+            function_name, params, *tags = args
             temp_block = get_block(code, instruction_pointer)
             if temp_block is None:
                 break
             else:
                 instruction_pointer, body = temp_block
-            func = objects.make_function(name, body, process_args(frame, params))
+            func = objects.make_function(function_name, body, process_args(frame, params))
             entry_point = False
+            if function_name.endswith("::entry_point"):
+                entry_point = True
             for tag in tags:
                 if tag == "entry_point":
                     entry_point = True
@@ -441,11 +443,16 @@ def execute(code, frame=None):
                 elif isinstance(tag, dict):
                     (tag, value), = tag.items()
                     func["tags"][tag] = value
+                elif isinstance(tag, tuple) and len(tag) == 2 and tag[0] in tag_handlers:
+                    if (err:=tag_handlers[tag[0]](frame, module_filepath, func, *process_args(frame, tag[1]))):
+                        if err > 0: # ignore control codes
+                            error.error(line_position, module_filepath, f"Tag handler {tag[0]} raised an error!")
+                        return err
                 else:
-                    error.error(line_position, module_name, f"Invalid tag: {tag!r}")
-            rset(frame[-1], name, func)
+                    error.error(line_position, module_filepath, f"Invalid tag: {tag!r}")
+            rset(frame[-1], function_name, func)
 
-            if entry_point:
+            if entry_point and module_filepath == "__main__":
                 function_obj = func
                 raw_args = args = (meta_attributes["argc"], meta_attributes["argv"])
                 nscope(frame).update({
@@ -464,14 +471,18 @@ def execute(code, frame=None):
                     frame[-1]["_capture"] = function_obj["capture"]
                 err = execute(function_obj["body"], frame)
                 if err and err != error.STOP_FUNCTION:
-                    if err > 0: error.error(line_position, module_name, f"Error in function {ins!r}")
+                    if err > 0: error.error(line_position, module_filepath, f"Error in function {function_name!r}: [{err}] {error.ERRORS_DICT.get(err, "???")}")
                     return err
                 if "_return_code" in frame[-1]["_nonlocal"]:
-                    if not isinstance(frame[-1]["_return_code"], int):
-                        error.error(line_position, module_name, "entry point returned non int return code.")
-                        return error.TYPE_ERROR
-                    return frame[-1]["_return_code"]
+                    ecode = frame[-1]["_nonlocal"]["_return_code"]
+                    if ecode > 0:
+                        if not isinstance(frame[-1]["_nonlocal"]["_return_code"], int):
+                            error.error(line_position, module_filepath, "entry point returned non int return code.")
+                            return error.TYPE_ERROR
+                        error.error(line_position, module_filepath, f"Entry point function returned error code {ecode}: {error.ERRORS_DICT.get(ecode, "???")}")
+                    return ecode
                 pscope(frame)
+                return 0
         elif ins == "use" and argc == 1:
             if args[0].startswith("{") and args[0].endswith("}"):
                 f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
@@ -482,10 +493,10 @@ def execute(code, frame=None):
                     f = os.path.join(os.path.dirname(name), f)
                 search_path = "_loc"
             if not os.path.exists(f):
-                error.error(lpos, module_name, f"Not found while including: {f}")
+                error.error(lpos, module_filepath, f"Not found while including: {f}")
                 return error.PREPROCESSING_ERROR
-            if mod_s.py_import(frame, f, search_path, loc=os.path.dirname(module_name)):
-                print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_name}")
+            if mod_s.py_import(frame, f, search_path, loc=os.path.dirname(module_filepath)):
+                print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_filepath}")
                 return error.RUNTIME_ERROR
         elif ins == "use" and argc == 3 and args[1] == "as":
             if args[0].startswith("{") and args[0].endswith("}"):
@@ -497,10 +508,10 @@ def execute(code, frame=None):
                     f = os.path.join(os.path.dirname(name), f)
                 search_path = "_loc"
             if not os.path.exists(f):
-                error.error(lpos, module_name, f"Not found while including: {f}")
+                error.error(lpos, module_filepath, f"Not found while including: {f}")
                 return error.PREPROCESSING_ERROR
-            if mod_s.py_import(frame, f, search_path, loc=os.path.dirname(module_name), alias=args[2]):
-                print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_name}")
+            if mod_s.py_import(frame, f, search_path, loc=os.path.dirname(module_filepath), alias=args[2]):
+                print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_filepath}")
                 return error.RUNTIME_ERROR
         elif ins == "use_luaj" and argc == 1:
             if args[0].startswith("{") and args[0].endswith("}"):
@@ -512,10 +523,10 @@ def execute(code, frame=None):
                     f = os.path.join(os.path.dirname(name), f)
                 search_path = "_loc"
             if not os.path.exists(f):
-                error.error(lpos, module_name, f"Not found while including: {f}")
+                error.error(lpos, module_filepath, f"Not found while including: {f}")
                 return error.PREPROCESSING_ERROR
-            if mod_s.luaj_import(frame, f, search_path, loc=os.path.dirname(module_name)):
-                print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_name}")
+            if mod_s.luaj_import(frame, f, search_path, loc=os.path.dirname(module_filepath)):
+                print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_filepath}")
                 return error.RUNTIME_ERROR
         elif ins == "_intern.switch" and argc == 2:
             temp_body = args[0].get(args[1], args[0][None])
@@ -523,7 +534,7 @@ def execute(code, frame=None):
                 instruction_pointer += 1
                 continue
             if err:=execute(temp_body, frame):
-                error.error(line_position, module_name, f"Error in switch block '{args[1]}'")
+                error.error(line_position, module_filepath, f"Error in switch block '{args[1]}'")
                 return err
         elif ins == "if" and argc == 1:
             temp_block = get_block(code, instruction_pointer)
@@ -541,7 +552,7 @@ def execute(code, frame=None):
                 break
             else:
                 instruction_pointer, body = temp_block
-            if module_name == "__main__":
+            if module_filepath == "__main__":
                 err = execute(body, frame=frame)
                 if err:
                     return err
@@ -596,7 +607,7 @@ def execute(code, frame=None):
                 names.add(ins)
             tmp = frame[-1][name] = {}
             for n in names:
-                tmp[n] = f"enum:{module_name}:{name}:{n}"
+                tmp[n] = f"enum:{module_filepath}:{name}:{n}"
         elif ins == "loop" and argc == 0:
             temp = get_block(code, instruction_pointer)
             if temp is None:
@@ -651,7 +662,7 @@ def execute(code, frame=None):
         elif ins == "check_schema" and argc == 3:
             data, as_, schema = args
             if not type_checker.check_schema(data, schema):
-                error.error(line_position, module_name, "Data doesnt comply with schema!")
+                error.error(line_position, module_filepath, "Data doesnt comply with schema!")
                 return error.TYPE_ERROR
         elif ins == "stop" and argc == 0:
             return error.STOP_RESULT
@@ -692,7 +703,7 @@ def execute(code, frame=None):
         elif ins == "new" and argc == 2:
             object_scope, object_name = args
             if object_scope == constants.nil:
-                error.error(line_position, module_name, f"Unknown object")
+                error.error(line_position, module_filepath, f"Unknown object")
                 break
             obj = copy(object_scope)
             for name, value in obj.items():
@@ -703,12 +714,12 @@ def execute(code, frame=None):
         elif ins == "make_cons" and argc == 1:
             attrs = list(name for name, value in args[0].items() if not name.startswith("_") and not isinstance(value, objects.function_type))
             func = objects.make_method("new", [
-                (line_position, f"{module_name}:internal", "new", [":self", "tmp"]),
+                (line_position, f"{module_filepath}:internal", "new", [":self", "tmp"]),
                 *[
-                    (line_position, f"{module_name}:internal", "set", [f"tmp.{name}", "=", f":{name}"])
+                    (line_position, f"{module_filepath}:internal", "set", [f"tmp.{name}", "=", f":{name}"])
                     for name in attrs
                 ],
-                (line_position, f"{module_name}:internal", "return", [":tmp"]),
+                (line_position, f"{module_filepath}:internal", "return", [":tmp"]),
             ] , attrs, args[0])
             args[0]["new"] = func
         elif ins == "method" and argc >= 2:
@@ -717,7 +728,7 @@ def execute(code, frame=None):
             self = rget(frame[-1], scope_name)
             if self == constants.nil:
                 error.error(
-                    line_position, module_name, "Cannot bind a method to a value that isnt a scope!"
+                    line_position, module_filepath, "Cannot bind a method to a value that isnt a scope!"
                 )
                 return error.RUNTIME_ERROR
             temp = get_block(code, instruction_pointer)
@@ -766,7 +777,7 @@ def execute(code, frame=None):
             sys.exit(args[0])
         elif ins == "return":  # Return to the latched names
             if any(isinstance(x, objects.reference_type) for x in args):
-                error.error(line_position, module_name, "Function returned a reference, perhaps they were supposed to be dereferenced?")
+                error.error(line_position, module_filepath, "Function returned a reference, perhaps they were supposed to be dereferenced?")
                 return error.TYPE_ERROR
             if (latched_names := rget(frame[-1], "_returns")) != constants.nil:
                 if latched_names == "_":
@@ -786,7 +797,7 @@ def execute(code, frame=None):
         elif ins == "catch" and argc >= 2:  # catch return value of a function
             rets, func_name, args = args
             if (function_obj := rget(frame[-1], func_name, default=rget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
-                error.error(line_position, module_name, f"Invalid function {func_name!r}!")
+                error.error(line_position, module_filepath, f"Invalid function {func_name!r}!")
                 break
             if function_obj["tags"]["preserve-args"]:
                 raw_args = args[0]
@@ -811,12 +822,12 @@ def execute(code, frame=None):
                             frame[-1][name] = value
                     frame[-1][function_obj["variadic"]["name"]] = variadic
                 else:
-                    error.error(line_position, module_name, f"Function {ins} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
+                    error.error(line_position, module_filepath, f"Function {ins} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
                     return error.RUNTIME_ERROR
             else:
                 if len(args) != len(function_obj["args"]) and not function_obj["defaults"]:
                     text = "more" if len(args) > len(function_obj["args"]) else "less"
-                    error.error(line_position, module_name, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
+                    error.error(line_position, module_filepath, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
                     return error.RUNTIME_ERROR
                 for n, v in function_obj["defaults"].items():
                     frame[-1][n] = v
@@ -827,7 +838,7 @@ def execute(code, frame=None):
             frame[-1]["_returns"] = rets
             err = execute(function_obj["body"], frame)
             if err > 0:
-                error.error(line_position, module_name, f"Error in function {ins!r}")
+                error.error(line_position, module_filepath, f"Error in function {ins!r}")
                 return err
             pscope(frame)
         elif ins == "DEFINE_ERROR" and 0 < argc < 3:
@@ -836,7 +847,7 @@ def execute(code, frame=None):
             rets, name, args = args
             args = process_args(frame, args)
             if (function := rget(frame[-1], name, default=rget(frame[0], name))) == constants.nil or not hasattr(function, "__call__"):
-                error.error(line_position, module_name, f"Invalid function {name!r}!")
+                error.error(line_position, module_filepath, f"Invalid function {name!r}!")
                 return error.NAME_ERROR
             try:
                 func_params = mod_s.get_py_params(function)[2:]
@@ -846,14 +857,14 @@ def execute(code, frame=None):
                         if i.endswith("_xbody"):
                             temp = get_block(code, instruction_pointer, start=0)
                             if temp is None:
-                                error.error(line_position, module_name, f"Function '{function.__name__}' expected a block!")
+                                error.error(line_position, module_filepath, f"Function '{function.__name__}' expected a block!")
                                 return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
                             instruction_pointer, body = temp
                             t_args.append(body)
                         elif i.endswith("_body"):
                             temp = get_block(code, instruction_pointer)
                             if temp is None:
-                                error.error(line_position, module_name, f"Function '{function.__name__}' expected a block!")
+                                error.error(line_position, module_filepath, f"Function '{function.__name__}' expected a block!")
                                 return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
                             instruction_pointer, body = temp
                             t_args.append(body)
@@ -870,7 +881,7 @@ def execute(code, frame=None):
                     and is_debug_enabled("warn_no_return")
                 ):
                     error.warn(
-                        "Function doesnt return anything. To reduce overhead please dont use pycatch.\nLine {line_position}\nFile {module_name}"
+                        "Function doesnt return anything. To reduce overhead please dont use pycatch.\nLine {line_position}\nFile {module_filepath}"
                     )
                 if isinstance(res, tuple):
                     if rets != "_":
@@ -887,10 +898,10 @@ def execute(code, frame=None):
                         return error.SKIP_RESULT
                     elif res.startswith("err:"):
                         _, ecode, message = res.split(":", 2)
-                        error.error(line_position, module_name, message)
+                        error.error(line_position, module_filepath, message)
                         return int(ecode)
             except:
-                error.error(line_position, module_name, traceback.format_exc()[:-1])
+                error.error(line_position, module_filepath, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
         elif ins == "dict" and argc == 1:
             temp = get_block(code, instruction_pointer)
@@ -945,7 +956,10 @@ def execute(code, frame=None):
             args = process_args(frame, args)
             rset(frame[-1], name, mod_s.global_ffi.new(struct, args))
         elif ins == "raise" and isinstance(args[0], int) and argc == 2:
-            error.error(line_position, module_name, args[1])
+            error.error(line_position, module_filepath, args[1])
+            return args[0]
+        elif ins == "raise" and isinstance(args[0], int) and argc == 1:
+            error.error(line_position, module_filepath, f"Error [{args[0]}]: {error.ERRORS_DICT.get(args[0], "???")}")
             return args[0]
         elif (
             (function_obj := rget(frame[-1], ins, default=rget(frame[0], ins)))
@@ -977,12 +991,12 @@ def execute(code, frame=None):
                             frame[-1][name] = value
                     frame[-1][function_obj["variadic"]["name"]] = variadic
                 else:
-                    error.error(line_position, module_name, f"Function {ins} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
+                    error.error(line_position, module_filepath, f"Function {ins} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
                     return error.RUNTIME_ERROR
             else:
                 if len(args) != len(function_obj["args"]) and not function_obj["defaults"]:
                     text = "more" if len(args) > len(function_obj["args"]) else "less"
-                    error.error(line_position, module_name, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
+                    error.error(line_position, module_filepath, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
                     return error.RUNTIME_ERROR
                 for n, v in function_obj["defaults"].items():
                     frame[-1][n] = v
@@ -994,7 +1008,7 @@ def execute(code, frame=None):
                 frame[-1]["_capture"] = function_obj["capture"]
             err = execute(function_obj["body"], frame)
             if err and err != error.STOP_FUNCTION:
-                if err > 0: error.error(line_position, module_name, f"Error in function {ins!r}")
+                if err > 0: error.error(line_position, module_filepath, f"Error in function {ins!r}: [{err}] {error.ERRORS_DICT.get(err, "???")}")
                 return err
             pscope(frame)
         elif (
@@ -1014,14 +1028,14 @@ def execute(code, frame=None):
                         if i.endswith("_xbody"):
                             temp = get_block(code, instruction_pointer, start=0)
                             if temp is None:
-                                error.error(line_position, module_name, f"Function '{function.__name__}' expected a block!")
+                                error.error(line_position, module_filepath, f"Function '{function.__name__}' expected a block!")
                                 return (error.RUNTIME_ERROR, error.SYNTAX_ERROR)
                             instruction_pointer, body = temp
                             t_args.append(body)
                         elif i.endswith("_body"):
                             temp = get_block(code, instruction_pointer)
                             if temp is None:
-                                error.error(line_position, module_name, f"Function '{function.__name__}' expected a block!")
+                                error.error(line_position, module_filepath, f"Function '{function.__name__}' expected a block!")
                                 return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
                             instruction_pointer, body = temp
                             t_args.append(body)
@@ -1039,17 +1053,17 @@ def execute(code, frame=None):
                         break
                     elif res.startswith("err:"):
                         _, ecode, message = res.split(":", 2)
-                        error.error(line_position, module_name, message)
+                        error.error(line_position, module_filepath, message)
                         return int(ecode)
             except:
-                error.error(line_position, module_name, traceback.format_exc()[:-1])
+                error.error(line_position, module_filepath, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
         elif ins == "local" and argc == 1:
             execute(args[0]["body"], frame)
         elif ins == "on_new_scope" and argc == 0:
             temp = get_block(code, instruction_pointer)
             if temp is None:
-                error.error(line_position, module_name, f"on_new_scope expected a block!")
+                error.error(line_position, module_filepath, f"on_new_scope expected a block!")
                 return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
             instruction_pointer, body = temp
 
@@ -1063,12 +1077,12 @@ def execute(code, frame=None):
                 return on_new_scope_tmp_fn
             on_new_scope.append({
                 "func": make_on_new_scope_fn(body, frame),
-                "from": f"dpl:{module_name}:{line_position}"
+                "from": f"dpl:{module_filepath}:{line_position}"
             })
         elif ins == "on_pop_scope" and argc == 0:
             temp = get_block(code, instruction_pointer)
             if temp is None:
-                error.error(line_position, module_name, f"on_new_scope expected a block!")
+                error.error(line_position, module_filepath, f"on_new_scope expected a block!")
                 return (error.RUNTIME_ERROR, error.SYNTAX_ERROR) # say "runtime error" caised by "syntax error"
             instruction_pointer, body = temp
 
@@ -1082,7 +1096,7 @@ def execute(code, frame=None):
                 return on_new_scope_tmp_fn
             on_pop_scope.append({
                 "func": make_on_new_scope_fn(body, frame),
-                "from": f"dpl:{module_name}:{line_position}"
+                "from": f"dpl:{module_filepath}:{line_position}"
             })
         else:
             if not isinstance((obj := rget(frame[-1], ins)), dict) and obj in (
@@ -1093,12 +1107,12 @@ def execute(code, frame=None):
                     "\nAdditional Info: User may have called a partially defined function!",
                     end="",
                 )
-            error.error(line_position, module_name, f"Invalid instruction {ins}")
+            error.error(line_position, module_filepath, f"Invalid instruction {ins}")
             return error.RUNTIME_ERROR
         instruction_pointer += 1
     else:
         return 0
-    error.error(line_position, module_name, "Error was raised!")
+    error.error(line_position, module_filepath, "Error was raised!")
     return error.SYNTAX_ERROR
 
 

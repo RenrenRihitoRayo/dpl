@@ -1,7 +1,7 @@
 if __name__ != "__dpl__":
     raise Exception()
 
-from flask import Flask, session, request
+from flask import Flask, session, request, redirect, url_for
 from threading import Lock
 
 
@@ -12,9 +12,22 @@ run_lock = Lock()
 ext = dpl.extension(meta_name="flask")
 app = None
 
-frame_stack["flask"] = {
+frame_stack[0]["flask"] = {
     "session": session
 }
+
+urls = ""
+
+
+@ext.add_method(name="redirect")
+def redirect_(_, function, args=[], kwargs={}):
+    return redirect(url_for(function, *args, **kwargs))
+
+
+@ext.add_method(name="redirect_until")
+def redirect_(_, function, time=0, args=[], kwargs={}):
+    dpl.time.sleep(time)
+    return redirect(url_for(function, *args, **kwargs))
 
 
 @ext.add_function()
@@ -25,7 +38,7 @@ def app(_, path):
 
 
 @ext.add_function()
-def route(frame, __, route, function, methods=("GET",)):
+def route(frame, _, route, function, methods=("GET",)):
     def bind():
         def func(*args, **kwargs):
             with run_lock:
@@ -43,6 +56,11 @@ def route(frame, __, route, function, methods=("GET",)):
                 return frame[-1]["_flask"] if "_flask" in frame[-1] else None
         return func
     app.add_url_rule(route, function["name"], bind(), methods=methods)
+
+#
+@dpl.tag_handler("flask:route")
+def route_tag(frame, path, func, url, methods=("GET",)):
+    route(frame, None, url, func, methods)
 
 
 @ext.add_function()

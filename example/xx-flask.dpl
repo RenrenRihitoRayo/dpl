@@ -3,7 +3,7 @@
    flask is not in requirements.txt
    and thus thats why its in std/other --
 flask:app()
-fn home()
+fn home() (flask:route("/"))
     string template new_line
         "<style> body { background-color: grey;  } </style>"
         "<meta name='viewport' content='width=device-width, initial-scale=175%'>"
@@ -15,8 +15,7 @@ fn home()
     end
     return :template
 end
-flask:route("/", :home)
-fn test()
+fn test() (flask:route("/test", [! "GET", "POST"]))
     switch :request.method
         case POST
             set str = :request.form.text
@@ -35,5 +34,4 @@ fn test()
         end
     end
 end
-flask:route("/test", :test, (GET, POST))
 flask:run_app()
