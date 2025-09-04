@@ -83,6 +83,8 @@ chars = {
     "s": " ",
     "t": "\t",
     "N": "\n\r",
+    '"': '"',
+    "'": "'",
     "e": chr(27)
 }
 
@@ -356,8 +358,7 @@ def parse_string(frame, temp_name, body, new_line=False, sep="\n"):
     p = 0
     while p < len(body):
         [pos, file, ins, _] = body[p]
-        line = process_arg(frame, ins)
-        data.append(line)
+        data.append(process_arg(frame, ins))
         p += 1
     varproc.rset(frame[-1], temp_name, sep.join(data) if new_line else "".join(data))
 
@@ -465,10 +466,6 @@ def is_deref(arg):
 
 def is_read_var(arg):
     return arg.startswith(":") and is_id(arg[1:])
-
-
-def is_preruntime_read_var(arg):
-    return arg.startswith(".:") and is_id(arg[2:])
 
 
 def expr_preruntime(arg):
@@ -585,16 +582,16 @@ def my_range(start, end):
     return pos(start, end) if start < end else neg(start, end)
 
 
-def is_static(frame, code):
+def is_static(code):
+    if not isinstance(code, list):
+        return is_static([code])
     for i in code:
         if isinstance(i, list):
-            if not is_static(frame, i):
+            if not is_static(i):
                 return False
         elif not isinstance(i, str):
             continue
         elif i in RT_EXPR:
-            return False
-        elif is_preruntime_read_var(i) and varproc.rget(frame[-1], i[2:], default=None) is None:
             return False
         elif is_read_var(i):
             return False
@@ -617,8 +614,6 @@ def to_static(frame, code):
                 code[pos] = to_static(frame, i)
         elif not isinstance(i, str):
             continue
-        elif is_preruntime_read_var(i) and (not (var:=varproc.rget(frame[-1], i[2:], default=None)) is None):
-            code[pos] = var
     return code
 
 
@@ -836,11 +831,10 @@ def group(text):
     for i in text:
         if str_tmp:
             if this:
-                i = "\\"+i
                 if i in chars:
                     str_tmp.append(chars[i])
                 else:
-                    str_tmp.append(i)
+                    str_tmp.append("\\"+i)
                 this = False
                 continue
             if i == "\\":

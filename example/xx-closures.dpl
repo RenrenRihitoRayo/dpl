@@ -1,0 +1,21 @@
+&use {std/text_io.py}
+
+inline::fn outter()
+    set start = 0
+    fn inner()
+        set res = :_capture.start
+        io:println(:res)
+        # _capture is there to avoid variable polution
+        inc _capture.start
+        return :res
+    end
+    return :inner
+end
+
+catch (inner) outter()
+# 0
+inner()
+# 1
+inner()
+# 2
+inner()

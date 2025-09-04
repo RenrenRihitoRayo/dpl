@@ -49,6 +49,8 @@ end
 
     There is an example given in the examples directory.
 
+* Introduced the switches
+
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented
 -->
@@ -217,6 +219,32 @@ Most recent at top.
 ### (most recent release 1.4.9)
 
 # 2.0.0 (Indev)
+
+## New switches
+
+`switch::static` (old behavior) and `switch` (new behavior)
+The new switch replaced the old one with one major difference.
+
+```duprol
+# New switch behavior fixed this.
+# At the cost of O(n)
+
+set something = 90
+
+switch :some_value
+    case :something
+        ...
+    end
+end
+
+# To use the old behavior and gain O(1)
+
+switch::static :some_value
+    case "must be a constant"
+        ...
+    end
+end
+```
 
 ## Fixed a bug
 

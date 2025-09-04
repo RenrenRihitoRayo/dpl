@@ -51,7 +51,8 @@ INC_EXT_BUILTIN = {
     "on_new_scope",
     "on_pop_scope",
     "list",
-    "string"
+    "string",
+    "inline::fn"
 }
 
 # multiple increments
