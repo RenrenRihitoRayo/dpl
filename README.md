@@ -157,10 +157,10 @@ Hello, world!
 ```DuProL
 &use {std/text_io.py}
 
-io:println "Hello, world!"
+io:println("Hello, world!")
 
 fn greet(name)
-    io:println 'Hello ${name}!'
+    io:println('Hello ${name}!')
     return 420
 end
 
