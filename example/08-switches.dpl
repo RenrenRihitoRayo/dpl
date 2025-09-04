@@ -1,6 +1,31 @@
-#cmd: python3 ../dpl.py dump-hlir $file
 &use {std/text_io.py}
 
-io:println "This is a program that prints."
+# io:input(num, "Number: ")
+set num = 90
 
-dump_vars :_meta
+switch::static :num
+    # This shows a warning
+    # As it will match a literal ":num"
+    # not the variable `:num` which is 90
+    case :num
+        io:println("Old behavior")
+    end
+end
+
+set num = 90
+switch :num
+    case :num
+        io:println("Works!")
+    end
+    default
+        io:println("No")
+    end
+end
+
+--
+Output:
+
+Warning for line 7 file '__main__'
+[WARNING]: Expression ':num' is not a constant. Use `switch` instead!
+Works!
+--

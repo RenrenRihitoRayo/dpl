@@ -320,42 +320,120 @@ def process_code(fcode, name="__main__"):
             return error.PREPROCESSING_ERROR
         # pass for switches
         nres = res
+        # res = []
+        # offset = 0
+        # whole_offset = 0
+        # for instruction_pointer, [line_pos, file, ins, args] in enumerate(nres):
+        #     # compile the switch statement
+        #     # this uses _intern.switch
+        #     if ins == "switch" and len(args) == 1:
+        #         body = {None:[]}
+        #         arg_val = args[0]
+        #         og_lpos = line_pos
+        #         temp = get_block(nres, instruction_pointer)
+        #         if temp is None:
+        #             error.error(line_pos, file, "Switch statement is invalid!")
+        #             return error.PREPROCESSING_ERROR
+        #         whole_offset, switch_block = temp
+        #         for instruction_pointer, [line_pos, _, ins, args] in enumerate(switch_block):
+        #             if ins == "case" and len(args) == 1:
+        #                 temp = get_block(switch_block, instruction_pointer)
+        #                 if temp is None:
+        #                     error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
+        #                     return error.PREPROCESSING_ERROR
+        #                 offset, body[process_arg(nframe, args[0])] = temp
+        #             elif ins == "default" and args is None:
+        #                 temp = get_block(switch_block, instruction_pointer)
+        #                 if temp is None:
+        #                     error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
+        #                     return error.PREPROCESSING_ERROR
+        #                 offset, body[None] = temp
+        #             else:
+        #                 if instruction_pointer > offset:
+        #                     error.error(line_pos, file, "Invalid switch statement!")
+        #                     return error.PREPROCESSING_ERROR
+        #         whole_offset += 1
+        #         res.append([og_lpos, file, "_intern.switch", [body, arg_val]])
+        #     elif instruction_pointer >= whole_offset and ins != "pass":
+        #         res.append([line_pos, file, ins, args])
+
+        pos = 0
         res = []
-        offset = 0
-        whole_offset = 0
-        for instruction_pointer, [line_pos, file, ins, args] in enumerate(nres):
-            # compile the switch statement
-            # this uses _intern.switch
-            if ins == "switch" and len(args) == 1:
-                body = {None:[]}
+        while pos < len(nres):
+            entire_line = line_pos, file, ins, args = nres[pos]
+            if ins == "switch::static":
+                body = {None: []}
                 arg_val = args[0]
                 og_lpos = line_pos
-                temp = get_block(nres, instruction_pointer)
+                temp = get_block(nres, pos)
                 if temp is None:
                     error.error(line_pos, file, "Switch statement is invalid!")
                     return error.PREPROCESSING_ERROR
-                whole_offset, switch_block = temp 
-                for instruction_pointer, [line_pos, _, ins, args] in enumerate(switch_block):
+                pos, switch_block = temp
+                sub_pos = 0
+                while sub_pos < len(switch_block):
+                    line_pos, file, ins, args = switch_block[sub_pos]
+
                     if ins == "case" and len(args) == 1:
-                        temp = get_block(switch_block, instruction_pointer)
+                        if not is_static(args[0]):
+                            error.warning(line_pos, file, f"Expression {args[0]!r} is not a constant. Use `switch` instead!")
+                        temp = get_block(switch_block, sub_pos)
                         if temp is None:
                             error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
                             return error.PREPROCESSING_ERROR
-                        offset, body[process_arg(nframe, args[0])] = temp
+                        sub_pos, body[process_arg(nframe, args[0])] = temp
                     elif ins == "default" and args is None:
-                        temp = get_block(switch_block, instruction_pointer)
+                        temp = get_block(switch_block, sub_pos)
                         if temp is None:
                             error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
                             return error.PREPROCESSING_ERROR
-                        offset, body[None] = temp
+                        sub_pos, body[None] = temp
                     else:
                         if instruction_pointer > offset:
                             error.error(line_pos, file, "Invalid switch statement!")
                             return error.PREPROCESSING_ERROR
-                whole_offset += 1
-                res.append([og_lpos, file, "_intern.switch", [body, arg_val]])
-            elif instruction_pointer >= whole_offset and ins != "pass":
-                res.append([line_pos, file, ins, args])
+                    sub_pos += 1
+                res.append([og_lpos, file, "_intern.switch::static", [body, arg_val]])
+            elif ins == "switch":
+                body = {"default": [], "opts": []}
+                opts = body["opts"]
+                arg_val = args[0]
+                og_lpos = line_pos
+                temp = get_block(nres, pos)
+                if temp is None:
+                    error.error(line_pos, file, "Switch statement is invalid!")
+                    return error.PREPROCESSING_ERROR
+                pos, switch_block = temp
+                sub_pos = 0
+                while sub_pos < len(switch_block):
+                    line_pos, file, ins, args = switch_block[sub_pos]
+
+                    if ins == "case" and len(args) == 1:
+                        temp = get_block(switch_block, sub_pos)
+                        if temp is None:
+                            error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
+                            return error.PREPROCESSING_ERROR
+                        sub_pos, tbody = temp
+                        opts.append({
+                            "value": args[0],
+                            "body": tbody
+                        })
+                    elif ins == "default" and args is None:
+                        temp = get_block(switch_block, sub_pos)
+                        if temp is None:
+                            error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
+                            return error.PREPROCESSING_ERROR
+                        sub_pos, body["default"] = temp
+                    else:
+                        if instruction_pointer > offset:
+                            error.error(line_pos, file, "Invalid switch statement!")
+                            return error.PREPROCESSING_ERROR
+                    sub_pos += 1
+                res.append([og_lpos, file, "_intern.switch::dynamic", [body, arg_val]])
+            else:
+                res.append(entire_line)
+
+            pos += 1
         frame = {
             "code": res,             # HLIR or LLIR code
             "frame": nframe, # Stack frame, populated via modules
@@ -375,7 +453,7 @@ def process_code(fcode, name="__main__"):
 
 @mod_s.register_execute
 @argproc_setter.set_execute
-def execute(code, frame=None):
+def execute(code, frame):
     """
     Low level function to run.
     Unlike the old run function
@@ -386,14 +464,14 @@ def execute(code, frame=None):
     This is used internally.
     Use run_code instead for more logic.
     """
-    
-    instruction_pointer = 0
     # the contents of the new run_code function
     # was previously here
-    if frame is None:
-        frame = new_frame()
+    # and ran every recursive call
 
-    while instruction_pointer < len(code):
+    instruction_pointer = 0
+    code_length = len(code)
+
+    while instruction_pointer < code_length:
         line_position, module_filepath, ins, oargs = code[instruction_pointer]
 
         ins = process_arg(frame, ins)
@@ -451,6 +529,8 @@ def execute(code, frame=None):
                 else:
                     error.error(line_position, module_filepath, f"Invalid tag: {tag!r}")
             rset(frame[-1], function_name, func)
+
+            func["capture"] = frame[-1] # automatically store the scope it was defined in
 
             if entry_point and module_filepath == "__main__":
                 function_obj = func
@@ -528,7 +608,7 @@ def execute(code, frame=None):
             if mod_s.luaj_import(frame, f, search_path, loc=os.path.dirname(module_filepath)):
                 print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_filepath}")
                 return error.RUNTIME_ERROR
-        elif ins == "_intern.switch" and argc == 2:
+        elif ins == "_intern.switch::static" and argc == 2:
             temp_body = args[0].get(args[1], args[0][None])
             if not temp_body:
                 instruction_pointer += 1
@@ -536,6 +616,20 @@ def execute(code, frame=None):
             if err:=execute(temp_body, frame):
                 error.error(line_position, module_filepath, f"Error in switch block '{args[1]}'")
                 return err
+        elif ins == "_intern.switch::dynamic" and argc == 2:
+            blocks, arg = args
+            for block in blocks["opts"]:
+                if process_arg(frame, block["value"]) == arg:
+                    if (err:=execute(block["body"], frame)):
+                        if err > 0:
+                            error.error(line_position, module_filepath, f"Error in switch case {block['value']}: [{err}] {error.ERRORS_DICT.get(err, "???")}")
+                        return err
+                    break
+            else:
+                if (err:=execute(blocks["default"], frame)):
+                    if err > 0:
+                        error.error(line_position, module_filepath, f"Error in switch case {block['value']}: [{err}] {error.ERRORS_DICT.get(err, "???")}")
+                    return err
         elif ins == "if" and argc == 1:
             temp_block = get_block(code, instruction_pointer)
             if temp_block is None:
@@ -738,6 +832,7 @@ def execute(code, frame=None):
                 instruction_pointer, body = temp
             func = objects.make_method(method_name, body, process_args(frame, params), self)
             self[method_name] = func
+            func["capture"] = frame[-1]
         elif ins == "inherit" and argc == 5 and args[1] == "from" and args[3] == "for":
             attrs, _, parent, _, child = args
             if attrs == "all":

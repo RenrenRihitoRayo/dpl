@@ -103,7 +103,7 @@ def info(text, show_date=True):
         og_print(f"   [INFO]: {text}")
 
 
-def warnf(pos, file, text):
+def warning(pos, file, text):
     og_print(f"\nWarning for line {pos} file {file!r}\n[WARNING]: {text}")
 
 
