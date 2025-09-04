@@ -318,49 +318,14 @@ def process_code(fcode, name="__main__"):
                 f"{name!r}:{last_comment}: Unclosed multiline comment!",
             )
             return error.PREPROCESSING_ERROR
-        # pass for switches
+        # pass for switches pre runtime transformations
         nres = res
-        # res = []
-        # offset = 0
-        # whole_offset = 0
-        # for instruction_pointer, [line_pos, file, ins, args] in enumerate(nres):
-        #     # compile the switch statement
-        #     # this uses _intern.switch
-        #     if ins == "switch" and len(args) == 1:
-        #         body = {None:[]}
-        #         arg_val = args[0]
-        #         og_lpos = line_pos
-        #         temp = get_block(nres, instruction_pointer)
-        #         if temp is None:
-        #             error.error(line_pos, file, "Switch statement is invalid!")
-        #             return error.PREPROCESSING_ERROR
-        #         whole_offset, switch_block = temp
-        #         for instruction_pointer, [line_pos, _, ins, args] in enumerate(switch_block):
-        #             if ins == "case" and len(args) == 1:
-        #                 temp = get_block(switch_block, instruction_pointer)
-        #                 if temp is None:
-        #                     error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
-        #                     return error.PREPROCESSING_ERROR
-        #                 offset, body[process_arg(nframe, args[0])] = temp
-        #             elif ins == "default" and args is None:
-        #                 temp = get_block(switch_block, instruction_pointer)
-        #                 if temp is None:
-        #                     error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
-        #                     return error.PREPROCESSING_ERROR
-        #                 offset, body[None] = temp
-        #             else:
-        #                 if instruction_pointer > offset:
-        #                     error.error(line_pos, file, "Invalid switch statement!")
-        #                     return error.PREPROCESSING_ERROR
-        #         whole_offset += 1
-        #         res.append([og_lpos, file, "_intern.switch", [body, arg_val]])
-        #     elif instruction_pointer >= whole_offset and ins != "pass":
-        #         res.append([line_pos, file, ins, args])
-
         pos = 0
         res = []
+        inlines = {}
         while pos < len(nres):
             entire_line = line_pos, file, ins, args = nres[pos]
+            argc = len(args) if args is not None else 0
             if ins == "switch::static":
                 body = {None: []}
                 arg_val = args[0]
@@ -394,7 +359,7 @@ def process_code(fcode, name="__main__"):
                             return error.PREPROCESSING_ERROR
                     sub_pos += 1
                 res.append([og_lpos, file, "_intern.switch::static", [body, arg_val]])
-            elif ins == "switch":
+            elif ins == "switch" and argc == 1:
                 body = {"default": [], "opts": []}
                 opts = body["opts"]
                 arg_val = args[0]
@@ -430,6 +395,21 @@ def process_code(fcode, name="__main__"):
                             return error.PREPROCESSING_ERROR
                     sub_pos += 1
                 res.append([og_lpos, file, "_intern.switch::dynamic", [body, arg_val]])
+            elif ins == "fn::inline" and argc == 1:
+                inline_name = process_arg(nframe, args[0])
+                temp = get_block(nres, pos)
+                if temp is None:
+                    error.error(line_pos, file, "Inline function statement is invalid!")
+                    return error.PREPROCESSING_ERROR
+                pos, inlines[f"{file}::{inline_name}"] = temp
+            elif ins.startswith("inline::") and argc == 0:
+                name = f"{file}::{ins[8:]}"
+                raw_name = ins[8:]
+                if name in inlines:
+                    res.extend(inlines[name])
+                else:
+                    error.error(line_pos, file, f"Invalid inline function: {raw_name}")
+                    return error.PREPROCESSING_ERROR
             else:
                 res.append(entire_line)
 

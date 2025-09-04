@@ -1,5 +1,12 @@
 &use {std/text_io.py}
 
+fn::inline test
+    io:println(test)
+    wha
+end
+
+inline::test
+
 # io:input(num, "Number: ")
 set num = 90
 

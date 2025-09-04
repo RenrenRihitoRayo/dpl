@@ -77,13 +77,6 @@ def my_print(*args, **kwargs):
 def get_error_string(name, message):
     return None if name not in ERRORS_DICT else f"err:{ERRORS_DICT.get(name)}:{message}"
 
-def pre_error(pos, file, cause=None):
-    if file == "__main__":
-        file = META_ERR["internal"]["main_file"]
-    og_print(f"\n[Preprocessing Error]\nError in line {pos} file {file!r}")
-    if cause is not None:
-        og_print(f"Cause:\n{cause}")
-
 
 def error(pos, file, cause=None):
     if file == "__main__":
@@ -104,27 +97,10 @@ def info(text, show_date=True):
 
 
 def warning(pos, file, text):
+    if file == "__main__":
+        file = META_ERR["internal"]["main_file"]
     og_print(f"\nWarning for line {pos} file {file!r}\n[WARNING]: {text}")
 
-
-def warn(text, show_date=True):
-    if show_date:
-        og_print(f"[WARNING] {datetime.datetime.now()}: {text}")
-    else:
-        og_print(f"[WARNING]: {text}")
-
-def pre_info(text, show_date=True):
-    if show_date:
-        og_print(f"   [INFO PRE] {datetime.datetime.now()}: {text}")
-    else:
-        og_print(f"   [INFO PRE]: {text}")
-
-
-def pre_warn(text, show_date=True):
-    if show_date:
-        og_print(f"[WARNING PRE] {datetime.datetime.now()}: {text}")
-    else:
-        og_print(f"[WARNING PRE]: {text}")
 
 # make the errors toggleable
 def silent():
