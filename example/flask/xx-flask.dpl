@@ -1,0 +1,48 @@
+&use {std/other/flask.py}
+-- Using flask!
+   flask is not in requirements.txt
+   and thus thats why its in std/other
+   This is a simple reactive website written in my
+   programming language --
+
+# 27 lines without empty lines and comments
+# +10 if "home_page.html" is included
+
+flask:app()
+
+# this is the index, the home of the website
+fn home() (flask:route("/"))
+    # this returns out of the function once called.
+    # Yes DPL allows functions to control program flow
+    # meaning you can use "skip" or "stop" in any code block
+    # and it will propagate and get handled in a statement
+    flask:serve_file("home_page.html")
+end
+
+# The route to display the text we gave earlier
+# we dont use files here
+# since we have dynamic parts
+# in the future itll have templates but not now
+fn display_text() (flask:route("/test", [! "GET", "POST"]))
+    switch :request.method
+        case POST
+            set str = :request.form.text
+            string template new_line
+                "<style> body { background-color: grey; height: 90%; display: flex; justify-content: center; align-items: center; } .text { color: orange; display: inline-block; } </style>"
+                '<meta name="viewport" content="width=device-width, initial-scale=1">'
+                '<h1> You entered <br><p class="text">${?str}</p><br> :D </h1>'
+
+                # Set time out
+                "<script> setTimeout(() => { window.location.href = \"/\" }, 5000); </script>"
+            end
+            return :template
+        end
+        case GET
+            return "<style> body { background-color: grey; } </style><meta name='viewport' content='width=device-width, initial-scale=175%'>Submit a post request first!"
+        end
+        default
+            return 'INVALID METHOD: ${request.method}'
+        end
+    end
+end
+flask:run_app()

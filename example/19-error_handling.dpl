@@ -1,0 +1,12 @@
+&use {std/text_io.py}
+
+fn test()
+    raise 90
+end
+
+# below doesnt propagate the code the error to the module level
+# once an error reaches the module level it will crash it
+safe catch code (result) test()
+safe code test()
+
+# both code variables are 90, as the raise statement shows

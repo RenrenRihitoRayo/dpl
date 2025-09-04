@@ -16,7 +16,7 @@
    just special types of dictionaries
    still writable, still readable, AND
    you can use NORMAL dictionaries to make one.
-   by. hand. --
+   by... hand... --
 dict main
     set name = main
     set args = ()
@@ -32,8 +32,10 @@ dict main
     end
     # Write the HLIR (High Level IR) your self.
     list body
-        . (!::__line__, "!::__file__", io:println, [("Hello, world!")])
-        . (!::__line__, "!::__file__", return, [0])
+        . [! !::__line__, "!::__file__", "loop", [! 10]]
+            . [! !::__line__, "!::__file__", "io:println", [! ("Hello, world!")]]
+        . [! !::__line__, "!::__file__", "end", .list]
+        . [! !::__line__, "!::__file__", "return", [! 0]]
     end
 end
 
@@ -56,6 +58,8 @@ exit
 # below handles the error code in python code
 # and is much more faster
 fn main::entry_point(argc, argv)
-    io:println("Hello, world!")
+    loop 10
+        io:println("Hello, world!")
+    end
     return 0
 end

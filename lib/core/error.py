@@ -1,6 +1,7 @@
 # Logging
 
 import datetime
+import enum
 import os
 
 class DPLError(Exception):
@@ -56,10 +57,16 @@ def register_error(name, value=None):
     ERRORS_DICT[err_id] = name
     return err_id
 
-STOP_RESULT = -1
-SKIP_RESULT = -2
-FALLTHROUGH = -3
-STOP_FUNCTION = -4
+CONTROL_CODES = (
+    "STOP_RESULT",
+    "SKIP_RESULT",
+    "FALLTHROUGH",
+    "STOP_FUNCTION"
+)
+
+globals().update({name:-index for index, name in enumerate(CONTROL_CODES, 1)})
+
+CONTROL_DICT = {-index: name for index, name in enumerate(CONTROL_CODES, 1)}
 
 ERRORS_DICT = {name: index for name, index in enumerate(ERRORS, 1)}
 
@@ -86,7 +93,7 @@ def error(pos, file, cause=None):
         og_print(f"Cause:\n{cause}")
 
 
-og_print = my_print  # Use this to always call an error even when silent
+og_print = my_print
 is_silent = []
 
 def info(text, show_date=True):
@@ -121,12 +128,12 @@ def pre_warn(text, show_date=True):
 
 # make the errors toggleable
 def silent():
-    global print
+    global og_print
     og_print = lambda *x, **y: ...
-    is_silent.append(0)
+    is_silent.append(1)
 
 def active():
-    global print
+    global og_print
     is_silent.pop()
     if not is_silent:
         og_print = my_print

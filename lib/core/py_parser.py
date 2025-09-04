@@ -794,7 +794,7 @@ def execute(code, frame=None):
                     for name, value in zip(latched_names, args):
                         rset(frame[-1]["_nonlocal"], name, value)
             return error.STOP_FUNCTION
-        elif ins == "catch" and argc >= 2:  # catch return value of a function
+        elif ins == "catch" and argc == 3:  # catch return value of a function
             rets, func_name, args = args
             if (function_obj := rget(frame[-1], func_name, default=rget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
                 error.error(line_position, module_filepath, f"Invalid function {func_name!r}!")
@@ -841,6 +841,101 @@ def execute(code, frame=None):
                 error.error(line_position, module_filepath, f"Error in function {ins!r}")
                 return err
             pscope(frame)
+        elif ins == "safe" and argc == 5 and args[0] == "catch":  # catch return value of a function
+            _, ecode, rets, func_name, args = args
+            if (function_obj := rget(frame[-1], func_name, default=rget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
+                error.error(line_position, module_filepath, f"Invalid function {func_name!r}!")
+                break
+            if function_obj["tags"]["preserve-args"]:
+                raw_args = args[0]
+            args = process_args(frame, args)
+            nscope(frame)
+            if function_obj["self"] is not None:
+                frame[-1]["self"] = function_obj["self"]
+            if function_obj["tags"]["preserve-args"]:
+                frame[-1]["_raw_args"] = raw_args
+            frame[-1]["_args"] = args
+            if function_obj["capture"] != constants.nil:
+                frame[-1]["_capture"] = function_obj["capture"]
+            if function_obj["variadic"]["name"] != constants.nil:
+                if len(args)-1 >= function_obj["variadic"]["index"]:
+                    variadic = []
+                    for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
+                        if variadic:
+                            variadic.append(value)
+                        elif line_position >= function_obj["variadic"]["index"]:
+                            variadic.append(value)
+                        else:
+                            frame[-1][name] = value
+                    frame[-1][function_obj["variadic"]["name"]] = variadic
+                else:
+                    error.error(line_position, module_filepath, f"Function {ins} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
+                    return error.RUNTIME_ERROR
+            else:
+                if len(args) != len(function_obj["args"]) and not function_obj["defaults"]:
+                    text = "more" if len(args) > len(function_obj["args"]) else "less"
+                    error.error(line_position, module_filepath, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
+                    return error.RUNTIME_ERROR
+                for n, v in function_obj["defaults"].items():
+                    frame[-1][n] = v
+                for name, value in itertools.zip_longest(function_obj["args"], args):
+                    if name is None:
+                        break
+                    frame[-1][name] = value
+            frame[-1]["_returns"] = rets
+            error.silent()
+            err = execute(function_obj["body"], frame)
+            error.active()
+            pscope(frame)
+            if err > 0:
+                frame[-1][ecode] = err
+        elif ins == "safe" and argc == 3:  # catch return value of a function
+            ecode, func_name, args = args
+            if (function_obj := rget(frame[-1], func_name, default=rget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
+                error.error(line_position, module_filepath, f"Invalid function {func_name!r}!")
+                break
+            if function_obj["tags"]["preserve-args"]:
+                raw_args = args[0]
+            args = process_args(frame, args)
+            nscope(frame)
+            if function_obj["self"] is not None:
+                frame[-1]["self"] = function_obj["self"]
+            if function_obj["tags"]["preserve-args"]:
+                frame[-1]["_raw_args"] = raw_args
+            frame[-1]["_args"] = args
+            if function_obj["capture"] != constants.nil:
+                frame[-1]["_capture"] = function_obj["capture"]
+            if function_obj["variadic"]["name"] != constants.nil:
+                if len(args)-1 >= function_obj["variadic"]["index"]:
+                    variadic = []
+                    for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
+                        if variadic:
+                            variadic.append(value)
+                        elif line_position >= function_obj["variadic"]["index"]:
+                            variadic.append(value)
+                        else:
+                            frame[-1][name] = value
+                    frame[-1][function_obj["variadic"]["name"]] = variadic
+                else:
+                    error.error(line_position, module_filepath, f"Function {ins} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
+                    return error.RUNTIME_ERROR
+            else:
+                if len(args) != len(function_obj["args"]) and not function_obj["defaults"]:
+                    text = "more" if len(args) > len(function_obj["args"]) else "less"
+                    error.error(line_position, module_filepath, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
+                    return error.RUNTIME_ERROR
+                for n, v in function_obj["defaults"].items():
+                    frame[-1][n] = v
+                for name, value in itertools.zip_longest(function_obj["args"], args):
+                    if name is None:
+                        break
+                    frame[-1][name] = value
+            error.silent()
+            err = execute(function_obj["body"], frame)
+            error.active()
+            pscope(frame)
+            if err > 0:
+                frame[-1][ecode] = err
         elif ins == "DEFINE_ERROR" and 0 < argc < 3:
             error.register_error(*args)
         elif ins == "ecatch" and argc == 3:  # catch return value of a python function
