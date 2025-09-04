@@ -635,7 +635,7 @@ class kwarg:
 
 def evaluate(frame, expression):
     "Evaluate an expression"
-    if not isinstance(expression, (list, tuple)):
+    if not isinstance(expression, Expression):
         return expression
     processed = process_args(frame, expression)
     if len(processed) == 3 and isinstance(processed[1], str) and processed[1] in simple_ops:

@@ -29,11 +29,12 @@ def wrap_ok(_, value):
 def wrap_err(_, code, message):
     return Option(True, code, message)
 
-@ext.add_func(typed="$$ :: str")
+@ext.add_func()
 def raise_from_string(_, __, error_str):
     return error_str
 
-@ext.add_func(typed="$$ :: any str")
+@ext.add_method(from_func=True)
+@ext.add_func()
 def unwrap(frame, _, code, names):
     if len(names) != 2:
         return dpl.error.get_errror_string("RUNTIME_ERROR", "names must be a list of two items that contain valid identifiers!")
