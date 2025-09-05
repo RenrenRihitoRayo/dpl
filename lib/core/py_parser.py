@@ -306,7 +306,8 @@ def process_code(fcode, name="__main__"):
             except:
                 error.pre_error(lpos, file, "Line has an imballance in parenthesis!")
                 return error.SYNTAX_ERROR
-            if preprocessing_flags["EXPRESSION_FOLDING"]: args = to_static(nframe,
+            if preprocessing_flags["EXPRESSION_FOLDING"]: args = to_static(
+                nframe,
                 args
             )  # If there are static parts in the arguments run them before runtime.
             res.append((lpos, name, ins, args if len(args) else None))
@@ -724,8 +725,9 @@ def execute(code, frame):
                 break
             else:
                 instruction_pointer, body = temp
+            expr = Expression(args[0])
             if body:
-                while (tmp:=evaluate(frame, args[0])):
+                while evaluate(frame, expr):
                     err = execute(body, frame)
                     if err:
                         if err == error.STOP_RESULT:

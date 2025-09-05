@@ -1,2 +1,9 @@
 use {std/text_io.py}
 
+START_TIME
+set a = 0
+while (:a < 250_000)
+    inc a
+end
+STOP_TIME
+LOG_TIME

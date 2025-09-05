@@ -1,31 +1,27 @@
 &use {std/text_io.py}
 
-fn::inline test
-    io:println(test)
-    wha
-end
-
-inline::test
-
-# io:input(num, "Number: ")
-set num = 90
+io:input(num, "Number: ")
+set value = 90
 
 switch::static :num
     # This shows a warning
     # As it will match a literal ":num"
     # not the variable `:num` which is 90
-    case :num
-        io:println("Old behavior")
+    case :value
+        io:println("Old behavior - matched!")
+    end
+    default
+        io:println("Old behavior - no match")
     end
 end
 
 set num = 90
 switch :num
-    case :num
-        io:println("Works!")
+    case :value
+        io:println("New - Works!")
     end
     default
-        io:println("No")
+        io:println("New - No match")
     end
 end
 
