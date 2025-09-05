@@ -53,8 +53,11 @@ end
 <<<<<<< HEAD
 =======
 
+<<<<<<< HEAD
 >>>>>>> 2.0.0
 
+=======
+>>>>>>> 2.0.0
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented
 -->
