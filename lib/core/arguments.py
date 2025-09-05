@@ -2,18 +2,26 @@
 # NOT FOR THE CLI
 
 from . import dpl_ctypes
-
-globals().update(vars(dpl_ctypes))
-
 from sys import flags
 import traceback
 import operator
+from . import constants
+from . import varproc
+from . import error
+from .info import *
+from . import py_argument_handler as pah
+from . import fmt
+from . import objects
+
+globals().update(vars(dpl_ctypes))
 
 inf = float("inf")
+
 
 # custom type to distinguish lists and expressions
 class Expression(list):
     ...
+
 
 def glob_match(pattern, text):
     negate = False
@@ -48,6 +56,7 @@ def glob_match(pattern, text):
         result = match(pattern, text)
     return not result if negate else result
 
+
 simple_ops = {
     '+': operator.add,
     '-': operator.sub,
@@ -73,7 +82,7 @@ simple_ops = {
 }
 
 chars = {
-    "\\":"\\",
+    "\\": "\\",
     "n": "\n",
     "b": "\b",
     "f": "\f",
@@ -87,8 +96,6 @@ chars = {
     "'": "'",
     "e": chr(27)
 }
-
-from . import objects
 
 type_annotations = {
     "dpl::bool": int,
@@ -118,17 +125,11 @@ type_annotations = {
 
 dpl_constants = {
     "py::none": None,
+    "py::true": True,
+    "py::false": False
 }
 
 type_to_name = {value: name for name, value in (type_annotations | dpl_constants).items()}
-
-from . import state
-from . import constants
-from . import varproc
-from . import error
-from .info import *
-from . import py_argument_handler as pah
-from . import fmt
 
 fmt_format = fmt.format
 fmt_old_format = fmt.old_format
@@ -140,6 +141,7 @@ execute_code = None  # to be set by py_parser
 
 tag_handlers = {}
 
+
 def tag_handler(name=None):
     def _(fn):
         nonlocal name
@@ -148,6 +150,7 @@ def tag_handler(name=None):
         tag_handlers[name] = fn
         return fn
     return _
+
 
 def nest_args(tokens):
     "Magic thing."
@@ -318,6 +321,7 @@ def parse_dict(frame, temp_name, body):
             return 1
         p += 1
 
+
 def parse_list(frame, temp_name, body):
     data = []
     varproc.rset(frame[-1], temp_name, data)
@@ -353,6 +357,7 @@ def parse_list(frame, temp_name, body):
             return 1
         p += 1
 
+
 def parse_string(frame, temp_name, body, new_line=False, sep="\n"):
     data = []
     p = 0
@@ -362,6 +367,7 @@ def parse_string(frame, temp_name, body, new_line=False, sep="\n"):
         p += 1
     varproc.rset(frame[-1], temp_name, sep.join(data) if new_line else "".join(data))
 
+
 def parse_struct(frame, ffi, s_name, body):
     names = ["typedef struct {"]
     for p, [pos, file, name, [eq, type]] in enumerate(body):
@@ -369,7 +375,6 @@ def parse_struct(frame, ffi, s_name, body):
             error.error(pos, file, f"Invalid statement!")
             return 1
         names.append("   " + type.name(name) + ";")
-    
     names.append(f"}} {s_name};")
     ffi.cdef("\n".join(names))
     varproc.rset(frame[-1], s_name, f"{s_name}*")
@@ -510,10 +515,12 @@ def expr_preruntime(arg):
         return 22/7
     return arg
 
+
 def handle_in_string_expr(text, data):
     args = exprs_preruntime(group(text))
     args = process_args(data, args)
     return evaluate(data, args)
+
 
 def expr_runtime(frame, arg):
     "Process an argument at runtime"
@@ -568,6 +575,7 @@ def expr_runtime(frame, arg):
     else:
         raise Exception(f"Invalid literal: {arg}")
 
+
 def my_range(start, end):
     def pos(start, end):
         while start < end:
@@ -604,7 +612,7 @@ def is_static(code):
 def to_static(frame, code):
     for pos, i in enumerate(code):
         if isinstance(i, list):
-            if is_static(frame, i):
+            if is_static(i):
                 value = evaluate(frame, to_static(frame, i))
                 if isinstance(value, str):
                     code[pos] = f'"{value}"'

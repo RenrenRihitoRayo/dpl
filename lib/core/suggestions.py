@@ -8,10 +8,7 @@ pattern = rcomp(r"[&\w\.\:_\%\!]+")
 import os
 
 SUGGEST = list(info.ALL_INTRINSICS) + [
-    'pub fn',
-    'export set'
 ]
-SUGGEST.remove("pub")
 
 def listdir(path=info.LIBDIR):
     directory_contents = {}
@@ -33,7 +30,6 @@ def listdir(path=info.LIBDIR):
     return directory_contents
 k = listdir()
 k.pop("core")
-k.pop("dpl_helpers")
 directive = "use"
 for lib, files in k.items():
     if "include-py.txt" in files:

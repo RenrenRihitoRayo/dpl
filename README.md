@@ -51,8 +51,12 @@ end
 
 * Reworked the switch statement
 
+* Text IO can disable input
+
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented
+
+    TODO :,D
 -->
 
 ## Philosophy
@@ -64,9 +68,11 @@ end
 
 ## Features
 
-- Functions? Yes, and they sometimes even work.  
-- Syntax? Let\'s call it... *flexible*.  
-- Naming conventions? **snake\_case**, **PascalCase**, **camelCase**, or **whoknows\_\_\_???case** - all welcome.
+- OOP
+- Functional-ish Programming
+- Symple-ish Syntax
+- Interopt with Python, C, and Lua
+- Simple C interface (user facing code is easy to include)
 
 ## Types
 
@@ -122,12 +128,7 @@ Explicitly undefined means that the variable doesnt exist in scope!
 While Implicitly undefined means that the variable does exist but is set as nil.
 
 To differentiate between these two use the `def?` operator. Ex: `set exists [def? var]`
-To make sure its only implicitly undefined use `def?` with `nil?`. Ex: `set exists_bit_is_nil [[def? var] and [nil? :var]]`
-
-### Extra Note
-
-Even values representing a state of nothingness
-has value here, too sad you dont have any...
+To make sure its only implicitly undefined use `def?` with `nil?`. Ex: `set exists_but_is_nil [[def? var] and [nil? :var]]`
 
 ## How To Use DPL
 
@@ -141,12 +142,12 @@ You must have python and python-pip installed.
 Added ... to PATH in ~/.bashrc
 [root@localhost ~/dpl]# dpl
 DPL REPL for DPL v1.4.7
-Python 3.11.4 (...) [...]
+Python 3.x (...) [...]
 >>> &use {std/text_io.py}
 >>> io:println "Hello, world!"
 Hello, world!
 >>> exit
-[root@localhost ~/dpl]# dpl example/hello-world.dpl
+[root@localhost ~/dpl]# dpl run example/01-helloworld.dpl
 Hello, world!
 [root@localhost ~/dpl]# # get info about the code base
 [root@localhost ~/dpl]# python3 info.py
@@ -171,14 +172,16 @@ io:println(:result)
 
 ## Reasons to use DPL
 
-- To suffer
-- To show off
-- To look smart-ish
+- Simple interopt between Python and C
 
-Why use DPL?
-* You’re tired of languages judging you.
-* You believe standards are optional. You want full control and full responsibility.
-* You enjoy chaos, minimalism, or pain.
+DPL can be used as a glue between the two.
+
+- Simple Syntax
+
+DPL has a simple syntax, given that it doesnt
+have a lexer or AST in the normal sense.
+One function call is needed to compile DPL code
+into HLIR
 
 ## DPL's Moto
 
@@ -219,6 +222,11 @@ Most recent at top.
 ### (most recent release 1.4.9)
 
 # 2.0.0 (Indev)
+
+## `io:input(var_name, prompt, default_value)`
+
+The `text_io.py` extension now supports disabling the inputs
+and use the defaults instead. Which is an improvement for testing.
 
 ## New switches
 

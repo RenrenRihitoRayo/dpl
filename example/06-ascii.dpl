@@ -2,28 +2,18 @@ use {std/text_io.py}
 
 set start = [from_ascii "A"]
 set end   = [[from_ascii "Z"] + 1]
-set a     = 0
 
-while ([:a + :start] < :end)
-    io:print([to_ascii [:a + :start]])
-    set a = [:a + 1]
+for i in [drange :start :end]
+    io:print([to_ascii :i])
 end
 
 io:println()
 
-set a = 0
-while (:a < 10)
-    io:print([to_ascii [:a + 48]])
-    set a = [:a + 1]
+set start = [from_ascii "0"]
+set end   = [[from_ascii "9"] + 1]
+
+for i in [drange :start :end]
+    io:print([to_ascii :i])
 end
 
 io:println()
-
---
-  Break statement = stop
-  Continue statement = skip
-  
-  Why?
-  break keyword **stops** iteration.
-  continue keyword **skips** to the next iteration.
---
