@@ -49,7 +49,8 @@ end
 
     There is an example given in the examples directory.
 
-* Reworked the switch statements
+* Reworked the switch statement
+
 
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented
@@ -157,10 +158,10 @@ Hello, world!
 ```DuProL
 &use {std/text_io.py}
 
-io:println "Hello, world!"
+io:println("Hello, world!")
 
 fn greet(name)
-    io:println 'Hello ${name}!'
+    io:println('Hello ${name}!')
     return 420
 end
 
@@ -231,6 +232,8 @@ The new switch replaced the old one with one major difference.
 
 set something = 90
 
+# new behavior allows
+# variables in the cases
 switch :some_value
     case :something
         ...
@@ -239,6 +242,8 @@ end
 
 # To use the old behavior and gain O(1)
 
+# old behavior can only accept
+# constants in cases
 switch::static :some_value
     case "must be a constant"
         ...
