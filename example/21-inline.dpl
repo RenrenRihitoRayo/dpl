@@ -1,0 +1,14 @@
+&use {std/text_io.py}
+
+fn::inline add(res, a, b)
+    set ::res = [::a + ::b]
+end
+
+fn test()
+    inline::add(result, 10, 20)
+end
+
+io:println([[?dict :test](body)])
+
+# Output:
+# [(5, '__main__', 'set', ['result', '=', [10, '+', 20]])]

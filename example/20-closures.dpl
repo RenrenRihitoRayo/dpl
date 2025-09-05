@@ -1,6 +1,6 @@
 &use {std/text_io.py}
 
-inline::fn outter()
+fn outter()
     set start = 0
     fn inner()
         set res = :_capture.start

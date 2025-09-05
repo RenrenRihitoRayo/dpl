@@ -609,17 +609,17 @@ def is_static(code):
     return True
 
 
-def to_static(frame, code):
+def to_static(code):
     for pos, i in enumerate(code):
         if isinstance(i, list):
             if is_static(i):
-                value = evaluate(frame, to_static(frame, i))
+                value = evaluate([{}], to_static(i))
                 if isinstance(value, str):
                     code[pos] = f'"{value}"'
                 else:
                     code[pos] = value
             else:
-                code[pos] = to_static(frame, i)
+                code[pos] = to_static(i)
         elif not isinstance(i, str):
             continue
     return code

@@ -4,8 +4,8 @@ get_time delta
 
 fn stamp_to_time(stamp)
     set seconds = [ ?int :stamp ]
-    set minutes = [ [ ?string [ :seconds // 60 ] ] @ zfill 2 ]
-    set final_seconds = [ [ ?string [ :seconds % 60 ] ] @ zfill 2 ]
+    set minutes = [ [ ?string [ :seconds // 60 ] ] @ zfill(2) ]
+    set final_seconds = [ [ ?string [ :seconds % 60 ] ] @ zfill(2) ]
     return '${minutes}:${final_seconds}'
 end
 

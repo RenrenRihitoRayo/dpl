@@ -10,7 +10,6 @@ import itertools
 from typing import DefaultDict
 from copy import deepcopy as copy
 from . import py_argument_handler
-arguments_handler = py_argument_handler.arguments_handler
 from .runtime import *
 from . import utils
 from . import objects
@@ -20,6 +19,7 @@ import traceback
 import sys
 import os
 import gc
+arguments_handler = py_argument_handler.arguments_handler
 
 pp2_execute = None
 process_hlir = None
@@ -114,6 +114,32 @@ def pprint(d, l=0, seen=None, hide=True):
             print("  "*l+"],")
         else:
             print("  "*l+f"{name!r}: {value!r},")
+
+
+def recursive_replace(data, target, replacement):
+    if isinstance(data, (str, bytes)):
+        return replacement if data == target else data
+    elif isinstance(data, list):
+        return [recursive_replace(item, target, replacement) for item in data]
+    elif isinstance(data, tuple):
+        return tuple(recursive_replace(item, target, replacement) for item in data)
+    elif isinstance(data, set):
+        return {recursive_replace(item, target, replacement) for item in data}
+    else:
+        return replacement if data == target else data
+
+
+def process_inline(args, inline_fn):
+    res = []
+    params, body = inline_fn["args"], inline_fn["body"]
+    values = tuple(zip(params, args))
+    for [line_pos, module_name, ins, args] in body:
+        for name, value in values:
+            current_name = f"::{name}"
+            ins, args = recursive_replace([ins, args], current_name, value)
+        res.append((line_pos, module_name, to_static(ins), to_static(args)))
+    return res
+
 
 def process_code(fcode, name="__main__"):
     """
@@ -306,10 +332,9 @@ def process_code(fcode, name="__main__"):
             except:
                 error.pre_error(lpos, file, "Line has an imballance in parenthesis!")
                 return error.SYNTAX_ERROR
-            if preprocessing_flags["EXPRESSION_FOLDING"]: args = to_static(
-                nframe,
-                args
-            )  # If there are static parts in the arguments run them before runtime.
+            # If there are static parts in the arguments run them before runtime.
+            if preprocessing_flags["EXPRESSION_FOLDING"]:
+                args = to_static(args)
             res.append((lpos, name, ins, args if len(args) else None))
     else:
         if multiline:
@@ -396,34 +421,35 @@ def process_code(fcode, name="__main__"):
                             return error.PREPROCESSING_ERROR
                     sub_pos += 1
                 res.append([og_lpos, file, "_intern.switch::dynamic", [body, arg_val]])
-            elif ins == "fn::inline" and argc == 1:
-                inline_name = process_arg(nframe, args[0])
+            elif ins == "fn::inline" and argc == 2:
+                inline_name, param = process_args(nframe, args)
                 temp = get_block(nres, pos)
                 if temp is None:
                     error.error(line_pos, file, "Inline function statement is invalid!")
                     return error.PREPROCESSING_ERROR
-                pos, inlines[f"{file}::{inline_name}"] = temp
-            elif ins.startswith("inline::") and argc == 0:
+                pos, inlines[f"{file}::{inline_name}"] = temp[0], {
+                    "args": param,
+                    "body": temp[1]
+                }
+            elif ins.startswith("inline::") and argc == 1:
                 name = f"{file}::{ins[8:]}"
                 raw_name = ins[8:]
                 if name in inlines:
-                    res.extend(inlines[name])
+                    res.extend(process_inline(args[0], inlines[name]))
                 else:
                     error.error(line_pos, file, f"Invalid inline function: {raw_name}")
                     return error.PREPROCESSING_ERROR
             else:
                 res.append(entire_line)
-
             pos += 1
         frame = {
-            "code": res,             # HLIR or LLIR code
-            "frame": nframe, # Stack frame, populated via modules
-            # Is the code HLIR or LLIR?
-            #This will be used in the future
-            # to automatically switch execution functions.
+            "code": res,      # HLIR or LLIR code
+            "frame": nframe,  # Stack frame, populated via modules
+                              # Is the code HLIR or LLIR?
+                              # This will be used in the future
+                              # to automatically switch execution functions.
             "llir": False,
         }
-        # simple in place change :D proud of this.
         if preprocessing_flags["EXPERIMENTAL_LLIR"]:
             if process_hlir is None:
                 raise Exception("process_hlir function not available!\nFlag '-use-parser2' wasnt suplied!")
@@ -532,7 +558,7 @@ def execute(code, frame):
                     frame[-1]["_capture"] = function_obj["capture"]
                 err = execute(function_obj["body"], frame)
                 if err and err != error.STOP_FUNCTION:
-                    if err > 0: error.error(line_position, module_filepath, f"Error in function {function_name!r}: [{err}] {error.ERRORS_DICT.get(err, "???")}")
+                    if err > 0: error.error(line_position, module_filepath, f"Error in function {function_name!r}: [{err}] {error.ERRORS_DICT.get(err, '???')}")
                     return err
                 if "_return_code" in frame[-1]["_nonlocal"]:
                     ecode = frame[-1]["_nonlocal"]["_return_code"]
@@ -540,7 +566,7 @@ def execute(code, frame):
                         if not isinstance(frame[-1]["_nonlocal"]["_return_code"], int):
                             error.error(line_position, module_filepath, "entry point returned non int return code.")
                             return error.TYPE_ERROR
-                        error.error(line_position, module_filepath, f"Entry point function returned error code {ecode}: {error.ERRORS_DICT.get(ecode, "???")}")
+                        error.error(line_position, module_filepath, f"Entry point function returned error code {ecode}: {error.ERRORS_DICT.get(ecode, '???')}")
                     return ecode
                 pscope(frame)
                 return 0
@@ -603,13 +629,13 @@ def execute(code, frame):
                 if process_arg(frame, block["value"]) == arg:
                     if (err:=execute(block["body"], frame)):
                         if err > 0:
-                            error.error(line_position, module_filepath, f"Error in switch case {block['value']}: [{err}] {error.ERRORS_DICT.get(err, "???")}")
+                            error.error(line_position, module_filepath, f"Error in switch case {block['value']}: [{err}] {error.ERRORS_DICT.get(err, '???')}")
                         return err
                     break
             else:
                 if (err:=execute(blocks["default"], frame)):
                     if err > 0:
-                        error.error(line_position, module_filepath, f"Error in switch case {block['value']}: [{err}] {error.ERRORS_DICT.get(err, "???")}")
+                        error.error(line_position, module_filepath, f"Error in switch case {block['value']}: [{err}] {error.ERRORS_DICT.get(err, '???')}")
                     return err
         elif ins == "if" and argc == 1:
             temp_block = get_block(code, instruction_pointer)
@@ -704,6 +730,8 @@ def execute(code, frame):
             pprint(args[0], hide=False)
         elif ins == "dump_vars_fancy" and argc == 1:
             pprint({args[0]: rget(frame[-1], args[0])}, hide=False)
+        elif ins == "get_time" and argc == 1:
+            frame[-1][args[0]] = time.time()
         elif ins == "loop" and argc == 1:
             temp = get_block(code, instruction_pointer)
             if temp is None:
@@ -725,7 +753,10 @@ def execute(code, frame):
                 break
             else:
                 instruction_pointer, body = temp
-            expr = Expression(args[0])
+            if isinstance(args[0], (tuple, list)):
+                expr = Expression(args[0])
+            else:
+                expr = args[0]
             if body:
                 while evaluate(frame, expr):
                     err = execute(body, frame)
@@ -744,17 +775,6 @@ def execute(code, frame):
             return error.STOP_RESULT
         elif ins == "skip" and argc == 0:
             return error.SKIP_RESULT
-        elif ins == "sched" and argc == 1:
-            temp_block = get_block(code, instruction_pointer)
-            if temp_block is None:
-                break
-            else:
-                instruction_pointer, body = temp_block
-            while time.time() < args[0]:
-                pass
-            err = execute(body, frame=frame)
-            if err:
-                return err
         elif ins == "exec" and argc == 3:
             if err:=run(process_code(args[0], name=args[1]), frame=args[2]):
                 return err
@@ -1131,7 +1151,7 @@ def execute(code, frame):
             error.error(line_position, module_filepath, args[1])
             return args[0]
         elif ins == "raise" and isinstance(args[0], int) and argc == 1:
-            error.error(line_position, module_filepath, f"Error [{args[0]}]: {error.ERRORS_DICT.get(args[0], "???")}")
+            error.error(line_position, module_filepath, f"Error [{args[0]}]: {error.ERRORS_DICT.get(args[0], '???')}")
             return args[0]
         elif (
             (function_obj := rget(frame[-1], ins, default=rget(frame[0], ins)))
@@ -1180,7 +1200,7 @@ def execute(code, frame):
                 frame[-1]["_capture"] = function_obj["capture"]
             err = execute(function_obj["body"], frame)
             if err and err != error.STOP_FUNCTION:
-                if err > 0: error.error(line_position, module_filepath, f"Error in function {ins!r}: [{err}] {error.ERRORS_DICT.get(err, "???")}")
+                if err > 0: error.error(line_position, module_filepath, f"Error in function {ins!r}: [{err}] {error.ERRORS_DICT.get(err, '???')}")
                 return err
             pscope(frame)
         elif (
