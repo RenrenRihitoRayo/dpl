@@ -49,11 +49,7 @@ end
 
     There is an example given in the examples directory.
 
-<<<<<<< .merge_file_p8Xy2H
 * Reworked the switch statement
-=======
-* Reworked the switch statements
->>>>>>> .merge_file_3azyjm
 
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented
