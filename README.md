@@ -49,7 +49,7 @@ end
 
     There is an example given in the examples directory.
 
-* Introduced the switches
+* Reworked the switch statements
 
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented
