@@ -51,7 +51,6 @@ end
 
 * Reworked the switch statement
 
-
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented
 -->
