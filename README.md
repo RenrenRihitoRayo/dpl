@@ -50,6 +50,10 @@ end
     There is an example given in the examples directory.
 
 * Reworked the switch statement
+<<<<<<< HEAD
+=======
+
+>>>>>>> 2.0.0
 
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented
