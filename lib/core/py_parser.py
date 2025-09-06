@@ -134,10 +134,11 @@ def process_inline(args, inline_fn):
     params, body = inline_fn["args"], inline_fn["body"]
     values = tuple(zip(params, args))
     for [line_pos, module_name, ins, args] in body:
+        nargs = args
         for name, value in values:
             current_name = f"::{name}"
-            ins, args = recursive_replace([ins, args], current_name, value)
-        res.append((line_pos, module_name, to_static(ins), to_static(args)))
+            ins, nargs = recursive_replace([ins, nargs], current_name, value)
+        res.append((line_pos, module_name, ins, to_static(nargs) if varproc.meta_attributes["preprocessing_flags"]["EXPRESSION_FOLDING"] else nargs))
     return res
 
 
@@ -427,17 +428,39 @@ def process_code(fcode, name="__main__"):
                 if temp is None:
                     error.error(line_pos, file, "Inline function statement is invalid!")
                     return error.PREPROCESSING_ERROR
-                pos, inlines[f"{file}::{inline_name}"] = temp[0], {
+                pos, inlines[f"{inline_name}"] = temp[0], {
                     "args": param,
                     "body": temp[1]
                 }
+            elif ins == "string::static" and argc == 1:
+                name = process_arg(nframe, args[0])
+                temp = get_block(nres, pos)
+                if temp is None:
+                    error.error(line_pos, file, "Static string statement is invalid!")
+                    return error.PREPROCESSING_ERROR
+                pos, block = temp
+                lines = []
+                og_line = line_pos
+                og_file = file
+                for [line_pos, file, ins, args] in block:
+                    if len(args) > 1:
+                        error.error(line_pos, file, f"Invalid line length!")
+                        return error.PREPROCESSING_ERROR
+                    args = process_args(nframe, args)
+                    if ins == ".":
+                        lines.append((args[0] if args else "")+"\n")
+                    elif ins == "+":
+                        lines.append(args[0] if args else "")
+                    else:
+                        error.error(line_pos, file, f"Invalid operator length!")
+                        return error.PREPROCESSING_ERROR
+                rset(nframe[-1], name, "".join(lines))
             elif ins.startswith("inline::") and argc == 1:
-                name = f"{file}::{ins[8:]}"
-                raw_name = ins[8:]
+                name = ins[8:]
                 if name in inlines:
                     res.extend(process_inline(args[0], inlines[name]))
                 else:
-                    error.error(line_pos, file, f"Invalid inline function: {raw_name}")
+                    error.error(line_pos, file, f"Invalid inline function: {name}")
                     return error.PREPROCESSING_ERROR
             else:
                 res.append(entire_line)
@@ -666,7 +689,7 @@ def execute(code, frame):
             if (err := parse_match(frame, body, args[0])) > 0:
                 return err
         elif ins == "get_time" and argc == 1:
-            frame[-1][args[0]] = time.time()
+            rset(frame[-1], args[0], time.time())
         elif ins == "_intern.get_index" and argc == 1:
             frame[-1][args[0]] = instruction_pointer
         elif ins == "_intern.jump" and argc == 1:
@@ -835,6 +858,22 @@ def execute(code, frame):
             func = objects.make_method(method_name, body, process_args(frame, params), self)
             self[method_name] = func
             func["capture"] = frame[-1]
+        elif ins == "benchmark" and argc == 2:
+            times, var_name = args
+            temp = get_block(code, instruction_pointer)
+            if temp is None:
+                break
+            instruction_pointer, body = temp
+            deltas = []
+            for _ in range(times):
+                start = time.perf_counter()
+                if (err:=execute(body, frame)) > 0:
+                    error.error(line_position, module_filepath, f"Benchmark raised an error: [{err}] {error.ERRORS_DICT.get(err, '???')}")
+                    return err
+                delta = time.perf_counter() - start
+                deltas.append(delta)
+            ct, unit = utils.convert_sec(sum(deltas)/len(deltas))
+            rset(frame[-1], var_name, (ct, unit))
         elif ins == "inherit" and argc == 5 and args[1] == "from" and args[3] == "for":
             attrs, _, parent, _, child = args
             if attrs == "all":

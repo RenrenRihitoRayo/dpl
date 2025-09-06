@@ -52,7 +52,9 @@ INC_EXT_BUILTIN = {
     "on_pop_scope",
     "list",
     "string",
-    "fn::inline"
+    "fn::inline",
+    "string::inline",
+    "benchmark",
 }
 
 # multiple increments

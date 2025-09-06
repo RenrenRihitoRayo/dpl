@@ -20,7 +20,8 @@ inf = float("inf")
 
 # custom type to distinguish lists and expressions
 class Expression(list):
-    ...
+    def __repr__(self):
+        return "Expr"+super().__repr__()
 
 
 def glob_match(pattern, text):
@@ -171,6 +172,8 @@ def nest_args(tokens):
                 stack[-1].append(tuple(stack[-1].pop()))
             elif token == "]":
                 stack[-1].append(Expression(stack[-1].pop()))
+            else:
+                assert False, "SHOULD NOT BE REACHED!"
         else:
             stack[-1].append(token)
     if len(stack) > 1:
@@ -517,9 +520,9 @@ def expr_preruntime(arg):
 
 
 def handle_in_string_expr(text, data):
-    args = exprs_preruntime(group(text))
+    args = nest_args(exprs_preruntime(group(text)))
     args = process_args(data, args)
-    return evaluate(data, args)
+    return evaluate(data, Expression(args))
 
 
 def expr_runtime(frame, arg):
@@ -613,7 +616,7 @@ def to_static(code):
     for pos, i in enumerate(code):
         if isinstance(i, list):
             if is_static(i):
-                value = evaluate([{}], to_static(i))
+                value = type(i)(evaluate([{}], Expression(to_static(i))))
                 if isinstance(value, str):
                     code[pos] = f'"{value}"'
                 else:
@@ -717,9 +720,9 @@ def evaluate(frame, expression):
         varproc.pscope(frame)
         return ret
     elif len(processed) == 2 and processed[0] == "typeof":
-        for type in type_to_name:
-            if isinstance(processed[1], type):
-                return type_to_name[type]
+        for type_ in type_to_name:
+            if isinstance(processed[1], type_):
+                return type_to_name[type_]
         return "?::unknown"
     match (processed):
         # conditionals
@@ -734,7 +737,7 @@ def evaluate(frame, expression):
             elif isinstance(index, int) and isinstance(obj, (str, tuple, list)):
                 try:
                     return obj[index]
-                except:
+                except Exception as e:
                     return constants.nil
             else:
                 return constants.nil
@@ -784,9 +787,15 @@ def evaluate(frame, expression):
             if value is None:
                 return constants.false
             return constants.true
+        case [value1, "or", value2, "instead"]:
+            return value1 if value1 else value2
         # ranges
         case ["rawrange", num]:
             return range(num)
+        case ["reverse", num]:
+            return type(num)(reversed(num))
+        case ["ireverse", num]:
+            return reversed(num)
         case ["range", num]:
             return tuple(range(num))
         case ["drange", num]:
@@ -811,9 +820,7 @@ def evaluate(frame, expression):
             args = pah.arguments_handler(process_args(frame, args))
             return args.call(getattr(obj, method))
         case [obj, "->", attr]:
-            if not hasattr(obj, attr):
-                return constants.nil
-            return obj.__getattr__(attr)
+            return getattr(obj, attr, constants.nil)
         # other
         case default:
             for name, fn in matches.items():

@@ -25,15 +25,15 @@ def flatten_dict(d, parent_key="", sep=".", seen=None):
 def convert_sec(sec):
     "Convert seconds to appropriate units"
     if sec >= 1:
-        return sec, "s"
+        return sec, "s (seconds)"
     elif sec >= 1e-3:
-        return sec * 1e3, "ms"
+        return sec * 1e3, "ms (miliseconds)"
     elif sec >= 1e-6:
-        return sec * 1e6, "µs"
+        return sec * 1e6, "µs (microseconds)"
     elif sec >= 1e-9:
-        return sec * 1e9, "ns"
+        return sec * 1e9, "ns (nanoseconds)"
     else:
-        return sec * 1e12, "ps"
+        return sec * 1e12, "ps (picoseconds)"
 
 
 def convert_bytes(byte):
