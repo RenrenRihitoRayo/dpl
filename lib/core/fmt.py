@@ -7,6 +7,8 @@ def old_format(template, vars):
         template = template.replace(f"${{{name}}}", str(value))
     return template
 
+og_format = format
+
 def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
 
     result = StringIO()
@@ -23,7 +25,7 @@ def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
                 i += 1
             continue
 
-        elif char in ('$','&') and i + 1 < len(template) and template[i + 1] == '{':
+        elif char in ('$', '&') and i + 1 < len(template) and template[i + 1] == '{':
             is_expr = (char == '&')
             i += 2
             is_str = True
@@ -42,8 +44,11 @@ def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
             i += 1  # skip the closing '}'
 
             if is_expr:
+                format_spec = ""
+                if "|" in placeholder:
+                    placeholder, format_spec = placeholder.rsplit("|", 1)
                 try:
-                    result.write(str(expr_fn(placeholder, data)))
+                    result.write(og_format(expr_fn(placeholder, data), format_spec))
                 except Exception as e:
                     raise e
                 continue
@@ -53,13 +58,16 @@ def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
                 raise ValueError("Empty variable literal!")
             var_part = placeholder.split("|")
             default_text = None
+            format_spec = ""
 
+            if ":" in var_part[0]:
+                format_spec, var_part[0] = var_part[0].split(":", 1)
             if ":" in var_part[-1]:
                 var_part[-1], default_text = var_part[-1].split(":", 1)
 
             for name in var_part:
-                if (value:=varproc.rget(data[-1], name, default=varproc.rget(data[0], name))) != constants.nil:
-                    result.write(str(value) if is_str else repr(value))
+                if (value := varproc.rget(data[-1], name, default=varproc.rget(data[0], name))) != constants.nil:
+                    result.write(og_format(value if is_str else repr(value), format_spec))
                     break
             else:
                 if default_text is not None:

@@ -1,14 +1,22 @@
 &use {std/text_io.py}
 
-fn::inline add(res, a, b)
+fn::inline add_inline(res, a, b)
     set ::res = [::a + ::b]
 end
 
-fn test()
-    inline::add(result, 10, 20)
+fn add_fn(a, b)
+    return [:a + :b]
 end
 
-io:println([[?dict :test](body)])
+# 16~ percent faster
+benchmark 10000, stuff
+    inline::add_inline(res, 10, 20)
+end
 
-# Output:
-# [(5, '__main__', 'set', ['result', '=', [10, '+', 20]])]
+io:println('Inline: &{:stuff(0)|.2f}&{:stuff(1)}')
+
+benchmark 10000, stuff
+    catch(res) add_fn(10, 20)
+end
+
+io:println('Function: &{:stuff(0)|.2f}&{:stuff(1)}')

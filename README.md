@@ -223,6 +223,30 @@ Most recent at top.
 
 # 2.0.0 (Indev)
 
+## Expression Folding
+
+Expresion folding is now disabled by default.
+It isnt useful for small scripts and slows them
+down if enabled by default. So I made the choice to
+disable it by default.
+
+## Inline Functions
+
+```
+# acts like macro
+# but instead of textual replacement
+# its on the bytecode level
+fn::inline add_inline(res, a, b)
+    set ::res = [::a, ::b]
+end
+
+inline::add_inline(res, 20, 30)
+# compiles into
+set res = [20 + 30]
+# when folded
+set res = 50
+```
+
 ## `io:input(var_name, prompt, default_value)`
 
 The `text_io.py` extension now supports disabling the inputs
