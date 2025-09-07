@@ -724,6 +724,12 @@ def evaluate(frame, expression):
             if isinstance(processed[1], type_):
                 return type_to_name[type_]
         return "?::unknown"
+    elif len(processed) == 2 and processed[0] == "dpercent":
+        min, max = process_args(frame, processed[1])
+        return ((abs(min - max))/((min + max) * 2)) * 100
+    elif len(processed) == 2 and processed[0] == "median":
+        min, max = process_args(frame, processed[1])
+        return ((max - min)/2)+min
     match (processed):
         # conditionals
         case ["if", value, "then", true_v, "else", false_v]:

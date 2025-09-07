@@ -19,6 +19,7 @@ import traceback
 import sys
 import os
 import gc
+import threading
 arguments_handler = py_argument_handler.arguments_handler
 
 pp2_execute = None
@@ -865,13 +866,39 @@ def execute(code, frame):
                 break
             instruction_pointer, body = temp
             deltas = []
-            for _ in range(times):
-                start = time.perf_counter()
-                if (err:=execute(body, frame)) > 0:
-                    error.error(line_position, module_filepath, f"Benchmark raised an error: [{err}] {error.ERRORS_DICT.get(err, '???')}")
-                    return err
-                delta = time.perf_counter() - start
-                deltas.append(delta)
+            # run once to check time
+            # to decide whether to use threads or not
+            start = time.perf_counter()
+            if (err:=execute(body, frame)) > 0:
+                error.error(line_position, module_filepath, f"Benchmark raised an error: [{err}] {error.ERRORS_DICT.get(err, '???')}")
+                return err
+            first_delta = time.perf_counter() - start
+            dlock = threading.Lock()
+            use_thread = False
+            # if more than once, and takes more than 10 seconds
+            if times < 3 and first_delta[0] > 10 and first_delta[1] == "s":
+                use_thread = True
+            if use_thread:
+                for _ in range(times):
+                    def th():
+                        start = time.perf_counter()
+                        if (err:=execute(body, frame)) > 0:
+                            error.error(line_position, module_filepath, f"Benchmark raised an error: [{err}] {error.ERRORS_DICT.get(err, '???')}")
+                            return err
+                        delta = time.perf_counter() - start
+                        with dlock:
+                            deltas.append(delta)
+                    tht = threading.Thread(target=th)
+                    tht.deamon = True
+                    tht.start()
+            else:
+                for _ in range(times):
+                    start = time.perf_counter()
+                    if (err:=execute(body, frame)) > 0:
+                        error.error(line_position, module_filepath, f"Benchmark raised an error: [{err}] {error.ERRORS_DICT.get(err, '???')}")
+                        return err
+                    delta = time.perf_counter() - start
+                    deltas.append(delta)
             ct, unit = utils.convert_sec(sum(deltas)/len(deltas))
             rset(frame[-1], var_name, (ct, unit))
         elif ins == "inherit" and argc == 5 and args[1] == "from" and args[3] == "for":

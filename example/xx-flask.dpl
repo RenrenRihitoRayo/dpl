@@ -6,9 +6,6 @@
    This is a simple reactive website written in my
    programming language --
 
-# 27 lines without empty lines and comments
-# +10 if "home_page.html" is included
-
 flask:app()
 
 # this is the index, the home of the website
