@@ -50,16 +50,7 @@ end
     There is an example given in the examples directory.
 
 * Reworked the switch statement
-<<<<<<< HEAD
-=======
 
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 2.0.0
-
-=======
->>>>>>> 2.0.0
-=======
 * Text IO can disable input
 
 >>>>>>> 2.0.0
