@@ -84,10 +84,14 @@ if "skip-non-essential" not in prog_flags:
     from lib.core.py_parser2_internals.py_parser2_internals import op_code_registry
     import lib.core.ast_gen as ast_gen
     import misc.dpl_linter as linter
+    import lib.core.suggestions as suggest
 else:
     prompt = lambda text=None, *x, **y: input(text)
     WordCompleter = InMemoryHistory = lambda *x, **y: ...
-    import lib.core.suggestions as suggest
+    suggest = type("suggest:simple", (object,), {
+        "SUGGEST": [],
+        "pattern": ""
+    })
 
 # removed try except here.
 if "use-parser2" in prog_flags:
