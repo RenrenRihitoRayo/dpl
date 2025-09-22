@@ -4,10 +4,8 @@
 # makes sure HLIR can still be executed
 # directly
 
-from collections import defaultdict
 import time
 import itertools
-from typing import DefaultDict
 from copy import deepcopy as copy
 from . import py_argument_handler
 from .runtime import *
@@ -15,6 +13,8 @@ from . import utils
 from . import objects
 from . import constants
 from . import info
+import multiprocessing
+import threading
 import traceback
 import sys
 import os
@@ -24,6 +24,11 @@ arguments_handler = py_argument_handler.arguments_handler
 
 pp2_execute = None
 process_hlir = None
+
+output_stack_lock = threading.Lock()
+output_stack = []
+
+meta_attributes["output_stack"] = output_stack
 
 def register_execute(func):
     global pp2_execute
@@ -320,19 +325,19 @@ def process_code(fcode, name="__main__"):
             elif ins == "set" and argc == 2:
                 rset(nframe[-1], args[0], args[1])
             else:
-                error.pre_error(
+                error.error(
                     lpos, name, f"{name!r}:{lpos}: Invalid directive {ins!r}"
                 )
                 break
         else:
             ins, *args = group(line)
             if ins == "return" and any(is_reference_var(x) for x in args):
-                error.pre_error(lpos, file, "Return statement returns a reference!")
+                error.error(lpos, file, "Return statement returns a reference!")
                 return error.TYPE_ERROR
             try:
                 args = nest_args(exprs_preruntime(args))
             except:
-                error.pre_error(lpos, file, "Line has an imballance in parenthesis!")
+                error.error(lpos, file, "Line has an imballance in parenthesis!")
                 return error.SYNTAX_ERROR
             # If there are static parts in the arguments run them before runtime.
             if preprocessing_flags["EXPRESSION_FOLDING"]:
@@ -340,7 +345,7 @@ def process_code(fcode, name="__main__"):
             res.append((lpos, name, ins, args if len(args) else None))
     else:
         if multiline:
-            error.pre_error(
+            error.error(
                 last_comment,
                 name,
                 f"{name!r}:{last_comment}: Unclosed multiline comment!",
@@ -484,6 +489,7 @@ def process_code(fcode, name="__main__"):
 
 @mod_s.register_execute
 @argproc_setter.set_execute
+@varproc.register_execute
 def execute(code, frame):
     """
     Low level function to run.
@@ -639,6 +645,43 @@ def execute(code, frame):
             if mod_s.luaj_import(frame, f, search_path, loc=os.path.dirname(module_filepath)):
                 print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_filepath}")
                 return error.RUNTIME_ERROR
+        elif ins == "thread" and argc == 2:
+            function_name, params = args
+            temp_block = get_block(code, instruction_pointer)
+            if temp_block is None:
+                break
+            else:
+                instruction_pointer, body = temp_block
+            func = objects.make_function(function_name, body, process_args(frame, params))
+            def bind():
+                def fn(args):
+                    th_frame = copy(frame)
+                    
+                    nscope(th_frame).update(zip(func["args"], args))
+                    if (err:=execute(func["body"], th_frame)) > 0:
+                        raise error.DPLError(err)
+                    # dont bother cleaning up, garbage collected
+                return fn
+            fn = bind()
+            rset(frame[-1], function_name, lambda *x: threading.Thread(target=fn, args=(x,)))
+        elif ins == "thread::stack_op" and argc == 0:
+            temp_block = get_block(code, instruction_pointer)
+            if temp_block is None:
+                break
+            else:
+                instruction_pointer, body = temp_block
+            with output_stack_lock:
+                if (err:=execute(body, frame)) > 0:
+                    return err
+        elif ins == "thread::await_start" and argc == 1:
+            while not args[0].is_alive():
+                ...
+        elif ins == "thcall" and argc == 4 and args[2] == "as":
+            fn, args, _, name = args
+            args = process_args(frame, args)
+            fn_obj = fn(args)
+            rset(frame[-1], name, fn_obj)
+            fn_obj.run()
         elif ins == "_intern.switch::static" and argc == 2:
             temp_body = args[0].get(args[1], args[0][None])
             if not temp_body:
@@ -815,6 +858,13 @@ def execute(code, frame):
                         rset(frame[-1], name, value)
                 else:
                     rset(frame[-1], args[0], args[2])
+        elif ins == "mset" and argc == 3 and args[1] == "=":
+            if args[0] != "_":
+                if isinstance(args[0], (tuple, list)):
+                    for name, value in zip(args[0], args[2]):
+                        rset(frame[-1], name, value, meta=True)
+                else:
+                    rset(frame[-1], args[0], args[2], meta=True)
         elif ins == "del" and argc >= 1:
             for name in args:
                 rpop(frame[-1], name)
@@ -1478,4 +1528,6 @@ if "get-internals" in info.program_flags:
 ##################################
 # this is classified as dark magic...
 
-# All the functions shere have been turned into decorators
+mod_s.dpl.execute = execute_code
+
+# Some of the functions here have been turned into decorators

@@ -12,7 +12,6 @@ fn add_fn(a, b)
     return [:a + :b]
 end
 
-loop 10
 # 16~ percent faster (windows 11)
 # (32-36 median 34)~ percent faster (linux, android 14)
 benchmark 10000, inline
@@ -32,4 +31,3 @@ io:println('Function: &{:function(0)|.2f}&{:function(1)}')
 set diff = [dpercent([:inline(0)], [:function(0)])]
 
 io:println('Difference in percent: ${.2f:diff}\n')
-end

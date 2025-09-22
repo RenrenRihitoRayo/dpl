@@ -476,6 +476,10 @@ def is_read_var(arg):
     return arg.startswith(":") and is_id(arg[1:])
 
 
+def is_special_read_var(arg):
+    return arg.startswith("?:") and is_id(arg[2:])
+
+
 def expr_preruntime(arg):
     "Process arguments at preprocessing"
     if not isinstance(arg, str):
@@ -536,10 +540,27 @@ def expr_runtime(frame, arg):
             v = varproc.rget(
                 frame[-1],
                 arg[1:],
-                default=varproc.rget(frame[0], arg[1:]),
+                default=None,
             )
+            if v is None:
+                v = varproc.rget(frame[0], arg[1:])
         else:
             v = rget(frame[-1], arg[1:])
+        if get_debug("disable_nil_values") and v == constants.nil:
+            raise Exception(f"{arg!r} is nil!")
+        return v
+    elif is_special_read_var(arg):
+        if varproc.debug_settings["allow_automatic_global_name_resolution"]:
+            v = varproc.rget(
+                frame[-1],
+                arg[2:],
+                default=None,
+                meta=True
+            )
+            if v is None:
+                v = varproc.rget(frame[0], arg[1:], meta=True)
+        else:
+            v = rget(frame[-1], arg[2:])
         if get_debug("disable_nil_values") and v == constants.nil:
             raise Exception(f"{arg!r} is nil!")
         return v

@@ -9,6 +9,13 @@ from . import info
 from . import state
 from . import error
 
+execute_code = None
+
+def register_execute(fn):
+    global execute_code
+    execute_code = fn
+    return fn
+
 '''
 {
     "func": callable(scope: dict, scope_id: int) -> None,
@@ -70,7 +77,8 @@ internal_attributes = {
     "python_version_string": info.PYTHON_VER,
     "implementation":"python", # the language the parser is in.
     "_set_only_when_defined": 1,
-    "methods": to_be_methods
+    "methods": to_be_methods,
+    "module_index": {}
 }
 
 flags = set()
@@ -189,12 +197,29 @@ def pscope(frame):
 
 
 
-def rget(dct, full_name, default=constants.nil, sep=".", meta=True):
+def rget(dct, full_name, default=constants.nil, sep=".", meta=False, resolve=False):
     "Get a variable"
-    if "." not in full_name:
+    if sep not in full_name:
         temp = dct.get(full_name, default)
         if is_debug_enabled("show_value_updates"):
             error.info(f"Variable {full_name!r} was read!")
+        if meta and isinstance(temp, dict):
+            if "_internal::meta_value" in temp:
+                return temp["_internal::meta_value"]
+            elif "_internal::get_meta_value" in temp:
+                frame = dct["_frame_stack"]
+                lscope = nscope(frame)
+                fn = temp["_internal::get_meta_value"]
+                if "self" in fn:
+                    frame[-1]["self"] = temp
+                if "capture" in fn:
+                    frame[-1]["_capture"] = fn["capture"]
+                frame[-1]["_returns"] = ("_internal::return",)
+                if (err := execute_code(fn["body"], frame)) > 0:
+                    raise error.DPLError(err)
+                pscope(frame)
+                if "_internal::return" in frame[-1]:
+                    return frame[-1]["_internal::return"]
         return temp
     path = [*enumerate(full_name.split(sep), 1)][::-1]
     last = len(path)
@@ -210,15 +235,37 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=True):
         elif pos == last and name in node:
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was read!")
+            if meta and isinstance(node[name], dict):
+                if "_internal::meta_value" in node[name]:
+                    return node[name]["_internal::meta_value"]
+                elif "_internal::get_meta_value" in node[name]:
+                    frame = dct["_frame_stack"]
+                    lscope = nscope(frame)
+                    fn = node[name]["_internal::get_meta_value"]
+                    if "self" in fn:
+                        frame[-1]["self"] = node[name]
+                    if "capture" in fn:
+                        frame[-1]["_capture"] = fn["capture"]
+                    frame[-1]["_returns"] = ("_internal::return",)
+                    if (err := execute_code(fn["body"], frame)) > 0:
+                        raise error.DPLError(err)
+                    pscope(frame)
+                    if "_internal::return" in frame[-1]:
+                        return frame[-1]["_internal::return"]
             return node[name]
         else:
-            return default
+            break
+    if resolve:
+        for frame in reversed(dct["_frame_stack"][:-1]):
+            res = rget(dct["_frame_stack"][0], full_name)
+            if res != default:
+                return res
     return default
 
 
 def rpop(dct, full_name, default=constants.nil, sep="."):
     "Pop a variable"
-    if "." not in full_name:
+    if sep not in full_name:
         temp = dct.get(full_name, default)
         return temp
     path = [*enumerate(full_name.split(sep), 1)][::-1]
@@ -241,17 +288,38 @@ def rpop(dct, full_name, default=constants.nil, sep="."):
     return default
 
 
-def rset(dct, full_name, value, sep=".", meta=True):
+def rset(dct, full_name, value, sep=".", meta=False):
     "Set a variable"
     if full_name == "_":
         return
     if not isinstance(full_name, str):
         return
-    if "." not in full_name:
+    if sep not in full_name:
             if dct.get("_set_only_when_defined") and full_name not in dct:
                 error.warn(
                     f"Tried to set {full_name!r} but scope was set to set only when defined."
                 )
+                return
+            if meta:
+                item = dct.get(full_name, {
+                    "_internal::meta_value": value
+                })
+                if "_internal::set_meta_value" in item:
+                    frame = dct["_frame_stack"]
+                    lscope = nscope(frame)
+                    fn = item["_internal::set_meta_value"]
+                    if "self" in fn:
+                        frame[-1]["self"] = item
+                    if "capture" in fn:
+                        frame[-1]["_capture"] = fn["capture"]
+                    if fn["args"]:
+                        frame[-1][fn["args"][0]] = value
+                    else:
+                        frame[-1]["value"] = value
+                    if (err := execute_code(fn["body"], frame)) > 0:
+                        raise error.DPLError(err)
+                    pscope(frame)
+                dct[full_name] = item
                 return
             dct[full_name] = value
             return
@@ -271,6 +339,30 @@ def rset(dct, full_name, value, sep=".", meta=True):
                 error.warn(
                     f"Tried to set {full_name!r} but scope was set to set only when defined."
                 )
+                return
+            if meta:
+                item = node.get(name)
+                if item is None:
+                    node[name] = value
+                    return
+                if "_internal::set_meta_value" in item:
+                    frame = dct["_frame_stack"]
+                    lscope = nscope(frame)
+                    fn = item["_internal::set_meta_value"]
+                    if "self" in fn:
+                        frame[-1]["self"] = item
+                    if "capture" in fn:
+                        frame[-1]["_capture"] = fn["capture"]
+                    if fn["args"]:
+                        frame[-1][fn["args"][0]] = value
+                    else:
+                        frame[-1]["value"] = value
+                    if (err := execute_code(fn["body"], frame)) > 0:
+                        raise error.DPLError(err)
+                    pscope(frame)
+                else:
+                    item[name]["_internal::meta_value"] = value
+                node[name] = item
                 return
             node[name] = value
             if is_debug_enabled("show_value_updates"):

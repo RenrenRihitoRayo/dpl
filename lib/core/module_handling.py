@@ -294,7 +294,8 @@ class dpl:
     exit = None
     wrap = wrap
     tag_handler = argproc.tag_handler
-
+    execute = None
+    
     def to_bool(obj):
         return constants.true if obj else constants.false
 
@@ -306,6 +307,23 @@ class dpl:
             argproc.matches[name] = fn
             return fn
         return wrap
+    
+    def call_dpl(env, func, args):
+        varproc.nscope(env).update(zip(func["args"], args))
+        env[-1]["_returns"] = ("_internal'::return",)
+        err = dpl.execute(func["body"], env)
+        varproc.pscope(env)
+        if err > 0:
+            error.DPLError(f"Function {func['name']} returned an error!")
+        ret = env[-1].get("_internal::return")
+        if ret is not None:
+            if isinstance(ret, (list, tuple)):
+                if len(ret) > 1:
+                    return ret
+                else:
+                    return ret[0]
+            else:
+                return ret
 
 
 def get_py_params(func):

@@ -1,0 +1,12 @@
+&use {std/other/lisp.py}
+&use {std/text_io.py}
+
+fn add_fn(env, args)
+    return [[args(0)] + [args(1)]]
+end
+
+lisp:add_fn("+", :add_fn)
+dump_scope
+lisp:eval((define test [! a b] (+ a b)))
+lisp:eval((define res (test 10 10)))
+io:println(:res)

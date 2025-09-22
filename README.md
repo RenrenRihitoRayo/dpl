@@ -53,6 +53,8 @@ end
 
 * Text IO can disable input
 
+* Threading and Multiprocessing Built in Support
+
 >>>>>>> 2.0.0
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented

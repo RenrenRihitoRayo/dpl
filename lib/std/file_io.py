@@ -1,6 +1,6 @@
 ext = dpl.extension(meta_name="io", alias=__alias__)
 
-@ext.add_func("open", "%$$[str,str]\n%$$[str]")
+@ext.add_func("open")
 def myOpen(_, local, file_name, mode="r"):
     try:
         if modules.os.path.isabs(file_name):
@@ -12,7 +12,7 @@ def myOpen(_, local, file_name, mode="r"):
         return dpl.error.get_error_string("PYTHON_ERROR", repr(e))
 
 
-@ext.add_func(typed="$$[4] :: str \"=\" str str \n $$[3] :: str \"=\" str")
+@ext.add_func()
 def with_file(frame, local, body, name, _eq_, file_name, mode="r"):
     if _eq_ != "=":
         return dpl.error.get_error_string("SYNTAX_ERROR", f"Expected it to be `body io:with_file {name} **=** {file_name!r} {mode!r}`") 
@@ -41,7 +41,7 @@ def read(_, __, file_object):
         return (e,)
 
 
-@ext.add_func(typed="$$ :: TextIOWrapper str")
+@ext.add_func()
 def write(_, __, file_object, content):
     try:
         file_object.write(content)
@@ -50,7 +50,7 @@ def write(_, __, file_object, content):
         return f"err:{dpl.error.PYTHON_ERROR}:{repr(e)}"
 
 
-@ext.add_func(typed="$$ :: TextIOWrapper str")
+@ext.add_func()
 def append(_, __, file_object, content):
     try:
         if (mode := file_object.mode) == "a":
@@ -64,6 +64,6 @@ def append(_, __, file_object, content):
         return f"err:{dpl.error.PYTHON_ERROR}:{repr(e)}"
 
 
-@ext.add_func(typed="$$ :: TextIOWrapper")
+@ext.add_func()
 def close(_, __, file_object):
     file_object.close()

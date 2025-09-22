@@ -55,6 +55,8 @@ INC_EXT_BUILTIN = {
     "fn::inline",
     "string::inline",
     "benchmark",
+    "thread",
+    "thread::stack_op"
 }
 
 # multiple increments
