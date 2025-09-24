@@ -1,7 +1,6 @@
 &use {std/text_io.py}
 
-# DPL Now suports
-# Globbing.
+# DPL Now suports glob style matching.
 # Simple but effective.
 
 # * matches any number of any characters
@@ -11,19 +10,22 @@
 # \! literally matches !
 
 list my_list
-    "test.txt",
-    "test.md",
-    "test.eh",
-    "!.txt",
-    "*.txt",
+   . "test.txt",
+   . "test.md",
+   . "test.eh",
+   . "test-90-91.txt",
+   . "!.txt",
+   . "*.txt",
 end
 
 list my_patterns
-    "*.txt",
-    "\*.txt",
-    "!*.txt",
-    "\!.txt",
-    "*",
+   . "*.txt",
+   . "\*.txt",
+   . "!*.txt",
+   . "\!.txt",
+   . "*",
+   # this is possible
+   . "test-*-*.txt"
 end
 
 for pattern in :my_patterns

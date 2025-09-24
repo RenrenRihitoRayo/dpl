@@ -3,7 +3,7 @@ use {std/text_io.py}
 set start = [from_ascii "A"]
 set end   = [[from_ascii "Z"] + 1]
 
-for i in [drange :start :end]
+for i in [irange :start :end]
     io:print([to_ascii :i])
 end
 
@@ -12,7 +12,7 @@ io:println()
 set start = [from_ascii "0"]
 set end   = [[from_ascii "9"] + 1]
 
-for i in [drange :start :end]
+for i in [irange :start :end]
     io:print([to_ascii :i])
 end
 

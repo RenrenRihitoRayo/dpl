@@ -84,22 +84,6 @@ simple_ops = {
     "isinstanceof": lambda ins, typ: constants.true if isinstance(ins, typ) else constants.false,
 }
 
-chars = {
-    "\\": "\\",
-    "n": "\n",
-    "b": "\b",
-    "f": "\f",
-    "v": "\v",
-    "a": "\a",
-    "r": "\r",
-    "s": " ",
-    "t": "\t",
-    "N": "\n\r",
-    '"': '"',
-    "'": "'",
-    "e": chr(27)
-}
-
 type_annotations = {
     "dpl::int": int,
     "dpl::string": str,
@@ -645,7 +629,6 @@ def to_static(code, env=None):
         code = list(code)
     for pos, i in enumerate(code):
         if isinstance(i, Expression):
-            print(i)
             if is_static(i):
                 value = evaluate(env, to_static(i, env=env))
                 if isinstance(value, str):
@@ -693,6 +676,8 @@ def evaluate(frame, expression):
     elif len(processed) == 3:
         if isinstance(processed[1], str) and processed[1] in simple_ops:
             return simple_ops[processed[1]](processed[0], processed[2])
+        elif processed[0] == "irange":
+            return range(processed[1], processed[2])
         elif processed[0] == "pycall":
             args = pah.arguments_handler()
             args.parse(process_args(frame, processed[2]))
@@ -874,8 +859,8 @@ def group(text):
     for i in text:
         if str_tmp:
             if this:
-                if i in chars:
-                    str_tmp.append(chars[i])
+                if i in CHARS:
+                    str_tmp.append(CHARS[i])
                 else:
                     str_tmp.append("\\"+i)
                 this = False

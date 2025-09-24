@@ -125,7 +125,6 @@ ALL_INTRINSICS = INC_EXT | set(INC.keys()) | DEC | KEYWORDS
 
 CHARS = {
     "\\\\": "\\[lit_slash]",
-    "\\*": "\xFF\u200B",
     "\\!": "\\!",
     "\\n": "\n",
     "\\t": "\t",
@@ -135,9 +134,7 @@ CHARS = {
     "\\r": "\r",
     "\\a": "\a",
     "\\0": "\0",
-    "\\[null]": "\0",
     "\\e": "\x1B",
-    "\\[escape]": "\x1B",
     "\\[lit_slash]": "\\",
 }
 
