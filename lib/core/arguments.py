@@ -639,6 +639,10 @@ def is_static(code):
 
 def to_static(code, env=None):
     env = env or [{}]
+    t = None
+    if not isinstance(code, list):
+        t = type(code)
+        code = list(code)
     for pos, i in enumerate(code):
         if isinstance(i, Expression):
             print(i)
@@ -661,7 +665,7 @@ def to_static(code, env=None):
                 code[pos] = to_static(i, env=env)
         elif not isinstance(i, str):
             continue
-    return code
+    return code if t is None else t(code)
 
 
 class kwarg:

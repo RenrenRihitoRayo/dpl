@@ -412,16 +412,15 @@ def process_code(fcode, name="__main__"):
                             error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
                             return error.PREPROCESSING_ERROR
                         sub_pos, body[process_arg(nframe, args[0])] = temp
-                    elif ins == "default" and args is None:
+                    elif ins == "default" and not args:
                         temp = get_block(switch_block, sub_pos)
                         if temp is None:
                             error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
                             return error.PREPROCESSING_ERROR
                         sub_pos, body[None] = temp
                     else:
-                        if instruction_pointer > offset:
-                            error.error(line_pos, file, "Invalid switch statement!")
-                            return error.PREPROCESSING_ERROR
+                        error.error(line_pos, file, f"Switch statement is invalid!")
+                        return error.SYNTAX_ERROR
                     sub_pos += 1
                 res.append([og_lpos, file, "_intern.switch::static", [body, arg_val]])
             elif ins == "switch" and argc == 1:
@@ -448,16 +447,15 @@ def process_code(fcode, name="__main__"):
                             "value": args[0],
                             "body": tbody
                         })
-                    elif ins == "default" and args is None:
+                    elif ins == "default" and not args:
                         temp = get_block(switch_block, sub_pos)
                         if temp is None:
                             error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
                             return error.PREPROCESSING_ERROR
                         sub_pos, body["default"] = temp
                     else:
-                        if instruction_pointer > offset:
-                            error.error(line_pos, file, "Invalid switch statement!")
-                            return error.PREPROCESSING_ERROR
+                        error.error(line_pos, file, "Invalid switch statement!")
+                        return error.PREPROCESSING_ERROR
                     sub_pos += 1
                 res.append([og_lpos, file, "_intern.switch::dynamic", [body, arg_val]])
             elif ins == "fn::inline" and argc == 2:
