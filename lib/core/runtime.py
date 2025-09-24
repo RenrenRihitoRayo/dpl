@@ -5,7 +5,6 @@ from .varproc import *
 from . import error
 from .objects import *
 from . import constants
-from .type_checker import *
 from . import error
 from . import module_handling as mod_s
 import time

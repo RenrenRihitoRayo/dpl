@@ -47,15 +47,18 @@ end
 
 * Flask wrapper is available in `std/other/flask.py`
 
-    There is an example given in the examples directory.
+There is an example given in the examples directory.
 
 * Reworked the switch statement
 
 * Text IO can disable input
 
-* Threading and Multiprocessing Built in Support
+* Files that are included are cached for fast init time
 
->>>>>>> 2.0.0
+* Objects now support operator overloading!
+
+* Static inline function calls
+
 <!-- ************************ TODO: ACTUALLY DO THIS *****************************
     * New parser has been fully implemented
 
@@ -228,6 +231,68 @@ Most recent at top.
 
 ## Expression Folding
 
+Expression folding is fixed and is on by
+default.
+
+## Static In Expression Function Calls
+
+```duprol
+&use {std/text_io.py}
+
+--
+  Below is a static function.
+  Every caller would get the result
+  before runtime if arguments are not impure
+--
+
+fn::static add(a, b)
+    return [:a + :b]
+end
+
+set meep = 90
+# below compiles into
+# io:println(30)
+io:println([call::static add(10, 20)])
+
+# below demotes to a regular call expression
+io:println([call::static add(10, :meep)])
+```
+
+## Object operator overloading
+
+Object operator overloading is
+finally here! For over a year
+DPL hasnt had official overloading
+due for simplicity, but for convinience
+it was added. The downside of using operator
+overloading rather than raw calls is that
+it is slower due to indirection.
+
+```duprol
+&use {std/text_io.py}
+
+object t
+method t.new(value)
+    new :self t
+    set t.value = :value
+    del t._instance_name
+    return :t
+end
+method t._impl::repr()
+    return '<t ${self.value}>'
+end
+method t._impl::add(other)
+    return [call :self.new([ :self.value + :other.value ])]
+end
+
+set t_a = [call :t.new(10)]
+set t_b = [call :t.new(20)]
+# <t 10> <t 20> <t 30>
+io:println(:t_a, :t_b, [:t_a + :t_b])
+```
+
+## Expression Folding
+
 Expresion folding is now disabled by default.
 It isnt useful for small scripts and slows them
 down if enabled by default. So I made the choice to
@@ -235,7 +300,7 @@ disable it by default.
 
 ## Inline Functions
 
-```
+```duprol
 # acts like macro
 # but instead of textual replacement
 # its on the bytecode level

@@ -6,7 +6,7 @@
 
 import time
 import itertools
-from copy import deepcopy as copy
+from copy import deepcopy
 from . import py_argument_handler
 from .runtime import *
 from . import utils
@@ -21,6 +21,41 @@ import os
 import gc
 import threading
 arguments_handler = py_argument_handler.arguments_handler
+
+def copy(obj, memo=None):
+    if memo is None:
+        memo = {}
+    obj_id = id(obj)
+    if obj_id in memo:
+        return memo[obj_id]
+    if isinstance(obj, dict):
+        dup = type(obj)()
+        memo[obj_id] = dup
+        dup.update({k: copy(v, memo) for k, v in obj.items()})
+        return dup
+    elif isinstance(obj, list):
+        dup = type(obj)()
+        memo[obj_id] = dup
+        dup.extend(copy(v, memo) for v in obj)
+        return dup
+    elif isinstance(obj, set):
+        dup = set()
+        memo[obj_id] = dup
+        dup.update(copy(v, memo) for v in obj)
+        return dup
+    elif isinstance(obj, tuple):
+        dup = tuple(copy(v, memo) for v in obj)
+        memo[obj_id] = dup
+        return dup
+    else:
+        try:
+            dup = deepcopy(obj, memo)
+            memo[obj_id] = dup
+            return dup
+        except Exception:
+            # Fallback: keep shallow reference
+            memo[obj_id] = obj
+            return obj
 
 pp2_execute = None
 process_hlir = None
@@ -339,10 +374,7 @@ def process_code(fcode, name="__main__"):
             except:
                 error.error(lpos, file, "Line has an imballance in parenthesis!")
                 return error.SYNTAX_ERROR
-            # If there are static parts in the arguments run them before runtime.
-            if preprocessing_flags["EXPRESSION_FOLDING"]:
-                args = to_static(args)
-            res.append((lpos, name, ins, args if len(args) else None))
+            res.append((lpos, name, ins, args))
     else:
         if multiline:
             error.error(
@@ -358,7 +390,7 @@ def process_code(fcode, name="__main__"):
         inlines = {}
         while pos < len(nres):
             entire_line = line_pos, file, ins, args = nres[pos]
-            argc = len(args) if args is not None else 0
+            argc = len(args)
             if ins == "switch::static":
                 body = {None: []}
                 arg_val = args[0]
@@ -438,6 +470,16 @@ def process_code(fcode, name="__main__"):
                     "args": param,
                     "body": temp[1]
                 }
+            elif ins == "fn::static" and argc == 2:
+                function_name, params = args
+                temp_block = get_block(nres, pos)
+                if temp_block is None:
+                    break
+                else:
+                    pos, body = temp_block
+                func = objects.make_function(function_name, body, process_args(nframe, params))
+                rset(nframe[-1], function_name, func)
+                func["capture"] = nframe[-1] # automatically store the scope it was defined in
             elif ins == "string::static" and argc == 1:
                 name = process_arg(nframe, args[0])
                 temp = get_block(nres, pos)
@@ -469,7 +511,10 @@ def process_code(fcode, name="__main__"):
                     error.error(line_pos, file, f"Invalid inline function: {name}")
                     return error.PREPROCESSING_ERROR
             else:
-                res.append(entire_line)
+                if args and preprocessing_flags["EXPRESSION_FOLDING"]:
+                    res.append((line_pos, file, ins, to_static(args, env=nframe)))
+                else:
+                    res.append(entire_line)
             pos += 1
         frame = {
             "code": res,      # HLIR or LLIR code
@@ -486,6 +531,52 @@ def process_code(fcode, name="__main__"):
         return frame
     return error.PREPROCESSING_ERROR
 
+@objects.register_run_fn
+@argproc_setter.set_run_fn
+def run_func(frame, function_obj, *args, line_position="???", module_filepath="???"):
+    args = process_args(frame, args)
+    nscope(frame)
+    if function_obj["self"] is not None:
+        frame[-1]["self"] = function_obj["self"]
+    frame[-1]["_args"] = args
+    if function_obj["variadic"]["name"] != constants.nil:
+        if len(args)-1 >= function_obj["variadic"]["index"]:
+            variadic = []
+            for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
+                if variadic:
+                    variadic.append(value)
+                elif line_position >= function_obj["variadic"]["index"]:
+                    variadic.append(value)
+                else:
+                    frame[-1][name] = value
+            frame[-1][function_obj["variadic"]["name"]] = variadic
+        else:
+            error.error(line_position, module_filepath, f"Function {function_obj['name']} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
+            raise error.DPLError(error.RUNTIME_ERROR)
+    else:
+        if len(args) != len(function_obj["args"]) and not function_obj["defaults"]:
+            text = "more" if len(args) > len(function_obj["args"]) else "less"
+            error.error(line_position, module_filepath, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
+            raise error.DPLError(error.RUNTIME_ERROR)
+    for n, v in function_obj["defaults"].items():
+        frame[-1][n] = v
+    for name, value in itertools.zip_longest(function_obj["args"], args, fillvalue=constants.nil):
+        if name == constants.nil:
+            break
+        frame[-1][name] = value
+    if function_obj["capture"] != constants.nil:
+        frame[-1]["_capture"] = function_obj["capture"]
+    frame[-1]["_returns"] = ("_internal::return",)
+    err = execute(function_obj["body"], frame)
+    if err and err != error.STOP_FUNCTION:
+        if err > 0:
+            error.error(line_position, module_filepath,
+            f"Error in function {function_obj['name']!r}: [{err}] {error.ERRORS_DICT.get(err, '???')}")
+            raise error.DPLError(err)
+    pscope(frame)
+    if "_internal::return" in frame[-1]:
+        ret = frame[-1]["_internal::return"]
+        return ret if isinstance(ret, (list, tuple)) and len(ret) == 1 else ret
 
 @mod_s.register_execute
 @argproc_setter.set_execute
@@ -512,20 +603,16 @@ def execute(code, frame):
         line_position, module_filepath, ins, oargs = code[instruction_pointer]
 
         ins = process_arg(frame, ins)
-        if not oargs is None:
-            try:
-                args = process_args(frame, oargs)
-                argc = len(args)
-            except Exception as e:
-                error.error(
-                    line_position,
-                    module_filepath,
-                    f"{traceback.format_exc()}\nSomething went wrong when arguments were processed:\n{e}\n> {oargs!r}",
-                )
-                return error.PYTHON_ERROR
-        else:
-            args = []
-            argc = 0
+        try:
+            args = process_args(frame, oargs)
+            argc = len(args)
+        except Exception as e:
+            error.error(
+                line_position,
+                module_filepath,
+                f"{traceback.format_exc()}\nSomething went wrong when arguments were processed:\n{e}\n> {oargs!r}",
+            )
+            return error.PYTHON_ERROR
         if ins == "inc" and argc == 1:
             rset(frame[-1], args[0], rget(frame[-1], args[0], default=0) + 1)
         elif ins == "dec" and argc == 1:
@@ -645,43 +732,6 @@ def execute(code, frame):
             if mod_s.luaj_import(frame, f, search_path, loc=os.path.dirname(module_filepath)):
                 print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_filepath}")
                 return error.RUNTIME_ERROR
-        elif ins == "thread" and argc == 2:
-            function_name, params = args
-            temp_block = get_block(code, instruction_pointer)
-            if temp_block is None:
-                break
-            else:
-                instruction_pointer, body = temp_block
-            func = objects.make_function(function_name, body, process_args(frame, params))
-            def bind():
-                def fn(args):
-                    th_frame = copy(frame)
-                    
-                    nscope(th_frame).update(zip(func["args"], args))
-                    if (err:=execute(func["body"], th_frame)) > 0:
-                        raise error.DPLError(err)
-                    # dont bother cleaning up, garbage collected
-                return fn
-            fn = bind()
-            rset(frame[-1], function_name, lambda *x: threading.Thread(target=fn, args=(x,)))
-        elif ins == "thread::stack_op" and argc == 0:
-            temp_block = get_block(code, instruction_pointer)
-            if temp_block is None:
-                break
-            else:
-                instruction_pointer, body = temp_block
-            with output_stack_lock:
-                if (err:=execute(body, frame)) > 0:
-                    return err
-        elif ins == "thread::await_start" and argc == 1:
-            while not args[0].is_alive():
-                ...
-        elif ins == "thcall" and argc == 4 and args[2] == "as":
-            fn, args, _, name = args
-            args = process_args(frame, args)
-            fn_obj = fn(args)
-            rset(frame[-1], name, fn_obj)
-            fn_obj.run()
         elif ins == "_intern.switch::static" and argc == 2:
             temp_body = args[0].get(args[1], args[0][None])
             if not temp_body:
@@ -1529,5 +1579,6 @@ if "get-internals" in info.program_flags:
 # this is classified as dark magic...
 
 mod_s.dpl.execute = execute_code
+mod_s.dpl.call_dpl = run_func
 
 # Some of the functions here have been turned into decorators

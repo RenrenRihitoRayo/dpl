@@ -1,0 +1,22 @@
+&use {std/text_io.py}
+
+--
+  Below is a static function.
+  Every caller would get the result
+  before runtime if arguments are not impure
+--
+
+fn::static add(a, b)
+    return [:a + :b]
+end
+
+fn test()
+    set meep = 90
+    # below compiles into
+    # io:println(30)
+    io:println([call::static add(10, 20)])
+    # below demotes to a regular call expression
+    io:println([call::static add(10, :meep)])
+end
+
+test()

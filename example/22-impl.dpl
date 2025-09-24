@@ -1,0 +1,20 @@
+&use {std/text_io.py}
+
+object t
+method t.new(value)
+    new :self t
+    set t.value = :value
+    del t._instance_name
+    return :t
+end
+method t._impl::repr()
+    return '<t ${self.value}>'
+end
+method t._impl::add(other)
+    return [call :t.new([ :self.value + :other.value ])]
+end
+
+set t_a = [call :t.new(10)]
+set t_b = [call :t.new(20)]
+# <t 10> <t 20> <t 30>
+io:println(:t_a, :t_b, [:t_a + :t_b])

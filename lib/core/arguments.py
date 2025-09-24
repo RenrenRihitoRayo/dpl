@@ -4,7 +4,6 @@
 from . import dpl_ctypes
 from sys import flags
 import traceback
-import operator
 from . import constants
 from . import varproc
 from . import error
@@ -22,6 +21,8 @@ inf = float("inf")
 class Expression(list):
     def __repr__(self):
         return "Expr"+super().__repr__()
+
+run_fn = None
 
 
 def glob_match(pattern, text):
@@ -57,28 +58,29 @@ def glob_match(pattern, text):
         result = match(pattern, text)
     return not result if negate else result
 
-
 simple_ops = {
-    '+': operator.add,
-    '-': operator.sub,
-    '*': operator.mul,
-    '/': operator.truediv,
-    '//': operator.floordiv,
-    '%': operator.mod,
+    '+': lambda a, b: a + b,
+    '-': lambda a, b: a - b,
+    '*': lambda a, b: a * b,
+    '/': lambda a, b: a / b,
+    '//': lambda a, b: a // b,
+    '%': lambda a, b: a % b,
     '%%': lambda x, y: constants.true if x % y == 0 else constants.false,
-    '<': lambda a, b: constants.true if operator.lt(a, b) else constants.false,
-    '<=': lambda a, b: constants.true if operator.le(a, b) else constants.false,
-    '>': lambda a, b: constants.true if operator.gt(a, b) else constants.false,
-    '>=': lambda a, b: constants.true if operator.ge(a, b) else constants.false,
-    '==': lambda a, b: constants.true if operator.eq(a, b) else constants.false,
-    '!=': lambda a, b: constants.true if operator.ne(a, b) else constants.false,
+    '<': lambda a, b: constants.true if a < b else constants.false,
+    '<=': lambda a, b: constants.true if a <= b else constants.false,
+    '>': lambda a, b: constants.true if a > b else constants.false,
+    '>=': lambda a, b: constants.true if a >= b else constants.false,
+    '==': lambda a, b: constants.true if a == b else constants.false,
+    '!=': lambda a, b: constants.true if a != b else constants.false,
     'and': lambda a, b: constants.true if a and b else constants.false,
     'or': lambda a, b: constants.true if a or b else constants.false,
     'in': lambda a, b: constants.true if a in b else constants.false,
     'is': lambda a, b: constants.true if a is b else constants.false,
-    "**": operator.pow,
+    "**": lambda a, b: a ** b,
     "=": lambda name, value: {name: value},
     "=>": lambda text, pattern: constants.true if glob_match(pattern, text) else constants.false,
+    "..": lambda min, max: range(min, max),
+    "..+": lambda min, max: range(min, max+1),
     "isinstanceof": lambda ins, typ: constants.true if isinstance(ins, typ) else constants.false,
 }
 
@@ -99,7 +101,6 @@ chars = {
 }
 
 type_annotations = {
-    "dpl::bool": int,
     "dpl::int": int,
     "dpl::string": str,
     "dpl::float": float,
@@ -615,10 +616,13 @@ def my_range(start, end):
 
 
 def is_static(code):
-    if not isinstance(code, list):
-        return is_static([code])
     for i in code:
-        if isinstance(i, list):
+        if isinstance(i, Expression) and len(i) == 3 and i[0] == "call::static":
+            if not is_static(i[2]):
+                name, args = i[1:]
+                i.clear()
+                i.extend(["call", f":_global.{name}", args])
+        elif isinstance(i, (tuple, list)):
             if not is_static(i):
                 return False
         elif not isinstance(i, str):
@@ -633,17 +637,28 @@ def is_static(code):
     return True
 
 
-def to_static(code):
+def to_static(code, env=None):
+    env = env or [{}]
     for pos, i in enumerate(code):
-        if isinstance(i, list):
+        if isinstance(i, Expression):
+            print(i)
             if is_static(i):
-                value = type(i)(evaluate([{}], Expression(to_static(i))))
+                value = evaluate(env, to_static(i, env=env))
                 if isinstance(value, str):
                     code[pos] = f'"{value}"'
                 else:
                     code[pos] = value
             else:
-                code[pos] = to_static(i)
+                code[pos] = to_static(i, env=env)
+        elif isinstance(i, tuple):
+            if is_static(i):
+                value = tuple(evaluate(env, to_static(list(i), env=env)))
+                if isinstance(value, str):
+                    code[pos] = f'"{value}"'
+                else:
+                    code[pos] = value
+            else:
+                code[pos] = to_static(i, env=env)
         elif not isinstance(i, str):
             continue
     return code
@@ -665,92 +680,91 @@ def evaluate(frame, expression):
     if not isinstance(expression, Expression):
         return expression
     processed = process_args(frame, expression)
-    if len(processed) == 3 and isinstance(processed[1], str) and processed[1] in simple_ops:
-        return simple_ops[processed[1]](processed[0], processed[2])
-    elif processed and processed[0] == "!":
+    # back then this was just one layer
+    # of it statements
+    # now if the length is not the correct one
+    # we skip a barrage of conditions
+    if processed and processed[0] == "!":
         return processed[1:]
-    elif len(processed) == 2 and processed[0] == "not":
-        return constants.true if not processed[1] else constants.false
-    elif len(processed) == 2 and processed[0] == "-":
-        return -processed[1]
-    elif len(processed) == 2 and processed[0] == "~":
-        return ~processed[1]
-    elif len(processed) == 2 and processed[0] == "type":
-        return getattr(type(processed[1]), "__name__", constants.nil)
-    elif len(processed) == 2 and processed[0] == "sum":
-        args = processed[1]
-        t = type(args[0])
-        start = args[0]
-        for i in args:
-            start += t(i)
-        return start
-    elif len(processed) == 2 and processed[0] == "eval":
-        return evaluate(frame, processed[1])
-    elif len(processed) == 2 and processed[0] == "oldformat":
-        local = flatten_dict(frame[-1])
-        text = processed[1]
-        return fmt_old_format(text, local)
-    elif len(processed) == 2 and processed[0] == "to_ascii":
-        return chr(processed[1])
-    elif len(processed) == 2 and processed[0] == "from_ascii":
-        return ord(processed[1])
-        return processed[1] % processed[2]
-    elif len(processed) == 2 and processed[0] == "len":
-        return len(processed[1])
-    elif len(processed) == 2 and processed[0] == "head:body:tail":
-        head, *rest, tail = processed[1]
-        return head, rest, tail
-    elif len(processed) == 2 and processed[0] == "head:body":
-        head, *rest = processed[1]
-        return head, rest
-    elif len(processed) == 2 and processed[0] == "body:tail":
-        *res, tail = processed[1]
-        return rest, tail
-    elif len(processed) == 2 and processed[0] == "head":
-        return processed[1][0]
-    elif len(processed) == 2 and processed[0] == "tail":
-        return processed[1][-1]
-    elif len(processed) == 3 and processed[0] == "pycall":
-        args = pah.arguments_handler()
-        args.parse(process_args(frame, processed[2]))
-        return args.call(processed[1])
-    elif len(processed) == 3 and processed[0] == "call":
-        func, args = processed[1:]
-        args = process_args(frame, args)
-        varproc.nscope(frame)
-        
-        frame[-1]["_returns"] = ("_intern_result",)
-        frame[-1].update({
-            name: value
-            for name, value
-            in zip(func["args"], args)
-        })
-        if func["capture"]:
-            frame[-1]["_capture"] = func["capture"]
-        if func["self"] is not None:
-            frame[-1]["self"] = func["self"]
-        if err:=execute_code(func["body"], frame=frame):
-            if err < 0: # control codes
-                ...
-            else:
-                raise error.DPLError(err)
-        if "_intern_result" in frame[-1]["_nonlocal"]:
-            ret = frame[-1]["_nonlocal"]["_intern_result"]
-        else:
-            ret = constants.nil
-        varproc.pscope(frame)
-        return ret
-    elif len(processed) == 2 and processed[0] == "typeof":
-        for type_ in type_to_name:
-            if isinstance(processed[1], type_):
-                return type_to_name[type_]
-        return "?::unknown"
-    elif len(processed) == 2 and processed[0] == "dpercent":
-        min, max = process_args(frame, processed[1])
-        return ((abs(min - max))/((min + max) * 2)) * 100
-    elif len(processed) == 2 and processed[0] == "median":
-        min, max = process_args(frame, processed[1])
-        return ((max - min)/2)+min
+    elif len(processed) == 3:
+        if isinstance(processed[1], str) and processed[1] in simple_ops:
+            return simple_ops[processed[1]](processed[0], processed[2])
+        elif processed[0] == "pycall":
+            args = pah.arguments_handler()
+            args.parse(process_args(frame, processed[2]))
+            return args.call(processed[1])
+        elif processed[0] == "call":
+            return run_fn(processed[1]["capture"]["_frame_stack"], processed[1], *processed[2])
+        elif processed[0] == "call::static":
+            func = varproc.rget(frame[-1], processed[1], default=None, resolve=True)
+            if func is None:
+                func = varproc.rget(frame[0], processed[1], default=None, resolve=True)
+            if func is None:
+                error.error("???", "???", f"Function {processed[1]!r} does not exist.")
+                raise error.DPLError(error.PYTHON_ERROR)
+            return run_fn(func["capture"]["_frame_stack"], func, *processed[2])
+    elif len(processed) == 2:
+        if processed[0] == "not":
+            return constants.true if not processed[1] else constants.false
+        elif processed[0] == "-":
+            return -processed[1]
+        elif processed[0] == "~":
+            return ~processed[1]
+        elif processed[0] == "type":
+            return getattr(type(processed[1]), "__name__", constants.nil)
+        elif processed[0] == "sum":
+            args = processed[1]
+            t = type(args[0])
+            start = args[0]
+            for i in args[1:]:
+                start += t(i)
+            return start
+        elif processed[0] == "eval":
+            return evaluate(frame, processed[1])
+        elif processed[0] == "oldformat":
+            local = flatten_dict(frame[-1])
+            text = processed[1]
+            return fmt_old_format(text, local)
+        elif processed[0] == "to_ascii":
+            return chr(processed[1])
+        elif processed[0] == "from_ascii":
+            return ord(processed[1])
+        elif processed[0] == "len":
+            return len(processed[1])
+        elif processed[0] == "head:body:tail":
+            head, *rest, tail = processed[1]
+            return head, rest, tail
+        elif processed[0] == "head:body":
+            head, *rest = processed[1]
+            return head, rest
+        elif processed[0] == "body:tail":
+            *rest, tail = processed[1]
+            return rest, tail
+        elif processed[0] == "head":
+            return processed[1][0]
+        elif processed[0] == "tail":
+            return processed[1][-1]
+        elif processed[0] == "typeof":
+            for type_ in type_to_name:
+                if isinstance(processed[1], type_):
+                    return type_to_name[type_]
+            return "?::unknown"
+        elif processed[0] == "dpercent":
+            min, max = process_args(frame, processed[1])
+            return ((abs(min - max))/((min + max) * 2)) * 100
+        elif processed[0] == "median":
+            min, max = process_args(frame, processed[1])
+            return ((max - min)/2)+min
+        elif processed[0] == "irange":
+            return range(processed[1])
+        elif processed[0] == "reverse":
+            return type(processed[1])(reversed(processed[1]))
+        elif processed[0] == "ireverse":
+            return reversed(processed[1])
+        elif processed[0] == "range":
+            return tuple(range(processed[1]))
+    elif 1 > len(processed) <= 4 and processed[0] == "slice":
+        return slice(*processed[1:])
     match (processed):
         # conditionals
         case ["if", value, "then", true_v, "else", false_v]:
@@ -816,23 +830,6 @@ def evaluate(frame, expression):
             return constants.true
         case [value1, "or", value2, "instead"]:
             return value1 if value1 else value2
-        # ranges
-        case ["rawrange", num]:
-            return range(num)
-        case ["reverse", num]:
-            return type(num)(reversed(num))
-        case ["ireverse", num]:
-            return reversed(num)
-        case ["range", num]:
-            return tuple(range(num))
-        case ["drange", num]:
-            return tuple(my_range(0, num))
-        case ["drawrange", num]:
-            return my_range(0, num)
-        case ["drange", num, end]:
-            return tuple(my_range(num, end))
-        case ["drawrange", num, end]:
-            return my_range(num, end)
         # values
         case ["set", name, "=", value]:
             varproc.rset(frame[-1], name, value)
@@ -860,7 +857,7 @@ def evaluate(frame, expression):
 
 sep = " ,"
 special_sep = "@()+/*[]π<>=!π%"
-sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//", "%%"]
+sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//", "%%", "..", "..+"]
 
 def group(text):
     res = []
@@ -940,4 +937,8 @@ class argproc_setter:
     def set_execute(func):
         global execute_code
         execute_code = func
+        return func
+    def set_run_fn(func):
+        global run_fn
+        run_fn = func
         return func

@@ -56,9 +56,6 @@ if "show-imports" in prog_flags or "show-imports-as-is" in prog_flags:
 if "init-time" in prog_flags:
     INIT_START_TIME = time.perf_counter()
 
-sys.set_int_max_str_digits(2**30)
-sys.setrecursionlimit(2**30)
-
 import lib.core.utils as utils
 import lib.core.error as error
 import os

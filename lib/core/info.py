@@ -32,6 +32,7 @@ INC_EXT_BUILTIN = {
     "match",
     "case",
     "fn",
+    "fn::static",
     "module",
     "method",
     "for",
@@ -43,7 +44,6 @@ INC_EXT_BUILTIN = {
     "dict",
     "with",
     "default",
-    "sched",
     "enum",
     "ifmain",
     "switch",
@@ -55,8 +55,6 @@ INC_EXT_BUILTIN = {
     "fn::inline",
     "string::inline",
     "benchmark",
-    "thread",
-    "thread::stack_op"
 }
 
 # multiple increments
@@ -71,18 +69,36 @@ INCREMENTS = set(INC.keys()) | INC_EXT
 
 DEC = {"end", ".end"}
 
+# methods where they depend on
+# runtime but are unclear
+# for example
+# [oldformat "${...}"]
+# since its a normal string
+# and since oldformat is also just a string
+# before runtime
+# DPL might accidentally evaluate this
+# to fold it, when the string
+# says otherwise
 RT_EXPR = {
+    "oldformat",
+    "call" # side effects
+}
+
+def add_runtime_dependent_method(name):
+    RT_EXPR.add(name)
+
+EXPR = {
     "tuple", "?tuple",
     "dict", "?dict",
     "?int", "?float", "?str",
-    "len", "type", "range", "rawrange", "drange",
-    "drawrange", 'nil?', 'none?', 'def?',
-    "eval", "oldformat",
-    "!", "call",
+    "len", "type", "range", "irange",
+    "reverse",
+    'nil?', 'none?', 'def?',
+    "eval",
+    "!", "..", "..+",
+    "+", "-", "/", "*", "//", "%", "%%",
+    "=>", "or", "and", "not", "call::static"
 }
-
-def add_runtime_dependent_method(keyword):
-    RT_EXPR.add(keyword)
 
 FUNCTIONS = {
     'cmd',

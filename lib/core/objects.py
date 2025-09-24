@@ -6,12 +6,15 @@ from . import varproc
 from . import constants
 
 run_code = None
-
+run_fn = None
 
 def register_run(run):
     global run_code
     run_code = run
 
+def register_run_fn(run):
+    global run_fn
+    run_fn = run
 
 class object_type(dict):
     def __instancecheck__(self, instance):
@@ -23,9 +26,167 @@ class object_type(dict):
         return data
 
     def __repr__(self):
+        op_name = "_impl::repr"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method)
         if "_instance_name" in self:
             return f'<instance {self["_instance_name"]} of object {self["_type_name"]}>'
         return f'<object {self["_type_name"]}>'
+
+    def __add__(self, other):
+        op_name = "_impl::add"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __sub__(self, other):
+        op_name = "_impl::sub"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __mul__(self, other):
+        op_name = "_impl::mul"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __div__(self, other):
+        op_name = "_impl::div"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __pow__(self, other):
+        op_name = "_impl::pow"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __floordiv__(self, other):
+        op_name = "_impl::fdiv"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __mod__(self, other):
+        op_name = "_impl::modulo"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __hash__(self):
+        op_name = "_impl::hash"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method)
+        return super().__hash__()
+    
+#    def __eq__(self, other):
+#        op_name = "_impl::equal"
+#        if op_name in self:
+#            method = self[op_name]
+#            return bool(run_fn(method["capture"]["_frame_stack"], method, other))
+#        return super().__eq__(other)
+#    
+#    def __ne__(self, other):
+#        op_name = "_impl::not_equal"
+#        if op_name in self:
+#            method = self[op_name]
+#            return bool(run_fn(method["capture"]["_frame_stack"], method, other))
+#        return super().__ne__(other)
+
+    def __len__(self):
+        op_name = "_impl::length"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method)
+        return super().__len__()
+    
+    def __rshift__(self, other):
+        op_name = "_impl::right_shift"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __lshift__(self, other):
+        op_name = "_impl::left_shift"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __and__(self, other):
+        op_name = "_impl::logical_and"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __or__(self, other):
+        op_name = "_impl::logical_or"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __xor__(self, other):
+        op_name = "_impl::logical_xor"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return constants.nil
+    
+    def __neg__(self):
+        op_name = "_impl::negate"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method)
+        return constants.nil
+    
+    def __invert__(self):
+        op_name = "_impl::invert"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method)
+        return constants.nil
+    
+    def __contains__(self, other):
+        op_name = "_impl::contains"
+        if super().__contains__(op_name):
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method, other)
+        return super().__contains__(other)
+    
+    def __str__(self):
+        op_name = "_impl::str"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method)
+        return self.__repr__()
+    
+    def __int__(self):
+        op_name = "_impl::int"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method)
+        return constants.nil
+    
+    def __float__(self):
+        op_name = "_impl::float"
+        if op_name in self:
+            method = self[op_name]
+            return run_fn(method["capture"]["_frame_stack"], method)
+        return constants.nil
 
     def __dpl_repr__(self):
         methods = []

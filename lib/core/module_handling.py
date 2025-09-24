@@ -262,13 +262,6 @@ def require(path):
         return e
 
 
-class wrap:
-    def __init__(self, data):
-        self.type = type(data) if not data is None else None
-        self.value = data
-    def __repr__(self):
-        return f"wrap(type={self.type}, value={self.value!r})"
-
 class dpl:
     require = require
     utils = utils
@@ -277,7 +270,7 @@ class dpl:
     info = info
     error = error
     state = state
-    Version = info.Version
+    version = info.Version
     ffi = None
     fmt = fmt
     register_error = error.register_error
@@ -292,9 +285,9 @@ class dpl:
     falsy = (state_nil, state_none, state_false, None, False)
     truthy = (state_true, True)
     exit = None
-    wrap = wrap
     tag_handler = argproc.tag_handler
     execute = None
+    call_dpl = None
     
     def to_bool(obj):
         return constants.true if obj else constants.false
@@ -307,24 +300,6 @@ class dpl:
             argproc.matches[name] = fn
             return fn
         return wrap
-    
-    def call_dpl(env, func, args):
-        varproc.nscope(env).update(zip(func["args"], args))
-        env[-1]["_returns"] = ("_internal'::return",)
-        err = dpl.execute(func["body"], env)
-        varproc.pscope(env)
-        if err > 0:
-            error.DPLError(f"Function {func['name']} returned an error!")
-        ret = env[-1].get("_internal::return")
-        if ret is not None:
-            if isinstance(ret, (list, tuple)):
-                if len(ret) > 1:
-                    return ret
-                else:
-                    return ret[0]
-            else:
-                return ret
-
 
 def get_py_params(func):
     if not hasattr(func, "__code__"):
@@ -333,6 +308,7 @@ def get_py_params(func):
     arg_count = co.co_argcount
     return co.co_varnames[:arg_count]
 
+varproc.meta_attributes["file_cache"] = file_cache = {}
 def dpl_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"]):
     variables = {}
     if not os.path.isabs(file):
@@ -375,12 +351,17 @@ def dpl_import(frame, file, search_path=None, loc=varproc.meta_attributes["inter
         else:
             print(f"python: 'include-py.txt' not found.\nTried to include a directory ({file!r}) without an include file!")
             return
+    if file in file_cache:
+        if varproc.is_debug_enabled("show_imports"):
+            error.info(f"Imported {file!r} (cached)" if not alias else f"Imported {file!r} as {alias} (cached)")
+        return file_cache[file]
     varproc.dependencies["dpl"].add(file)
     if varproc.is_debug_enabled("show_imports"):
         error.info(f"Imported {file!r}" if not alias else f"Imported {file!r} as {alias}")
     with open(file, "r") as f:
         res = dpl.process_code(f.read(), name=file)
         variables.update(res["frame"][0])
+        file_cache[file] = (variables, res["code"])
         return variables, res["code"]
 
 def luaj_import(
@@ -471,11 +452,16 @@ def c_import(frame, file, search_path=None, loc=varproc.meta_attributes["interna
     if not os.path.isfile(file):
         print("File not found:", file)
         return 1
+    if file in file_cache:
+        name = alias or result["_name"]
+        frame[-1][name] = file_cache[file]
+        return
     result = process_cdef(file, open(file).read())
     if result is None:
         return 1
     name = alias or result["_name"]
     frame[-1][name] = result
+    file_cache[file] = result
 
 def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"], alias=None):
     if not os.path.isabs(file):
@@ -489,6 +475,9 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
     if not os.path.exists(file):
         print("Not found:", file)
         return 1
+    if file in file_cache:
+        frame[-1].update(file_cache[file])
+        return
     if os.path.isdir(file):
         if alias:
             frame[-1][alias] = {}
@@ -529,21 +518,19 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
         except:
             error.error("[N/A]", file, traceback.format_exc())
             return 1
-    funcs = {}
+    data = {}
     for name, ext in d.items():
         if isinstance(ext, extension):
             if ext.meta_name:
-                funcs.update(ext.functions)
-            elif ext.name in frame[-1]:
-                raise Exception(f"Name clashing! For name {ext.name!r}")
+                data.update(ext.functions)
             elif ext.name:
-                varproc.rset(frame[-1], ext.name, {})
+                varproc.rset(data, ext.name, {})
                 for func, value in ext.functions.items():
-                    varproc.rset(frame[-1], func, value)
-    frame[-1].update(funcs)
+                    varproc.rset(data, func, value)
+    frame[-1].update(data)
+    file_cache[file] = data
     file = os.path.realpath(file)
     varproc.dependencies["python"].add(file)
-
 
 def call(func, frame, file, args):
     ret = func(frame, file, *args)

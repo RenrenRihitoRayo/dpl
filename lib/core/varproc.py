@@ -51,12 +51,9 @@ debug_settings = {
 
 # preruntime flags
 preprocessing_flags = {
-    "DEAD_CODE_OPT": constants.true, # dead code optimization
-    "EXPRESSION_FOLDING": constants.false,
-    # Expression folding is off by default
-    # as it slows down init time AND slows down small scripts.
-    # IE having it on by default has more downsides than upsides.
-    "IGNORE_EMPTY_FUNCTIONS": constants.false, # doesnt optimize empty functions out
+    "EXPRESSION_FOLDING": constants.true,
+    # Fixed expression folding,
+    # more stable than before
     "WARNINGS": constants.true, # display warnings
     "STRICT": constants.false, # treat warnings as errors
     "RUNTIME_ERRORS": constants.true, # Yep this is a thing
@@ -99,6 +96,7 @@ meta_attributes = {
     "preprocessing_flags":preprocessing_flags,
     "dependencies": dependencies,
     "err": {},
+    "file_cache": {},
     "_set_only_when_defined": 1,
 }
 
