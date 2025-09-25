@@ -94,4 +94,5 @@ endfunction
 
 setlocal indentexpr=GetMyIndent()
 setlocal autoindent
+set shiftwidth=4
 let b:current_syntax = "dpl"

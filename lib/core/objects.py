@@ -4,6 +4,7 @@ from itertools import zip_longest
 from copy import deepcopy as copy
 from . import varproc
 from . import constants
+from . import error
 
 run_code = None
 run_fn = None
@@ -11,10 +12,12 @@ run_fn = None
 def register_run(run):
     global run_code
     run_code = run
+    return run
 
 def register_run_fn(run):
     global run_fn
     run_fn = run
+    return run
 
 class object_type(dict):
     def __instancecheck__(self, instance):
@@ -89,20 +92,6 @@ class object_type(dict):
             method = self[op_name]
             return run_fn(method["capture"]["_frame_stack"], method)
         return super().__hash__()
-    
-#    def __eq__(self, other):
-#        op_name = "_impl::equal"
-#        if op_name in self:
-#            method = self[op_name]
-#            return bool(run_fn(method["capture"]["_frame_stack"], method, other))
-#        return super().__eq__(other)
-#    
-#    def __ne__(self, other):
-#        op_name = "_impl::not_equal"
-#        if op_name in self:
-#            method = self[op_name]
-#            return bool(run_fn(method["capture"]["_frame_stack"], method, other))
-#        return super().__ne__(other)
 
     def __len__(self):
         op_name = "_impl::length"
@@ -243,15 +232,37 @@ def make_reference(scope_index, scope_uuid, name, value, data=constants.none):
     })
 
 
-def make_function(name, body, params):
+def make_function(capture, name, body, params):
     vname = constants.nil
     vindex = 0
     defs = {}
+    checks = {}
     params_ = []
+    def handle_check(expr):
+        cname, _checks, *body = expr
+        if _checks == "checks":
+            checks[cname] = make_function(capture, f"check:{name}:{cname}", [(0, "::internal", "return", [Expression(body)])], ("self",))
+        elif _checks == "follows":
+            a = []
+            for n in body:
+                a.extend((
+                    "and",
+                    Expression(["call", f":{n}", (":self",)])
+                ))
+            checks[cname] = make_function(capture, f"check:{name}:{cname}", [(0, "::internal", "return", [Expression(a[1:])])], ("self",))
     for n in params:
         if isinstance(n, dict):
             (n, v), = n.items()
+            if isinstance(n, tuple):
+                handle_check(n)
+                n = n[0]
+            if not run_fn([{}], checks[n], v):
+                error.error(f"near {body[0][0]-1}", body[0][1], f"Default value of {n!r} ({v!r}) of function {name} does not pass check {checks[n]['body'][0][3][0]}")
+                raise error.DPLError(error.RUNTIME_ERROR)
             defs[n] = v
+        elif isinstance(n, tuple):
+            handle_check(n)
+            n = n[0]
         params_.append(n)
     for pos, an in enumerate(params_):
         if an.startswith("variadic:"):
@@ -262,7 +273,7 @@ def make_function(name, body, params):
         "name": name,
         "body": body,
         "args": params_,
-        "capture": constants.nil,
+        "capture": capture,
         "variadic":{
             "name": vname,
             "index": vindex,
@@ -271,40 +282,15 @@ def make_function(name, body, params):
             "preserve-args": False, # save un-evaluated arguments?
         },
         "defaults": defs,
+        "checks": checks,
         "self": None,
         })
 
 
-def make_method(name, body, params, self):
-    vname = constants.nil
-    vindex = 0
-    defs = {}
-    params_ = []
-    for n in params:
-        if isinstance(n, dict):
-            (n, v), = n.items()
-            defs[n] = v
-        params_.append(n)
-    for pos, an in enumerate(params_):
-        if an.startswith("variadic:"):
-            vindex = pos
-            vname = an[9:]
-            break
-    return function_type({
-        "name": name,
-        "body": body,
-        "args": params_,
-        "capture": constants.nil,
-        "variadic":{
-            "name": vname,
-            "index": vindex,
-        },
-        "tags": { # tags for DPL to treat functions differently.
-            "preserve-args": False, # save un-evaluated arguments?
-        },
-        "defaults": defs,
-        "self": self,
-    })
+def make_method(capture, name, body, params, self):
+    func = make_function(capture, name, body, params)
+    func["self"] = self
+    return func
 
 
 def make_object(name, frame=None):

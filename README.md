@@ -25,6 +25,10 @@ There are no style rules. There are no guardrails. Just a loosely-held-together 
 
 * Multiline dictionaries and lists can now be nested!
 
+* Expression Folding has been fixed
+
+* Checks
+
 ```DuProL
 
 dict d1
@@ -39,6 +43,9 @@ dict d1
         list
             . item4
             . item5
+        end
+        dict
+            set depth = 4
         end
     end
 end
@@ -228,6 +235,27 @@ Most recent at top.
 ### (most recent release 1.4.9)
 
 # 2.0.0 (Indev)
+
+## Checks
+
+Checks are predicates arguments must
+follow. Checks can be annotated and binded
+to a function or defined standalone
+as a statememt.
+
+```duprol
+# reusable
+check positive(:self > 0)
+
+fn bounded((value follows positive))
+    ...
+end
+
+# inline
+fn bounded((value checks :self > 0))
+    ...
+end
+```
 
 ## Expression Folding
 

@@ -475,7 +475,7 @@ def process_code(fcode, name="__main__"):
                     break
                 else:
                     pos, body = temp_block
-                func = objects.make_function(function_name, body, process_args(nframe, params))
+                func = objects.make_function(constants.nil, function_name, body, process_args(nframe, params))
                 rset(nframe[-1], function_name, func)
                 func["capture"] = nframe[-1] # automatically store the scope it was defined in
             elif ins == "string::static" and argc == 1:
@@ -541,6 +541,10 @@ def run_func(frame, function_obj, *args, line_position="???", module_filepath="?
         if len(args)-1 >= function_obj["variadic"]["index"]:
             variadic = []
             for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
+                if name in function_obj["checks"]:
+                    if not run_func(frame, function_obj["checks"][name], value):
+                        error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][3][0]}")
+                        raise error.DPLError(error.RUNTIME_ERROR)
                 if variadic:
                     variadic.append(value)
                 elif line_position >= function_obj["variadic"]["index"]:
@@ -556,12 +560,16 @@ def run_func(frame, function_obj, *args, line_position="???", module_filepath="?
             text = "more" if len(args) > len(function_obj["args"]) else "less"
             error.error(line_position, module_filepath, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
             raise error.DPLError(error.RUNTIME_ERROR)
-    for n, v in function_obj["defaults"].items():
-        frame[-1][n] = v
-    for name, value in itertools.zip_longest(function_obj["args"], args, fillvalue=constants.nil):
-        if name == constants.nil:
-            break
-        frame[-1][name] = value
+        for n, v in function_obj["defaults"].items():
+            frame[-1][n] = v
+        for name, value in itertools.zip_longest(function_obj["args"], args, fillvalue=constants.nil):
+            if name == constants.nil:
+                break
+            if name in function_obj["checks"]:
+                if not run_func(frame, function_obj["checks"][name], value):
+                    error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][3][0]}")
+                    raise error.DPLError(error.RUNTIME_ERROR)
+            frame[-1][name] = value
     if function_obj["capture"] != constants.nil:
         frame[-1]["_capture"] = function_obj["capture"]
     frame[-1]["_returns"] = ("_internal::return",)
@@ -631,7 +639,7 @@ def execute(code, frame):
                 break
             else:
                 instruction_pointer, body = temp_block
-            func = objects.make_function(function_name, body, process_args(frame, params))
+            func = objects.make_function(frame[-1], function_name, body, process_args(frame, params))
             entry_point = False
             if function_name.endswith("::entry_point"):
                 entry_point = True
@@ -651,8 +659,6 @@ def execute(code, frame):
                 else:
                     error.error(line_position, module_filepath, f"Invalid tag: {tag!r}")
             rset(frame[-1], function_name, func)
-
-            func["capture"] = frame[-1] # automatically store the scope it was defined in
 
             if entry_point and module_filepath == "__main__":
                 function_obj = func
@@ -685,6 +691,10 @@ def execute(code, frame):
                     return ecode
                 pscope(frame)
                 return 0
+        elif ins == "check" and argc == 2:
+            name, body = args
+            fn = make_function(frame[-1], name, [(0, "::internal", "return", [Expression(body)])], ("self",))
+            rset(frame[-1], name, fn)
         elif ins == "use" and argc == 1:
             if args[0].startswith("{") and args[0].endswith("}"):
                 f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
@@ -954,9 +964,8 @@ def execute(code, frame):
                 break
             else:
                 instruction_pointer, body = temp
-            func = objects.make_method(method_name, body, process_args(frame, params), self)
+            func = objects.make_method(frame[-1], method_name, body, process_args(frame, params), self)
             self[method_name] = func
-            func["capture"] = frame[-1]
         elif ins == "benchmark" and argc == 2:
             times, var_name = args
             temp = get_block(code, instruction_pointer)
@@ -1075,6 +1084,10 @@ def execute(code, frame):
                 if len(args)-1 >= function_obj["variadic"]["index"]:
                     variadic = []
                     for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
+                        if name in function_obj["checks"]:
+                            if not run_func(frame, func_obj["checks"], value):
+                                error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][3][0]}")
+                                return error.RUNTIME_ERROR
                         if variadic:
                             variadic.append(value)
                         elif line_position >= function_obj["variadic"]["index"]:
@@ -1095,6 +1108,10 @@ def execute(code, frame):
                 for name, value in itertools.zip_longest(function_obj["args"], args):
                     if name is None:
                         break
+                    if name in function_obj["checks"]:
+                        if not run_func(frame, function_obj["checks"][name], value):
+                            error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][3][0]}")
+                            return error.RUNTIME_ERROR
                     frame[-1][name] = value
             frame[-1]["_returns"] = rets
             err = execute(function_obj["body"], frame)
@@ -1122,6 +1139,10 @@ def execute(code, frame):
                 if len(args)-1 >= function_obj["variadic"]["index"]:
                     variadic = []
                     for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
+                        if name in function_obj["checks"]:
+                            if not run_func(frame, func_obj["checks"], value):
+                                error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][3][0]}")
+                                return error.RUNTIME_ERROR
                         if variadic:
                             variadic.append(value)
                         elif line_position >= function_obj["variadic"]["index"]:
@@ -1142,6 +1163,10 @@ def execute(code, frame):
                 for name, value in itertools.zip_longest(function_obj["args"], args):
                     if name is None:
                         break
+                    if name in function_obj["checks"]:
+                        if not run_func(frame, function_obj["checks"][name], value):
+                            error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][3][0]}")
+                            return error.RUNTIME_ERROR
                     frame[-1][name] = value
             frame[-1]["_returns"] = rets
             error.silent()
@@ -1170,6 +1195,10 @@ def execute(code, frame):
                 if len(args)-1 >= function_obj["variadic"]["index"]:
                     variadic = []
                     for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
+                        if name in function_obj["checks"]:
+                            if not run_func(frame, func_obj["checks"], value):
+                                error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][3][0]}")
+                                return error.RUNTIME_ERROR
                         if variadic:
                             variadic.append(value)
                         elif line_position >= function_obj["variadic"]["index"]:
@@ -1190,6 +1219,10 @@ def execute(code, frame):
                 for name, value in itertools.zip_longest(function_obj["args"], args):
                     if name is None:
                         break
+                    if name in function_obj["checks"]:
+                        if not run_func(frame, function_obj["checks"][name], value):
+                            error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][3][0]}")
+                            return error.RUNTIME_ERROR
                     frame[-1][name] = value
             error.silent()
             err = execute(function_obj["body"], frame)
@@ -1339,6 +1372,10 @@ def execute(code, frame):
                 if len(args)-1 >= function_obj["variadic"]["index"]:
                     variadic = []
                     for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
+                        if name in function_obj["checks"]:
+                            if not run_func(frame, func_obj["checks"], value):
+                                error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][3][0]}")
+                                return error.RUNTIME_ERROR
                         if variadic:
                             variadic.append(value)
                         elif line_position >= function_obj["variadic"]["index"]:
@@ -1359,6 +1396,10 @@ def execute(code, frame):
                 for name, value in itertools.zip_longest(function_obj["args"], args, fillvalue=constants.nil):
                     if name == constants.nil:
                         break
+                    if name in function_obj["checks"]:
+                        if not run_func(frame, function_obj["checks"][name], value):
+                            error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][3][0]}")
+                            return error.RUNTIME_ERROR
                     frame[-1][name] = value
             if function_obj["capture"] != constants.nil:
                 frame[-1]["_capture"] = function_obj["capture"]
@@ -1544,7 +1585,13 @@ def run_code(code, frame=None):
     # the function below is recursive
     # thats why depth was mentioned
     # in the doc string.
-    return execute(code, frame)
+    try:
+        return execute(code, frame)
+    except error.DPLError as e:
+        return e.code
+    except:
+        print(traceback.format_exc()+"\nPLEASE REPORT THIS BUG FOR IT ISNT EXPECTED!")
+        return error.PYTHON_ERROR
 
 
 def get_run():

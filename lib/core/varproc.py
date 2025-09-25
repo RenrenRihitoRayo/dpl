@@ -139,7 +139,7 @@ def new_frame():
 
 def get_debug(name):
     "Get a debug option"
-    return debug_settings.get(name, None)
+    return debug_settings.get(name)
 
 
 def is_debug_enabled(name):

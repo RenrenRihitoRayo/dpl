@@ -21,8 +21,21 @@ inf = float("inf")
 
 # custom type to distinguish lists and expressions
 class Expression(list):
+    def __hash__(self):
+        return hash(str(self))
     def __repr__(self):
-        return "Expr"+super().__repr__()
+        string = ""
+        for i in self:
+            if not isinstance(i, str):
+                string += " "+str(i)
+            elif i.startswith(":"):
+                string += f" {i}"
+            else:
+                string += f' "{i}"' if " " in i else f" {i}"
+        return f"[{string.strip()}]"
+                
+
+objects.Expression = Expression
 
 run_fn = None
 
@@ -850,7 +863,7 @@ def evaluate(frame, expression):
                         return res
                 except:
                     raise Exception(f"Error while evaluating: {default}\nMatcher: {name}\n{traceback.format_exc()}") from None
-    raise Exception(f"Unknown expression: {processed!r}")
+    raise Exception(f"Unknown expression: {Expression(processed)!r}")
 
 sep = " ,"
 special_sep = "@()+/*[]π<>=!π%"
