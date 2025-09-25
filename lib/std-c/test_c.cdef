@@ -10,12 +10,5 @@
 /* Where the library file is */
 #path-posix "std-c/lib/test_c.so@global"
 #path-nt "std-c/lib/test_c.dll@global"
-
-#func "print_greeting"
-void print_greeting(void);
-
-#func "print_num"
-void print_num(int num);
-
-#func "fib"
-int fib(int n);
+#func "greet"
+int greet(char* name);

@@ -1,4 +1,4 @@
 *.so
+**/*.so
 *.dll
-*.dynlib
-*.lib
+**/*.dll

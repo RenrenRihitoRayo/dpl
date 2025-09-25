@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # /lib/std-c/_build_.py
 # Build C libraries for DPL
 # Maybe in the future this will

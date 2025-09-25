@@ -81,8 +81,8 @@ simple_ops = {
     "**": lambda a, b: a ** b,
     "=": lambda name, value: {name: value},
     "=>": lambda text, pattern: constants.true if glob_match(pattern, text) else constants.false,
-    "..": lambda min, max: range(min, max),
-    "..+": lambda min, max: range(min, max+1),
+    "..": lambda min, max: my_range(min, max),
+    "..+": lambda min, max: my_range(min, max+1),
     "isinstanceof": lambda ins, typ: constants.true if isinstance(ins, typ) else constants.false,
 }
 
@@ -696,6 +696,10 @@ def evaluate(frame, expression):
                 error.error("???", "???", f"Function {processed[1]!r} does not exist.")
                 raise error.DPLError(error.PYTHON_ERROR)
             return run_fn(func["capture"]["_frame_stack"], func, *processed[2])
+        elif processed[0] == "range":
+            return tuple(my_range(processed[1], processed[2]))
+        elif processed[0] == "irange":
+            return my_range(processed[1], processed[2])
     elif len(processed) == 2:
         if processed[0] == "not":
             return constants.true if not processed[1] else constants.false
