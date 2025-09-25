@@ -1,10 +1,6 @@
 " Vim syntax file for DPL (Dumb Programming Language)
 " Save as ~/.vim/syntax/dpl.vim
 
-if exists("b:current_syntax")
-    finish
-endif
-
 " Directives
 syntax match dplIncludeDirective "&\(define_error\|set_name\|extend\|whatever\|file\|version\|embed\|embed_binary\|\(warn\|dead\)_code_\(disable\|enable\)\|def_fn_\(enable\|disable\)\|save_config\|include\|use\|includec\|extend\|set\|use:luaj\)"
 
@@ -12,7 +8,7 @@ syntax match dplIncludeDirective "&\(define_error\|set_name\|extend\|whatever\|f
 syntax keyword dplKeyword fallthrough as in is not and or export catch safe stop skip pass help DEFINE_ERROR pycatch ecatch raise local setref set cmd use_luaj use dec inc on_new_scope on_pop_scope 
 
 " - Keywords that indent
-syntax keyword keyword_indent fn if match case with default module pub while sched ifmain method switch begin enum loop for
+syntax match keyword_indent "\<\(dict\|list\|keyword_indent\|string\|string::static\|switch::static\|fn::static\|fn\|if\|match\|case\|with\|default\|module\|while\|sched\|ifmain\|method\|switch\|begin\|enum\|loop\|for\)\>"
 " - Keywords that dedent
 syntax keyword keyword_dedent end
 
@@ -69,21 +65,33 @@ highlight link dplIncludeDirective PreProc
 
 function! GetMyIndent()
     let lnum = v:lnum
-    let line = getline(lnum)
+    " Get previous non-blank line number and its content
+    let prev_lnum = prevnonblank(lnum - 1)
+    let line = getline(prev_lnum)
 
-    " Get syntax group of previous line
-    let syn_id = synID(lnum - 1, 1, 1)
+    " Get syntax group of previous line's last character
+    let col_prev = strlen(line)
+    if col_prev == 0
+        let col_prev = 1
+    endif
+    let syn_id = synID(prev_lnum, col_prev, 1)
     let syn_name = synIDattr(syn_id, "name")
+    echom syn_name, line
 
+    " Check for indent keyword on previous line
     if syn_name =~# 'keyword_indent'
-        return indent(lnum - 1) + &shiftwidth
-    elseif syn_name =~# 'keyword_dedent'
-        return indent(lnum - 1) - &shiftwidth
+        return indent(prev_lnum) + &shiftwidth
     endif
 
-    return indent(lnum - 1)
+    if syn_name =~# 'keyword_dedent'
+        call setline(prev_lnum, repeat(' ', target_indent) . substitute(line_text, '^\s*', '', ''))
+        return indent(lnum) - &shiftwidth
+    endif
+
+    " Default: same indent as previous line
+    return indent(prev_lnum)
 endfunction
 
 setlocal indentexpr=GetMyIndent()
-
+setlocal autoindent
 let b:current_syntax = "dpl"

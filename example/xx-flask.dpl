@@ -21,6 +21,9 @@ fn home() (flask:route("/"))
             "Text: <input name='text' required>"
             "<input type='submit' value='Do stuff'>"
         "</form>"
+	"<script>"
+	"document.getElementById('text').focus()"
+	"</script>
     end
     return :home
 end
