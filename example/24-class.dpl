@@ -1,0 +1,16 @@
+&use {std/text_io.py}
+
+object test
+method test.new(value)
+	new :self tmp
+	set tmp.value = :value
+	del tmp._instance_name
+	return :tmp
+end
+method test._impl::repr()
+	return '<test ${self.value}>'
+end
+
+set my_test_object = [call :test.new(90)]
+io:println(:my_test_object)
+

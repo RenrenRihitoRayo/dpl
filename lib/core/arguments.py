@@ -11,6 +11,8 @@ from .info import *
 from . import py_argument_handler as pah
 from . import fmt
 from . import objects
+import uuid
+import time
 
 globals().update(vars(dpl_ctypes))
 
@@ -499,6 +501,8 @@ def expr_preruntime(arg):
         return set()
     elif arg == ".tuple":
         return set()
+    elif arg == ".unique::static":
+        return f"{uuid.uuid4()}::{VERSION.as_id()}::{int(time.time()*10000)}"
     elif arg in dpl_constants:
         arg = dpl_constants[arg]
     elif arg in type_annotations:
@@ -565,6 +569,8 @@ def expr_runtime(frame, arg):
         return reference["value"]
     elif arg == ".input":
         return input()
+    elif arg == ".unique":
+        return f"{uuid.uuid4()}::{VERSION.as_id()}::{int(time.time()*10000)}"
     elif is_id(arg):
         return arg
     elif arg.startswith('"') and arg.endswith('"'):
@@ -676,8 +682,6 @@ def evaluate(frame, expression):
     elif len(processed) == 3:
         if isinstance(processed[1], str) and processed[1] in simple_ops:
             return simple_ops[processed[1]](processed[0], processed[2])
-        elif processed[0] == "irange":
-            return range(processed[1], processed[2])
         elif processed[0] == "pycall":
             args = pah.arguments_handler()
             args.parse(process_args(frame, processed[2]))

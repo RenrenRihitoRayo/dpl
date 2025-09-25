@@ -10,4 +10,4 @@ while (:bottles > 1)
 end
 
 io:println('1 bottle of beer on the wall, 1 bottle on the wall.')
-io:println('Take one down and pass it around, 1 bottle of beer on the wall.')
+io:println('Take one down and pass it around, no more bottles of beer left on the wall.')

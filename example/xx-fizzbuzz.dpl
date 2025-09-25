@@ -14,7 +14,7 @@ set n = [?int :n]
   if num is divisible by op.
 --
 
-for i in [rawrange :n]
+for i in [irange :n]
     if [[ :i %% 3 ] and [ :i %% 5 ]]
         io:println("fizzbuzz")
         skip

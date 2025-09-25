@@ -81,7 +81,8 @@ DEC = {"end", ".end"}
 # says otherwise
 RT_EXPR = {
     "oldformat",
-    "call" # side effects
+    "call", # side effects
+    ".unique"
 }
 
 def add_runtime_dependent_method(name):
@@ -177,6 +178,8 @@ class Version:
         return self.version_tuple
     def __repr__(self):
         return "v"+".".join(map(str, self.version_tuple))
+    def as_id(self):
+        return "v"+"_".join(map(str, self.version_tuple))
 
 VERSION = Version(VERSION_STRING)
 VERSION_TRIPLE = VERSION.version_tuple
