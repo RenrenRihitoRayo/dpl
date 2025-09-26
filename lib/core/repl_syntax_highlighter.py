@@ -1,14 +1,20 @@
 import json
 import re
 import os
-from . import info
+try:
+    from . import info
+except:
+    import info
 from traceback import format_exc
 from prompt_toolkit.lexers import Lexer
 from prompt_toolkit.styles import Style
 
 # Your JSON config as a string
 try:
-    json_config = open(os.path.join(info.BINDIR, "repl_conf/colors_n_stuff.json")).read()
+    try:
+        json_config = json.loads(open(os.path.join(info.BINDIR, "repl_conf/colors_n_stuff.json")).read())
+    except:
+        json_config = json.loads(open(os.path.join("../../repl_conf/colors_n_stuff.json")).read())
     print("Loaded highlighter config...")
 except Exception as e:
     json_config = '{"classes":{}}'
@@ -16,125 +22,66 @@ except Exception as e:
     with open(os.path.join(info.BINDIR, "log.txt"), "w") as f:
         f.write(format_exc())
 
-# Parse the config
-config = json.loads(json_config)
-classes = config['classes']
+from prompt_toolkit.lexers import Lexer
+from prompt_toolkit.formatted_text import FormattedText
+import re
 
-# Extract styles and word lists
-class_styles = {}
-word_map = {}  # word -> class name
-regex_matchers = []  # (class name, regex)
-sw_map = {}  # word -> class name
-
-for class_name, rule in classes.items():
-    class_styles[class_name] = rule['style']
-    if 'words' in rule:
-        for word in rule['words']:
-            word_map[word] = class_name
-    if 'match' in rule:
-        regex_matchers.append((class_name, re.compile(eval(str(repr(rule['match']))))))
-    if 'startswith' in rule:
-        sw_map[class_name] = rule["startswith"]
-
-# Construct the prompt_toolkit Style object
-style = Style.from_dict(class_styles)
-
-# Custom Lexer
 class DPLLexer(Lexer):
+    def __init__(self):
+        self.config = json_config
+        self.token_rules = []
+
+        for cls_name, cls in self.config.get("classes", {}).items():
+            style = cls.get("style", "")
+            
+            # If 'words' is present, match them as whole words
+            if "words" in cls:
+                words_pattern = r'\b(?:' + '|'.join(re.escape(word) for word in cls["words"]) + r')\b'
+                self.token_rules.append((re.compile(words_pattern), style))
+            
+            # If 'match' regex is present, use it
+            if "match" in cls:
+                try:
+                    self.token_rules.append((re.compile(cls["match"]), style))
+                except Exception as e:
+                    print("Something went wrong for:", cls["match"], repr(e))
+            
+            # If 'startswith' is present (like comments or directives)
+            if "startswith" in cls:
+                pattern = re.compile(re.escape(cls["startswith"]) + r'.*')
+                self.token_rules.append((pattern, style))
+        
     def lex_document(self, document):
-        lines = document.lines
+        text = document.text
 
-        def get_line(i: int):
-            text = lines[i]
+        def get_line_tokens(lineno):
+            line = document.lines[lineno]
             tokens = []
-            
-            for class_name, word in sw_map.items():
-                if text.startswith(word):
-                    tokens.append((f'class:{class_name}', text))
-                    return tokens
-            
-            # Tokenize line by words
             i = 0
-            while i < len(text):
-#                if text[i] == '"':
-#                    end = text[i+1:].find('"')
-#                    if end == -1:
-#                        string = text[i:]
-#                    else:
-#                        string = text[i:i+2+end]
-#                    tokens.append(("class:string", string))
-#                    
-#                    i += len(string)
-#                    if i >= len(text):
-#                        break
-                if text[i] == '"':
-                    start = i
-                    end = i + 1
-                    tokens.append(("class:string", '"'))
-                    while end < len(text):
-                        char = text[end]
-                        if char == '\\':
-                            if end+1 < len(text): tokens.extend([
-                                ("class:escape", "\\"),
-                                ("class:escape", text[end+1])
-                            ]); end += 2
-                            else: tokens.extend([
-                                ("class:escape", "\\"),
-                            ]); end += 1
-                            continue
-                        end += 1
-                        tokens.append(('class:string', char))
-                        if char == '"':
-                            break
-                    i = end
-                    if i >= len(text): break
-                if text[i] == "'":
-                    start = i
-                    end = i + 1
-                    tokens.append(("class:string", "'"))
-                    while end < len(text):
-                        char = text[end]
-                        if char == '\\':
-                            if end+1 < len(text): tokens.extend([
-                                ("class:escape", "\\"),
-                                ("class:escape", text[end+1])
-                            ]); end += 2
-                            else: tokens.extend([
-                                ("class:escape", "\\"),
-                            ]); end += 1
-                            continue
-                        if char == '$' and end + 1 < len(text) and text[end+1] == '{':
-                            sub_end = end + 2
-                            
-                            continue
-                        end += 1
-                        tokens.append(('class:string', char))
-                        if char == "'":
-                            break
-                    i = end
-                    if i >= len(text): break
-
-                if text[i].isspace():
-                    tokens.append(('', text[i]))
+            while i < len(line):
+                match_found = False
+                for pattern, style in self.token_rules:
+                    match = pattern.match(line, i)
+                    if match:
+                        tokens.append((style, match.group()))
+                        i = match.end()
+                        match_found = True
+                        break
+                if not match_found:
+                    tokens.append(('', line[i]))
                     i += 1
-                    continue
-
-                start = i
-                while i < len(text) and not text[i].isspace():
-                    i += 1
-                word = text[start:i]
-
-                class_name = word_map.get(word)
-                if class_name:
-                    tokens.append((f'class:{class_name}', word))
-                else:
-                    for class_name, regex in regex_matchers:
-                        if (match:=regex.match(word)):
-                            tokens.append((f"class:{class_name}", word))
-                            break
-                    else:
-                        tokens.append(('', word))
-
             return tokens
 
-        return get_line
+        return get_line_tokens
+
+
+# Example usage with prompt_toolkit
+if __name__ == "__main__":
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.styles import Style
+
+    lexer = DPLLexer()
+    session = PromptSession(lexer=lexer)
+    while True:
+        text = session.prompt('> ')
+        print("You entered:", text)

@@ -1,1 +1,0 @@
-dpl.py -no-cffi -no-lupa -skip-non-essential pm $@

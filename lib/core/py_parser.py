@@ -107,7 +107,7 @@ def pprint(d, l=0, seen=None, hide=True):
     if id(d) in seen:
         print("  "*l+"...")
         return
-    if isinstance(d, objects.objects):
+    if isinstance(d, object_type):
         print(("  "*l+repr(d))+",")
         return
     seen.add(id(d))
@@ -117,9 +117,7 @@ def pprint(d, l=0, seen=None, hide=True):
                 print("  "*l+"[")
                 pprint(i, l+1, seen)
                 print("  "*l+"],")
-            elif isinstance(d, objects.objects):
-                print(("  "*l+repr(d))+",")
-            elif isinstance(i, objects.object_type):
+            elif isinstance(i, object_type):
                 print("  "*l+f"{i['_type_name']}{{")
                 pprint(i, l+1, seen)
                 print("  "*l+"},")
@@ -139,9 +137,7 @@ def pprint(d, l=0, seen=None, hide=True):
     for name, value in d.items():
         if isinstance(name, str) and name.startswith("_") and hide:
             ...
-        elif isinstance(value, objects.objects):
-            print(("  "*l+f"{name!r}: " + repr(value))+",")
-        elif isinstance(value, objects.object_type):
+        elif isinstance(value, object_type):
             print("  "*l+f"{name!r}: {value['_type_name']}{{")
             pprint(value, l+1, seen)
             print("  "*l+"},")
@@ -365,15 +361,16 @@ def process_code(fcode, name="__main__"):
                 )
                 break
         else:
-            ins, *args = group(line)
-            if ins == "return" and any(is_reference_var(x) for x in args):
+            try:
+                ins, *args = nest_args(exprs_preruntime(group(line)))
+                if isinstance(ins, Expression):
+                    ins = to_static(ins)
+            except:
+                error.error(lpos, name, "Line has an imballance in parenthesis!")
+                return error.SYNTAX_ERROR
+            if ins == "return" and any(is_reference_var(x) for x in args if isinstance(x, str)):
                 error.error(lpos, file, "Return statement returns a reference!")
                 return error.TYPE_ERROR
-            try:
-                args = nest_args(exprs_preruntime(args))
-            except:
-                error.error(lpos, file, "Line has an imballance in parenthesis!")
-                return error.SYNTAX_ERROR
             res.append((lpos, name, ins, args))
     else:
         if multiline:
@@ -391,7 +388,9 @@ def process_code(fcode, name="__main__"):
         while pos < len(nres):
             entire_line = line_pos, file, ins, args = nres[pos]
             argc = len(args)
-            if ins == "switch::static":
+            if not isinstance(ins, str):
+                res.append(entire_line)
+            elif ins == "switch::static":
                 body = {None: []}
                 arg_val = args[0]
                 og_lpos = line_pos
@@ -436,7 +435,6 @@ def process_code(fcode, name="__main__"):
                 sub_pos = 0
                 while sub_pos < len(switch_block):
                     line_pos, file, ins, args = switch_block[sub_pos]
-
                     if ins == "case" and len(args) == 1:
                         temp = get_block(switch_block, sub_pos)
                         if temp is None:
@@ -475,7 +473,7 @@ def process_code(fcode, name="__main__"):
                     break
                 else:
                     pos, body = temp_block
-                func = objects.make_function(constants.nil, function_name, body, process_args(nframe, params))
+                func = make_function(constants.nil, function_name, body, process_args(nframe, params))
                 rset(nframe[-1], function_name, func)
                 func["capture"] = nframe[-1] # automatically store the scope it was defined in
             elif ins == "string::static" and argc == 1:
@@ -529,7 +527,7 @@ def process_code(fcode, name="__main__"):
         return frame
     return error.PREPROCESSING_ERROR
 
-@objects.register_run_fn
+@register_run_fn
 @argproc_setter.set_run_fn
 def run_func(frame, function_obj, *args, line_position="???", module_filepath="???"):
     args = process_args(frame, args)
@@ -639,7 +637,7 @@ def execute(code, frame):
                 break
             else:
                 instruction_pointer, body = temp_block
-            func = objects.make_function(frame[-1], function_name, body, process_args(frame, params))
+            func = make_function(frame[-1], function_name, body, process_args(frame, params))
             entry_point = False
             if function_name.endswith("::entry_point"):
                 entry_point = True
@@ -916,6 +914,43 @@ def execute(code, frame):
                         rset(frame[-1], name, value)
                 else:
                     rset(frame[-1], args[0], args[2])
+        elif ins == "set" and argc == 5 and args[1] == "=" and args[3] == "satisfies":
+            if args[0] != "_":
+                name, _, value, _, predicates = args
+                fn_pred = []
+                for i in predicates:
+                    if (f:=rget(frame[-1], i)) == constants.nil:
+                        error.error(line_position, module_filepath, f"Check {i!r} does not exist!")
+                        return error.RUNTIME_ERROR
+                    fn_pred.append(f)
+                if isinstance(args[0], (tuple, list)):
+                    for n, v in zip(name, value):
+                        for fn in fn_pred:
+                            if not run_func(frame, fn, v):
+                                error.error(line_position, module_filepath, f"Variable {n!r} ({v!r}) did not pass check {fn['name']}({fn['body'][0][3][0]})")
+                                return error.RUNTIME_ERROR
+                        rset(frame[-1], name, value)
+                else:
+                    for fn in fn_pred:
+                        if not run_func(frame, fn, value):
+                            error.error(line_position, module_filepath, f"Variable {name!r} ({value!r}) did not pass check {fn['name']}({str(fn['body'][0][3][0])[1:-1]})")
+                            return error.RUNTIME_ERROR
+                    rset(frame[-1], name, value)
+        elif ins == "set" and argc == 6 and args[1] == "=" and args[3] == "satisfies" and args[4] == "check":
+            if args[0] != "_":
+                name, _, value, _, _, predicate = args
+                fn_pred = make_function(frame[-1], f"check::{name}", [ (0, "::internal", "return", [ Expression(predicate) ]) ], ("self",))
+                if isinstance(args[0], (tuple, list)):
+                    for n, v in zip(name, value):
+                        if not run_func(frame, fn_pred, v):
+                            error.error(line_position, module_filepath, f"Variable {n!r} ({v!r}) did not pass check {fn_pred['name']}({fn_pred['body'][0][3][0]})")
+                            return error.RUNTIME_ERROR
+                        rset(frame[-1], name, value)
+                else:
+                    if not run_func(frame, fn_pred, value):
+                        error.error(line_position, module_filepath, f"Variable {name!r} ({value!r}) did not pass check {fn_pred['name']}({str(fn_pred['body'][0][3][0])[1:-1]})")
+                        return error.RUNTIME_ERROR
+                    rset(frame[-1], name, value)
         elif ins == "mset" and argc == 3 and args[1] == "=":
             if args[0] != "_":
                 if isinstance(args[0], (tuple, list)):
@@ -927,7 +962,7 @@ def execute(code, frame):
             for name in args:
                 rpop(frame[-1], name)
         elif ins == "object" and argc == 1:
-            rset(frame[-1], args[0], objects.make_object(args[0], frame))
+            rset(frame[-1], args[0], make_object(args[0], frame))
         elif ins == "new" and argc == 2:
             object_scope, object_name = args
             if object_scope == constants.nil:
@@ -935,13 +970,13 @@ def execute(code, frame):
                 break
             obj = copy(object_scope)
             for name, value in obj.items():
-                if isinstance(value, objects.function_type):
+                if isinstance(value, function_type):
                     value["self"] = obj
             obj["_instance_name"] = object_name
             rset(frame[-1], object_name, obj)
         elif ins == "make_cons" and argc == 1:
-            attrs = list(name for name, value in args[0].items() if not name.startswith("_") and not isinstance(value, objects.function_type))
-            func = objects.make_method("new", [
+            attrs = list(name for name, value in args[0].items() if not name.startswith("_") and not isinstance(value, function_type))
+            func = make_method("new", [
                 (line_position, f"{module_filepath}:internal", "new", [":self", "tmp"]),
                 *[
                     (line_position, f"{module_filepath}:internal", "set", [f"tmp.{name}", "=", f":{name}"])
@@ -964,7 +999,7 @@ def execute(code, frame):
                 break
             else:
                 instruction_pointer, body = temp
-            func = objects.make_method(frame[-1], method_name, body, process_args(frame, params), self)
+            func = make_method(frame[-1], method_name, body, process_args(frame, params), self)
             self[method_name] = func
         elif ins == "benchmark" and argc == 2:
             times, var_name = args
@@ -1015,14 +1050,14 @@ def execute(code, frame):
                     if attr.startswith("_"):
                         continue
                     val = copy(rget(parent, attr))
-                    if isinstance(val, objects.function_type):
+                    if isinstance(val, function_type):
                         val["self"] = child
                     rset(child, attr, val)
             else:
                 for attr in attrs:
                     if attr in parent:
                         val = copy(rget(parent, attr))
-                        if isinstance(val, objects.function_type):
+                        if isinstance(val, function_type):
                             val["self"] = child
                         rset(child, attr, val)
         elif ins == "START_TIME" and argc == 0:
@@ -1046,7 +1081,7 @@ def execute(code, frame):
         elif ins == "exit" and argc == 1:
             sys.exit(args[0])
         elif ins == "return":  # Return to the latched names
-            if any(isinstance(x, objects.reference_type) for x in args):
+            if any(isinstance(x, reference_type) for x in args):
                 error.error(line_position, module_filepath, "Function returned a reference, perhaps they were supposed to be dereferenced?")
                 return error.TYPE_ERROR
             if (latched_names := rget(frame[-1], "_returns")) != constants.nil:

@@ -4,6 +4,10 @@ dill
 lupa
 cffi
 
+# extras
+# flask
+# flask_session
+
 # Unecessary dependencies, ehen removed
 # will break non-core features (like REPL)
 requests

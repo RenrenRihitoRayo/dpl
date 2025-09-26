@@ -10,24 +10,24 @@ There are no style rules. There are no guardrails. Just a loosely-held-together 
 
 * Objects now have short\-hand constructors!
 
-    You can use `make_cons object` to automatically make a constructor for that object,
-    given that you have defined them implicitly in the object.
+You can use `make_cons object` to automatically make a constructor for that object,
+given that you have defined them implicitly in the object.
 
 * New debug output!
 
-    Using `io:debug(object)` in `std/text_io.py`,
-    will yield more interesting output for objects.
+Using `io:debug(object)` in `std/text_io.py`,
+will yield more interesting output for objects.
 
 * `declare` in multiline dictionaries.
 
-    You can use declare to define keys that would be
-    implicitly defined.
+You can use declare to define keys that would be
+implicitly defined.
 
 * Multiline dictionaries and lists can now be nested!
 
 * Expression Folding has been fixed
 
-* Checks
+* Parameter and Variable Checks
 
 ```DuProL
 
@@ -238,10 +238,10 @@ Most recent at top.
 
 ## Checks
 
-Checks are predicates arguments must
-follow. Checks can be annotated and binded
-to a function or defined standalone
-as a statememt.
+Checks are predicates arguments or
+a variable must follow. Checks can
+be annotated and binded to a function
+or defined standalone as a statement.
 
 ```duprol
 # reusable
@@ -255,6 +255,10 @@ end
 fn bounded((value checks :self > 0))
     ...
 end
+
+set a = 10 satisfies(positive)
+# or inline
+set a = 10 satifies check(:self > 0)
 ```
 
 ## Expression Folding

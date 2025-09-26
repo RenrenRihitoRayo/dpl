@@ -3,36 +3,35 @@
         "keywords":{
             "style":"bold fg:magenta",
             "words":[
-                "skip", "stop", "in", "as", "not", "and", "or",
-                "raise", "tc_register", "export", "set", "del",
-                "match",
-                "case",
-                "fn",
-                "module",
-                "method",
-                "for",
-                "pub",
-                "loop",
-                "while",
-                "if",
-                "dict",
-                "with",
-                "default",
-                "sched",
-                "enum",
-                "ifmain",
-                "switch",
-                "begin",
-                "end",
-                "return",
-		"setref"
+		"end",
+                "fn", "fn::static", "fn::inline",
+		"match", "switch", "switch::static",
+		"string", "string::static", "dict", "list",
+		"set", "setref", "fallthrough",
+		"fallthrough",
+		"if", "ifmain", "then", "else",
+		"check"
+	    ]
+        },
+        "operations":{
+            "style":"fg:yellow",
+            "words":[
+                "+", "-", "*", "/", "//", "**",
+		"..", "..+",
+		"==", ">=", "<=", "!=", ">", "<", "=>",
+		"typeof", "len", "slice",
+		"?dict", "?list", "?string", "?int", "?float", "?bytes", 
+		"dict", "!",
+		"nil?", "def?",
+		"in", "or", "and", "not",
+		"checks", "follows", "satisfies"
             ]
         },
         "functions":{
             "style":"bold fg:grey",
             "words":[
                 "cmd", "exit", "exec", "sexec",
-                "dlopen", "dlclose", "cget", "cdef", "dump_vars", "dump_scope", "fallthrough",
+                "dump_vars", "dump_scope",
                 "inc", "dec"
             ]
         },
@@ -49,7 +48,8 @@
             "match":"-?\\d+(:?\\.\\d+)?"
         },
         "string":{
-            "style":"fg:green"
+            "style":"fg:green",
+	    "match": "\"(\\\\.|[^\"\\\\]+)+\""
         },
         "escape":{
             "style":"fg:purple"

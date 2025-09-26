@@ -384,10 +384,6 @@ Code format: (
                 print("Something went wrong:", file)
                 print("Error:", repr(e))
                 exit(1)
-        case ["pm", *args]:
-            import project_mngr.pmfdpl as pkg_manager
-            pkg_manager.mfile = _file_
-            sys.exit(pkg_manager.handle_cmd(args))
         case ["package", *args]:
             match args:
                 case ["install", user, repo]:
@@ -476,7 +472,7 @@ Code format: (
                 for f in frame:
                     acc.extend(utils.flatten_dict(f).keys())
                     acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
-                inp = lambda text: prompt(text, completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist, lexer=repl_conf.DPLLexer(), style=repl_conf.style).strip()
+                inp = lambda text: prompt(text, completer=WordCompleter(acc+suggest.SUGGEST, pattern=suggest.pattern), history=cmd_hist, lexer=repl_conf.DPLLexer()).strip()
             else:
                 inp = __builtins__.input
             while True:
@@ -538,7 +534,7 @@ Code format: (
                             acc.extend(utils.flatten_dict(f).keys())
                             acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
                 except Exception as e:
-                    print(f"Python Exception was raised while running:\n{repr(e)}")
+                    print(f"Python Exception was raised while running:\n{traceback.format_exc()}")
         case ["extract", file]:
             with open(file) as f:
                 linter.set_main(os.path.realpath(file))
@@ -556,7 +552,7 @@ Code format: (
                 print("Functions:")
                 for v in program.functions:
                     print(f"[{v.source_file}:{v.line_pos}] {v.function_name!r}({', '.join(v.function_parameters)})")
-        case ["help"]:
+        case ["help"] | ["--help"]:
             print(help_str)
         case _:
             print("Invalid invokation!")

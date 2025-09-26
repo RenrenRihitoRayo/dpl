@@ -23,7 +23,7 @@ for file in *; do
 			continue
 		fi
 		if [ "$command_res" -ne "0" ]; then
-			echo "$file: Failed [$?]"
+			echo "$file: Failed [$command_res]"
 			cp temp.txt "./errors/${file}.err"
 			fails=$((fails + 1))
 			failed_test+=($file)
