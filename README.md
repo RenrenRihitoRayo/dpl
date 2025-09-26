@@ -154,16 +154,16 @@ You must have python and python-pip installed.
 [root@localhost ~/dpl]# bash scripts/install.sh
 Added ... to PATH in ~/.bashrc
 [root@localhost ~/dpl]# dpl
-DPL REPL for DPL v1.4.7
+DPL REPL for DPL v2.0.0
 Python 3.x (...) [...]
 >>> &use {std/text_io.py}
->>> io:println "Hello, world!"
+>>> io:println("Hello, world!")
 Hello, world!
 >>> exit
 [root@localhost ~/dpl]# dpl run example/01-helloworld.dpl
 Hello, world!
 [root@localhost ~/dpl]# # get info about the code base
-[root@localhost ~/dpl]# python3 info.py
+[root@localhost ~/dpl]# python3 info.py --silent # dont print per file info
 ```
 
 ## Code Sample
