@@ -246,6 +246,12 @@ Most recent at top.
 
 # 2.0.0 (Indev)
 
+## Removed Async
+
+This is to fix bugs, as there was problems working
+with async, in short, code base became async hell
+for a second
+
 ## Blocks
 
 In HLIR code blocks are finally included IN
