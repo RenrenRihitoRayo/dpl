@@ -7,5 +7,5 @@ py_types.py
 tests.py
 to_py.py
 to_dict.py
-math.py
+mathlib.py
 error_handling.py

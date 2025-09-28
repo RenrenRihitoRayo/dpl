@@ -1,4 +1,4 @@
-&use {std}
+&use {std/text_io.py}
 
 --
   DPL 1.4.9

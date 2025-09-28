@@ -18,7 +18,6 @@ globals().update(vars(dpl_ctypes))
 
 inf = float("inf")
 
-
 # custom type to distinguish lists and expressions
 class Expression(list):
     def __hash__(self):
@@ -39,6 +38,74 @@ objects.Expression = Expression
 
 run_fn = None
 
+unary_ops = {
+    "not", "~"
+}
+
+precedence_list = [
+    ["==", "!=", ">=", "<=", ">", "<"],
+    ["not"],
+    ["~"],
+    ["^"],
+    ["*", "/"],
+    ["+", "-"],
+    ["and", "or"],
+]
+
+precedence = {}
+for row, line in enumerate(precedence_list):
+    for name in line:
+        precedence[name] = len(precedence_list)-row
+
+def nest_math(tokens):
+    if not tokens:
+        return None
+    expect_operand = True
+    for i, tok in enumerate(tokens):
+        if expect_operand:
+            if isinstance(tok, (int, float)):
+                expect_operand = False
+            elif tok in unary_ops:  # still expecting operand after unary
+                continue
+            else:
+                return None
+        else:  # expect operator
+            if tok in precedence:
+                expect_operand = True
+            else:
+                return None
+    if expect_operand:  # expression ended on operator
+        return None
+    def process(tokens, level):
+        if level == 0:
+            return tokens
+        # collect operators of this level
+        ops = [op for op, prec in precedence.items() if prec == level]
+        result = Expression()
+        i = 0
+        while i < len(tokens):
+            tok = tokens[i]
+            if tok in ops and tok in unary_ops:  # unary op
+                if i+1 >= len(tokens):
+                    return None
+                right = tokens[i+1]
+                result.append(Expression([tok, right]))
+                i += 2
+            elif tok in ops:  # binary op
+                if not result or i+1 >= len(tokens):
+                    return None
+                left = result.pop()
+                right = tokens[i+1]
+                result.append(Expression([left, tok, right]))
+                i += 2
+            else:
+                result.append(tok)
+                i += 1
+        return process(result, level-1)
+    max_prec = max(precedence.values())
+    res = process(tokens, max_prec)
+    if res:
+        return res[0]
 
 def glob_match(pattern, text):
     negate = False
@@ -94,25 +161,19 @@ simple_ops = {
     "**": lambda a, b: a ** b,
     "=": lambda name, value: {name: value},
     "=>": lambda text, pattern: constants.true if glob_match(pattern, text) else constants.false,
-    "..": lambda min, max: my_range(min, max),
-    "..+": lambda min, max: my_range(min, max+1),
+    "..": lambda min, max: tuple(my_range(min, max)),
+    "..+": lambda min, max: tuple(my_range(min, max+1)),
     "isinstanceof": lambda ins, typ: constants.true if isinstance(ins, typ) else constants.false,
 }
 
 type_annotations = {
-    "dpl::int": int,
-    "dpl::string": str,
-    "dpl::float": float,
-    "dpl::function": objects.function_type,
-    "dpl::object": objects.object_type,
-    "dpl::reference": objects.reference_type,
-    "dpl::sequence": list | set | tuple,
-    "py::int": int,
-    "py::string": str,
-    "py::float": float,
-    "py::bool": bool,
-    "py::dict": dict,
-    "py::sequence": list | set | tuple,
+    "primitive::int": int,
+    "primitive::string": str,
+    "primitibe::float": float,
+    "primitive::object.reference": objects.reference_type,
+    "primitive::object.function": objects.function_type,
+    "primitive::object": objects.object_type,
+    "primitive::sequence": list | set | tuple,
     "c::int": c_int, "c::uint": c_uint,
     "c::double": c_double,
     "c::float": c_float,
@@ -171,7 +232,7 @@ def nest_args(tokens):
             if token == ")":
                 stack[-1].append(tuple(stack[-1].pop()))
             elif token == "]":
-                stack[-1].append(Expression(stack[-1].pop()))
+                stack[-1].append(Expression(stack[-1].pop()));
             else:
                 assert False, "SHOULD NOT BE REACHED!"
         else:
@@ -179,31 +240,6 @@ def nest_args(tokens):
     if len(stack) > 1:
         raise ValueError(f"Mismatched parentheses: {tokens}")
     return stack[0]
-
-
-def get_block(code, current_p):
-    "Get a code block"
-    pos, file, _, _ = code[current_p]
-    p = current_p + 1
-    k = 1
-    res = []
-    while p < len(code):
-        _, _, ins, _ = code[p]
-        if ins in INC_EXT:
-            k += 1
-        elif ins in INC:
-            k -= INC[ins]
-        elif ins in DEC:
-            k -= 1
-        if k == 0:
-            break
-        else:
-            res.append(code[p])
-        p += 1
-    else:
-        print(f"Error in line {pos} file {file!r}\nCause: Block wasnt closed!")
-        return None
-    return p, res
 
 
 def parse_match(frame, body, value):
@@ -215,18 +251,14 @@ def parse_match(frame, body, value):
     np = 0
     ft = False # fallthrough
     if value != constants.nil:
-        for p, [pos, file, ins, args] in enumerate(body):
+        for p, [pos, file, ins, block, args] in enumerate(body):
             if ins == "as":
                 varproc.rset(frame[-1], process_arg(frame, args[0]), value)
             elif ins == "case":
                 if (v := process_arg(frame, args[0])) or ft:
                     if ft:
                         ft = False
-                    temp = get_block(body, p)
-                    if temp is None:
-                        error.error(pos, file, "Expected a case block!")
-                        return error.SYNTAX_ERROR
-                    res = execute_code(temp[1], frame=frame)
+                    res = execute_code(block, frame=frame)
                     if res != error.FALLTHROUGH:
                         return res
                     ft = True
@@ -234,46 +266,30 @@ def parse_match(frame, body, value):
                 if (v := process_arg(frame, args[0])) == value or ft:
                     if ft:
                         ft = False
-                    temp = get_block(body, p)
-                    if temp is None:
-                        error.error(pos, file, "Expected a case block!")
-                        return error.SYNTAX_ERROR
-                    res = execute_code(temp[1], frame=frame)
+                    res = execute_code(block, frame=frame)
                     if res != error.FALLTHROUGH:
                         return res
                     ft = True
             elif ins == "default":
-                temp = get_block(body, p)
-                if temp is None:
-                    error.error(pos, file, "Expected a case block!")
-                    return error.SYNTAX_ERROR
                 if name:
                     frame[-1][name] = value
-                return execute_code(temp[1], frame=frame)
+                return execute_code(block, frame=frame)
     else:
         for p, [pos, file, ins, args] in enumerate(body):
             if ins == "case":
                 if (v := process_arg(frame, args[0])) or ft:
                     if ft:
                         ft = False
-                    temp = get_block(body, p)
-                    if temp is None:
-                        error.error(pos, file, "Expected a case block!")
-                        return error.SYNTAX_ERROR
                     if name:
                         frame[-1][name] = value
-                    res = execute_code(temp[1], frame=frame)
+                    res = execute_code(block, frame=frame)
                     if res != error.FALLTHROUGH:
                         return res
                     ft = True
             elif ins == "default":
-                temp = get_block(body, p)
-                if temp is None:
-                    error.error(pos, file, "Expected a case block!")
-                    return error.SYNTAX_ERROR
                 if name:
                     frame[-1][name] = value
-                return execute_code(temp[1], frame=frame)
+                return execute_code(block, frame=frame)
     return 0
 
 
@@ -282,7 +298,7 @@ def parse_dict(frame, temp_name, body):
     varproc.rset(frame[-1], temp_name, data)
     p = 0
     while p < len(body):
-        [pos, file, ins, args] = body[p]
+        [pos, file, ins, block, args] = body[p]
         args = process_args(frame, args)
         argc = len(args)
         if ins == "set" and argc == 3 and args[1] == "=":
@@ -304,18 +320,10 @@ def parse_dict(frame, temp_name, body):
             for name in args:
                 data[name] = constants.nil
         elif ins == "dict" and argc == 1:
-            temp = get_block(body, p)
-            if temp is None:
-                return 1
-            p, block = temp
             tmp = [data]
             if parse_dict(tmp, args[0], block):
                 return 1
         elif ins == "list" and argc == 1:
-            temp = get_block(body, p)
-            if temp is None:
-                return 1
-            p, block = temp
             tmp = [data]
             if parse_list(tmp, args[0], block):
                 return 1
@@ -330,7 +338,7 @@ def parse_list(frame, temp_name, body):
     varproc.rset(frame[-1], temp_name, data)
     p = 0
     while p < len(body):
-        [pos, file, ins, args] = body[p]
+        [pos, file, ins, block, args] = body[p]
         args = process_args(frame, args or [])
         argc = len(args)
         if ins == "expand" and argc == 1:
@@ -338,19 +346,11 @@ def parse_list(frame, temp_name, body):
         elif ins == "." and argc == 1:
             data.append(args[0])
         elif ins == "dict" and argc == 0:
-            temp = get_block(body, p)
-            if temp is None:
-                return 1
-            p, block = temp
             tmp = [{}]
             if parse_dict(tmp, "???", block):
                 return 1
             data.append(tmp[-1]["???"])
         elif ins == "list" and argc == 0:
-            temp = get_block(body, p)
-            if temp is None:
-                return 1
-            p, block = temp
             tmp = [{}]
             if parse_list(tmp, "???", block):
                 return 1
@@ -365,7 +365,7 @@ def parse_string(frame, temp_name, body, new_line=False, sep="\n"):
     data = []
     p = 0
     while p < len(body):
-        [pos, file, ins, _] = body[p]
+        [pos, file, ins, _, _] = body[p]
         data.append(process_arg(frame, ins))
         p += 1
     varproc.rset(frame[-1], temp_name, sep.join(data) if new_line else "".join(data))
@@ -373,7 +373,7 @@ def parse_string(frame, temp_name, body, new_line=False, sep="\n"):
 
 def parse_struct(frame, ffi, s_name, body):
     names = ["typedef struct {"]
-    for p, [pos, file, name, [eq, type]] in enumerate(body):
+    for p, [pos, file, name, _, [eq, type]] in enumerate(body):
         if eq != "as":
             error.error(pos, file, f"Invalid statement!")
             return 1
@@ -692,6 +692,12 @@ def evaluate(frame, expression):
     # we skip a barrage of conditions
     if processed and processed[0] == "!":
         return processed[1:]
+    elif processed and processed[0] == ".":
+        r = nest_math(processed[1:])
+        if r is None:
+            error.error(698, "lib/core/arguments.py", f"Invalid expression: {Expression(processed[1:])!r}")
+            raise error.DPLError(error.SYNTAX_ERROR)
+        return r
     elif len(processed) == 3:
         if isinstance(processed[1], str) and processed[1] in simple_ops:
             return simple_ops[processed[1]](processed[0], processed[2])
@@ -699,15 +705,12 @@ def evaluate(frame, expression):
             args = pah.arguments_handler()
             args.parse(process_args(frame, processed[2]))
             return args.call(processed[1])
+        elif processed[0] == "fmt":
+            return format(str(processed[1]), processed[2])
         elif processed[0] == "call":
             return run_fn(processed[1]["capture"]["_frame_stack"], processed[1], *processed[2])
         elif processed[0] == "call::static":
             func = varproc.rget(frame[-1], processed[1], default=None, resolve=True)
-            if func is None:
-                func = varproc.rget(frame[0], processed[1], default=None, resolve=True)
-            if func is None:
-                error.error("???", "???", f"Function {processed[1]!r} does not exist.")
-                raise error.DPLError(error.PYTHON_ERROR)
             return run_fn(func["capture"]["_frame_stack"], func, *processed[2])
         elif processed[0] == "range":
             return tuple(my_range(processed[1], processed[2]))
@@ -867,33 +870,31 @@ def evaluate(frame, expression):
 
 sep = " ,"
 special_sep = "@()+/*[]π<>=!π%"
-sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//", "%%", "..", "..+"]
+sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//", "%%", "..", "..+", "]."]
 
 def group(text):
     res = []
-    str_tmp = []
+    str_tmp = ""
     id_tmp = []
     this = False
     rq = False
     quotes = {"str": '"', "pre": "}", "str1": "'"}
     str_type = "str"
+    text = iter(text)
     for i in text:
         if str_tmp:
             if this:
-                if i in CHARS:
-                    str_tmp.append(CHARS[i])
-                else:
-                    str_tmp.append("\\"+i)
+                str_tmp += "\\"+i
                 this = False
                 continue
             if i == "\\":
-                this = True
+                this = 1
             elif i == quotes[str_type]:
-                text = "".join(str_tmp) + quotes[str_type]
+                text = str_tmp + quotes[str_type]
                 res.append(text)
-                str_tmp.clear()
+                str_tmp = ""
             else:
-                str_tmp.append(i)
+                str_tmp += i
             continue
         elif i in sep:
             if id_tmp:
@@ -908,7 +909,7 @@ def group(text):
             if id_tmp:
                 res.append("".join(id_tmp))
                 id_tmp.clear()
-            str_tmp.append(i)
+            str_tmp = i
             if i == '"':
                 str_type = "str"
             elif i == "{":

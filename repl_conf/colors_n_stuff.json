@@ -1,58 +1,124 @@
 {
-    "classes":{
-        "keywords":{
-            "style":"bold fg:magenta",
-            "words":[
-		"end",
-                "fn", "fn::static", "fn::inline",
-		"match", "switch", "switch::static",
-		"string", "string::static", "dict", "list",
-		"set", "setref", "fallthrough",
-		"fallthrough",
-		"if", "ifmain", "then", "else",
-		"check"
-	    ]
-        },
-        "operations":{
-            "style":"fg:yellow",
-            "words":[
-                "+", "-", "*", "/", "//", "**",
-		"..", "..+",
-		"==", ">=", "<=", "!=", ">", "<", "=>",
-		"typeof", "len", "slice",
-		"?dict", "?list", "?string", "?int", "?float", "?bytes", 
-		"dict", "!",
-		"nil?", "def?",
-		"in", "or", "and", "not",
-		"checks", "follows", "satisfies"
+    "classes": {
+        "keywords": {
+            "style": "bold fg:magenta",
+            "words": [
+                "end",
+                "fn", "fn::static", "fn::inline", "method", "return",
+                "match", "switch", "switch::static", "default", "case", "with",
+                "string", "string::static", "dict", "list",
+                "set", "setref", "fallthrough", "as",
+                "fallthrough",
+                "if", "ifmain", "then", "else",
+                "check",
+                "safe", "raise",
+                "declare", "def",
+                "for", "while", "loop",
+                "on_new_scope", "on_pop_scope",
+                "del", "enum",
+                "object", "new", "make_cons", "inherit", "from",
+                "stop", "skip", "begin", "benchmark",
+                "START_TIME", "STOP_TIME", "LOG_TIME", "get_time"
             ]
         },
-        "functions":{
-            "style":"bold fg:grey",
-            "words":[
+        "operations": {
+            "style": "fg:cyan",
+            "words": [
+                "+", "-", "*", "/", "//", "**", "%",
+                "..", "..+",
+                "==", ">=", "<=", "!=", ">", "<", "=>",
+                "typeof", "len", "slice",
+                "?dict", "?list", "?string", "?int", "?float", "?bytes", 
+                "dict", "!",
+                "nil?", "def?", "none?",
+                "in", "or", "and", "not",
+                "checks", "follows", "satisfies",
+                "median", "irange", "ireverse", "range", "reverse", "..", "..+",
+                "dpercent", "to_ascii", "from_ascii", "eval", "oldformat",
+                "head:body:tail", "head:body", "body:tail", "tail",
+                "call", "call::static", "struct", "tuple"
+            ]
+        },
+        "functions": {
+            "style": "bold fg:grey",
+            "words": [
                 "cmd", "exit", "exec", "sexec",
                 "dump_vars", "dump_scope",
                 "inc", "dec"
             ]
         },
-        "comments":{
-            "style":"bg:grey",
-            "startswith":"#"
+        "comments": {
+            "style": "fg:yellow",
+            "startswith": "#"
         },
-        "directives":{
-            "style":"underline",
-            "startswith":"&"
+        "runtime_directives": {
+            "style": "underline fg:magenta",
+            "words": [
+                "use", "use:luaj"
+            ]
         },
-        "numbers":{
-            "style":"fg:orange",
-            "match":"-?\\d+(:?\\.\\d+)?"
+        "directives": {
+            "style": "underline",
+            "words": [
+                "&use", "&use:luaj", "&use:c",
+                "&include", "&enable", "&disable",
+                "&import"
+            ]
         },
-        "string":{
-            "style":"fg:green",
-	    "match": "\"(\\\\.|[^\"\\\\]+)+\""
+        "numbers": {
+            "style": "fg:orange",
+            "match": "-?\\d+(: ?\\.\\d+)?"
         },
-        "escape":{
-            "style":"fg:purple"
+        "string": {
+            "style": "fg:lightgreen",
+            "match": "\"(\\\\.|[^\"\\\\]+)*?\""
+        },
+        "istring": {
+            "style": "fg:lightgreen",
+            "match": "'(\\\\.|[^'\\\\]+)*?'"
+        },
+        "bstring": {
+            "style": "fg:lightgreen",
+            "match": "\\{(\\\\.|[^}\\\\]+)*?\\}"
+        },
+        "err_string": {
+            "style": "fg:lightgreen bg:red",
+            "match": "(\\{|'|\").*?$"
+        },
+        "escape": {
+            "style": "fg:purple"
+        },
+        "in:istring:interpolated": {
+            "style": "fg:#c8ad7f",
+            "match": "(\\$|&)\\{[^}]+\\}"
+        },
+        "in:string:escape": {
+            "style": "underline fg:lightgreen",
+            "match": "\\\\."
+        },
+        "in:istring:escape": {
+            "style": "underline fg:lightgreen",
+            "match": "\\\\."
+        },
+        "in:bstring:escape": {
+            "style": "underline fg:lightgreen",
+            "match": "\\\\."
+        },
+        "read": {
+            "style": "fg:pink",
+            "match": ":[\\w:._\\-\\d]+"
+        },
+        "calls_builtin": {
+            "style": "italic fg:white",
+            "words": [
+                "io:println", "io:print",
+                "io:rawoutput", "io:input",
+                "io:flush"
+            ]
+        },
+        "calls": {
+            "style": "italic fg:lightblue",
+            "match": "^[\\w:._\\-\\d]+"
         }
     }
 }

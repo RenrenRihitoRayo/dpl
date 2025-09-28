@@ -29,6 +29,16 @@ implicitly defined.
 
 * Parameter and Variable Checks
 
+* Actual Expressions
+
+* In-instruction blocks
+
+* Added "excluded.txt"
+
+This is to more efficiently ignore
+test cases that intentionally or
+predictably fails.
+
 ```DuProL
 
 dict d1
@@ -148,7 +158,7 @@ To make sure its only implicitly undefined use `def?` with `nil?`. Ex: `set exis
 You must have python and python-pip installed.
 
 ```Plaintext
-[root@localhost ~]# git clone https://github.com/DarrenPapa/dpl
+[root@localhost ~]# git clone https://github.com/renrenrihitorayo/dpl
 [root@localhost ~]# cd dpl
 [root@localhost ~/dpl]# pip install -r requirements.txt
 [root@localhost ~/dpl]# bash scripts/install.sh
@@ -235,6 +245,18 @@ Most recent at top.
 ### (most recent release 1.4.9)
 
 # 2.0.0 (Indev)
+
+## Blocks
+
+In HLIR code blocks are finally included IN
+the instruction, and happens before runtime.
+Meaning execution is faster!
+
+## Expressions! (Finaly.)
+
+Using `[ . ... ]` where ... is your arithmetic
+expression.
+It operates based on precedence (pemdas)
 
 ## Checks
 

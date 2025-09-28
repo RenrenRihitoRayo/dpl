@@ -1,9 +1,9 @@
-use {std}
+use {std/text_io.py}
 
 --
   DPL supports cffi types
 --
-
+--
 # ctypes: C compat
 struct person
     name as [c::char * 10]
@@ -13,3 +13,4 @@ end
 struct :person([?bytes "Darren"], 90) as andrew
 
 io:println(:andrew)
+--

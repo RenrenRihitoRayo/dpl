@@ -145,6 +145,14 @@ class modules:
     itertools = itertools
 
 
+class RawFunc:
+    def __init__(self, func):
+        self.func = func
+    def __repr__(self):
+        return f"<raw fn {self.func.__name__!r} @ {hex(id(self.func))}>"
+    def __call__(self):
+        ...
+
 class extension:
     "A class to help define methods and functions."
 
@@ -178,15 +186,6 @@ class extension:
             self.__func[self.mangle(name)] = (
                 func
             )
-            names = get_py_params(func)
-            pattern = ""
-            for name in names:
-                if name.endswith("_xbody"):
-                    pattern += "x"
-                elif name.endswith("_body"):
-                    pattern += "b"
-            if pattern:
-                info.PATTERN[name] = pattern
             return func
         return wrap
 

@@ -17,6 +17,24 @@ fn test()
     io:println([call::static add(10, 20)])
     # below demotes to a regular call expression
     io:println([call::static add(10, :meep)])
+    # still callable normally
+    io:println([call :add(10, 20)])
 end
 
 test()
+
+# 200ms
+START_TIME
+loop 10000
+    set res = [call::static add(20, 30)]
+end
+STOP_TIME
+LOG_TIME "static"
+
+# 1.5s
+START_TIME
+loop 10000
+    set res = [call :add(20, 30)]
+end
+STOP_TIME
+LOG_TIME "not static"

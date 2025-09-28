@@ -1,4 +1,5 @@
 ext = dpl.extension(meta_name="io", alias=__alias__)
+import asyncio
 
 frame_stack[0]["io"] = data = {
     "output": modules.sys.stdout,
@@ -16,15 +17,15 @@ def println(_, __, *args, sep=" "):
 
 
 @ext.add_func()
-def debug(_, __, arg):
-    if hasattr(arg, "__dpl_repr__"):
+def debug(arg):
+    if hasattr(_, __, arg, "__dpl_repr__"):
         print(arg.__dpl_repr__())
     else:
         print(arg)
 
 
 @ext.add_func("input")
-def myInput(frame, __, name=None, prompt=None, default=dpl.state_none):
+def myInput(_, __, name=None, prompt=None, default=dpl.state_none):
     if data["take_input"]:
         res = input(prompt if prompt else "")
     else:

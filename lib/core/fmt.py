@@ -17,7 +17,6 @@ def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
 
     while i < len(template):
         char = template[i]
-
         if char == '\\':
             i += 1
             if i < len(template):
@@ -42,11 +41,10 @@ def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
                 raise ValueError(f"Unclosed placeholder in {'expression' if is_expr else 'variable'}: {template[start:]}")
             placeholder = template[start:i]
             i += 1  # skip the closing '}'
-
             if is_expr:
                 format_spec = ""
                 if "|" in placeholder:
-                    placeholder, format_spec = placeholder.rsplit("|", 1)
+                    format_spec, placeholder = placeholder.split("|", 1)
                 try:
                     result.write(og_format(expr_fn(placeholder, data), format_spec))
                 except Exception as e:
@@ -78,23 +76,16 @@ def format(template: str, data: dict, strict=True, expr_fn=eval) -> str:
             continue
 
         else:
-            # old logic did it one by one.
+            # old logic did it char by char.
             # at least now we try to do it the greedy way.
             # avoids calling write on every character that doesnt match.
             # for reference old code is:
-            # result.write(char)
-            # i += 1
+#            result.write(char)
+#            i += 1
             start = i
-            if (index:=template[i:].find("$")) == -1:
-                if (index:=template[i:].find("&")) == -1:
-                    result.write(template[i:])
-                    return result.getvalue()
-                result.write(char)
+            while i < len(template) and template[i] not in ("&", "$"):
                 i += 1
-                continue
-            index += i
-            result.write(template[start:index])
-            i = index
+            result.write(template[start:i])
 
     if missing and strict:
         if len(missing) == 1:
@@ -126,3 +117,4 @@ if __name__ == "__main__":
     # just a test case to test the greedy concat
     # text is ha and ha twice is haha!
     print(format('text is ${text} and ${text} twice is &{text * 2}! How humorful isnt it?', {"text": "ha"}))
+    print(format('formated &{.2f:90}', {"text": "ha"}))

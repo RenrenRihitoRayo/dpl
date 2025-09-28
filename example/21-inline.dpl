@@ -14,17 +14,17 @@ end
 
 # 16~ percent faster (windows 11)
 # (32-36 median 34)~ percent faster (linux, android 14)
-benchmark 10000, inline
+benchmark 100000, inline
     inline::add_inline(res, 10, 20)
 end
 
-io:println('Inline: &{:inline(0)|.2f}&{:inline(1)}')
+io:println('Inline: &{.2f|:inline(0)}&{:inline(1)}')
 
-benchmark 10000, function
+benchmark 100000, function
     catch(res) add_fn(10, 20)
 end
 
-io:println('Function: &{:function(0)|.2f}&{:function(1)}')
+io:println('Function: &{.2f|:function(0)}&{:function(1)}')
 
 # dpercent is a built in (useful for statistics)
 # dpercent = difference in percent

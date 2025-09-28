@@ -33,14 +33,11 @@ INC_EXT_BUILTIN = {
     "case",
     "fn",
     "fn::static",
-    "module",
     "method",
     "for",
-    "pub",
     "loop",
     "while",
     "if",
-    "body",
     "dict",
     "with",
     "default",
@@ -55,19 +52,13 @@ INC_EXT_BUILTIN = {
     "fn::inline",
     "string::inline",
     "benchmark",
+    "struct"
 }
-
-# multiple increments
-INC_BUILTIN = {}
 
 # user exposed for INC and INC_EXT
 INC_EXT = INC_EXT_BUILTIN.copy()
-INC = INC_BUILTIN.copy()
-PATTERN = {}
 
-INCREMENTS = set(INC.keys()) | INC_EXT
-
-DEC = {"end", ".end"}
+INCREMENTS = INC_EXT
 
 # methods where they depend on
 # runtime but are unclear
@@ -91,14 +82,16 @@ def add_runtime_dependent_method(name):
 EXPR = {
     "tuple", "?tuple",
     "dict", "?dict",
-    "?int", "?float", "?str",
-    "len", "type", "range", "irange",
+    "?int", "?float", "?string",
+    "len", "range", "irange",
     "reverse",
     'nil?', 'none?', 'def?',
     "eval",
     "!", "..", "..+",
     "+", "-", "/", "*", "//", "%", "%%",
-    "=>", "or", "and", "not", "call::static"
+    "=>", "or", "and", "not", "call::static",
+    "len", "typeof", "to_ascii", "from_ascii", "slice",
+    
 }
 
 FUNCTIONS = {
@@ -107,6 +100,7 @@ FUNCTIONS = {
     'wait_for_threads',
     'exec', 'sexec',
     'dump_vars', 'dump_scope', 'fallthrough',
+    "from", "as", "checks", "follows", "satisfies"
 }
 
 CONSTANTS = {
@@ -117,16 +111,15 @@ KEYWORDS = {
     'skip',
     'stop',
     'in', 'as', 'not', 'and', 'or',
-    'raise', 'tc_register',
+    'raise',
     'set', 'del',
     'struct', 'dict', 'list',
 }
 
-ALL_INTRINSICS = INC_EXT | set(INC.keys()) | DEC | KEYWORDS
+ALL_INTRINSICS = INC_EXT | EXPR | {"end"} | KEYWORDS
 
 CHARS = {
     "\\\\": "\\[lit_slash]",
-    "\\!": "\\!",
     "\\n": "\n",
     "\\t": "\t",
     "\\s": " ",
@@ -136,11 +129,11 @@ CHARS = {
     "\\a": "\a",
     "\\0": "\0",
     "\\e": "\x1B",
-    "\\[lit_slash]": "\\",
+    "\\[lit_slash]": "\\"
 }
 
 OPEN_P = "[("
-CLOSE_P = ")]"
+CLOSE_P = (")","]","].")
 
 class flags:
     WARNINGS = True      # Specific to warnings.

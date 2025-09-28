@@ -1,7 +1,7 @@
 &use {std/text_io.py}
 
 io:input(num, "Number: ")
-set value = 90
+set value = "90"
 
 switch::static :num
     # This shows a warning
@@ -15,7 +15,6 @@ switch::static :num
     end
 end
 
-set num = 90
 switch :num
     case :value
         io:println("New - Works!")

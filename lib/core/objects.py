@@ -241,7 +241,7 @@ def make_function(capture, name, body, params):
     def handle_check(expr):
         cname, _checks, *body = expr
         if _checks == "checks":
-            checks[cname] = make_function(capture, f"check:{name}:{cname}", [(0, "::internal", "return", [Expression(body)])], ("self",))
+            checks[cname] = make_function(capture, f"check:{name}:{cname}", [(0, "::internal", "return", [], [Expression(body)])], ("self",))
         elif _checks == "follows":
             a = []
             for n in body:
@@ -249,7 +249,7 @@ def make_function(capture, name, body, params):
                     "and",
                     Expression(["call", f":{n}", (":self",)])
                 ))
-            checks[cname] = make_function(capture, f"check:{name}:{cname}", [(0, "::internal", "return", [Expression(a[1:])])], ("self",))
+                checks[cname] = make_function(capture, f"check:{name}:{cname}", [(0, "::internal", "return", [], [Expression(a[1:] if len(body) > 1 else ["call", f":{body[0]}", (":self",)])])], ("self",))
     for n in params:
         if isinstance(n, dict):
             (n, v), = n.items()
@@ -258,7 +258,7 @@ def make_function(capture, name, body, params):
                 n = n[0]
             if not run_fn([{}], checks[n], v):
                 error.error(f"near {body[0][0]-1}", body[0][1], f"Default value of {n!r} ({v!r}) of function {name} does not pass check {checks[n]['body'][0][3][0]}")
-                raise error.DPLError(error.RUNTIME_ERROR)
+                raise error.DPLError(error.CHECK_ERROR)
             defs[n] = v
         elif isinstance(n, tuple):
             handle_check(n)

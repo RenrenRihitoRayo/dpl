@@ -123,6 +123,8 @@ dpl package remove <package_name>
     Delete that package.
 dpl get-docs file
     Get the doc comments.
+dpl colorize file
+    Print file contents with colors.
 dpl dump-hlir <file>
     Dumps the high level IR that DPL generates.
     Output is `[file].hlir`
@@ -449,6 +451,10 @@ Code format: (
                     elif line.startswith("#:"):
                         res.append(line[2:])
             print("\n".join(res))
+        case ["colorize", file]:
+            import lib.core.repl_syntax_highlighter as repl_conf
+            file = get_start_path(file)
+            repl_conf.print_formatted_text(repl_conf.highlight_text(repl_conf.DPLLexer(), open(file).read()))
         case ["repl"] | []:
             error.error_setup_meta(varproc.meta_attributes)
             frame = varproc.new_frame()
@@ -467,6 +473,12 @@ Code format: (
                     print("something went wrong while running start up script!\n:", e)
                     with open("repl_startup_error.txt", "w") as err_f:
                         err_f.write(traceback.format_exc())
+            
+            frame_expo = frame[0].get("_exports")
+            frame = varproc.new_frame()
+            if frame_expo:
+                frame[0].update(frame_expo)
+
             if not "disable-auto-complete" in prog_flags:
                 import lib.core.repl_syntax_highlighter as repl_conf
                 for f in frame:

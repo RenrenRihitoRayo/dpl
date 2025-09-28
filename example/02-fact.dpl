@@ -1,8 +1,6 @@
 &use {std/text_io.py}
 
 fn fact_rec(n)
-    io:println(:n)
-
     if [:n <= 1]
         return 1
     end

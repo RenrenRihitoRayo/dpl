@@ -105,6 +105,18 @@ fn ansi.print_rgb_fg(r, g, b)
     io:rawoutput(27 '[38;2;${r};${g};${b}m')
 end
 
+fn ansi.goto_top()
+    io:rawoutput(27 '[H')
+end
+
+fn ansi.save_pos()
+    io:rawoutput(27 '[s')
+end
+
+fn ansi.load_pos()
+    io:rawoutput(27 '[u')
+end
+
 # Test suite
 ifmain
     ansi.print_color(:ansi.fg.cyan)
@@ -132,9 +144,9 @@ ifmain
     io:input("Press enter for a rainbow!")
     
     # fun thing
-    for a in [drange 30 38]
-    for b in [drange 30 38]
-    for c in [drange 30 38]
+    for a in [irange 30 38]
+    for b in [irange 30 38]
+    for c in [irange 30 38]
     ansi.print_color(:a)
     io:rawprint(w)
     ansi.print_color(:b)
