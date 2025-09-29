@@ -25,20 +25,6 @@ implicitly defined.
 
 * Multiline dictionaries and lists can now be nested!
 
-* Expression Folding has been fixed
-
-* Parameter and Variable Checks
-
-* Actual Expressions
-
-* In-instruction blocks
-
-* Added "excluded.txt"
-
-This is to more efficiently ignore
-test cases that intentionally or
-predictably fails.
-
 ```DuProL
 
 dict d1
@@ -75,6 +61,20 @@ There is an example given in the examples directory.
 * Objects now support operator overloading!
 
 * Static inline function calls
+
+* Expression Folding has been fixed
+
+* Parameter and Variable Checks
+
+* Actual Expressions
+
+* In-instruction blocks
+
+* Added "excluded.txt"
+
+This is to more efficiently ignore
+test cases that intentionally or
+predictably fails.
 
 * CLI can call different versions!
 
