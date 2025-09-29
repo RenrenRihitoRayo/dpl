@@ -72,7 +72,7 @@ internal_attributes = {
     "pid": os.getpid(),
     "python_version": str(sys.version_info),
     "python_version_string": info.PYTHON_VER,
-    "implementation":"python", # the language the parser is in.
+    "implementation": "python", # the language the parser is in.
     "_set_only_when_defined": 1,
     "methods": to_be_methods,
     "module_index": {}

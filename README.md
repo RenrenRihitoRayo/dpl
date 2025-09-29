@@ -76,11 +76,7 @@ There is an example given in the examples directory.
 
 * Static inline function calls
 
-<!-- ************************ TODO: ACTUALLY DO THIS *****************************
-    * New parser has been fully implemented
-
-    TODO :,D
--->
+* CLI can call different versions!
 
 ## Philosophy
 
@@ -246,11 +242,89 @@ Most recent at top.
 
 # 2.0.0 (Indev)
 
-## Removed Async
+## CLI can use a specific version of DPL
 
-This is to fix bugs, as there was problems working
-with async, in short, code base became async hell
-for a second
+#### dpl_config.ini
+```ini
+# specifically use 2.0.0
+# cli dispatches right interpreter
+# if supports minimal version and
+# is installed
+[dpl]
+version = 2.0.0
+```
+
+#### main.dpl
+```duprol
+&use {std/text_io.py}
+
+# use 2.0.0 specific features
+set awesome = [. 2 * 3 + 3] satisfies check(:self == 9)
+```
+
+### Setups
+
+Any setup scripts, must use "setup" as the version,
+this will use a special frozen version of DPL 2.0.0
+for stability and predictability.
+<br><br>
+Features for setup specific tasks may also be added.
+Which as of now is currently none.
+
+#### dpl_config.ini
+```ini
+# specifically use frozen2_0_0
+# cli dispatches right interpreter
+# if supports minimal version and
+# is installed
+[dpl]
+version = setup
+```
+
+#### CLI is blind
+
+The CLI doesnt verify what interpreter its calling.
+You could modify lib/core/config.json and call
+an entirely different language using this cli.
+<br><br>
+Main points of dynamic version dispatch.
+* One CLI multiple implementations
+* User can copy and make their own DPL superset and use
+the same CLI without problems
+* DPL wont need explicit backwards compatibility (at least for 2.0.0+)
+as you could just install the old interpreter youll use.
+
+##### Example of CLI invoking Python
+
+lib/core/py_inter/py.py
+```python
+def run(code):
+    exec(code)
+```
+copy varproc and info.
+info can be empty,
+varproc needs meta_attributes and
+internal_attributes as a dict
+<br><br>
+lib/core/config.py
+```python
+{
+    "newest": "2.0.0",
+    "versions": {
+        "setup": {
+            "lib_path": "@default",
+            "core_lib": "frozen2_0_0",
+            "call": "code = core.py_parser.process_code(code)\ncore.py_parser.run_code(code)",
+            "warning": "This version is used for setups only, to silence this warning use '--no-version-warnings'"
+        },
+        "python": {
+            "lib_path": "@default",
+            "core_lib": "py_inter",
+            "call": "core.py.run(code)"
+        }
+    }
+}
+```
 
 ## Blocks
 

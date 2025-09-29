@@ -16,7 +16,8 @@ def flags(argv, types=None, remove_first=False):
     for pos, value in enumerate(argv):
         if value.startswith("--"):
             if "=" not in value:
-                
+                indexes[pos] = value[2:]
+                flags.add(value[2:])
                 continue
             indexes[pos] = value
             vname, vval = value.split("=")
@@ -42,8 +43,15 @@ if __name__ == "__main__":
         "--testv=woah",
         "-test",
         "-test2",
-        "--myint=90"
+        "--myint=90",
     ],
     {
         "myint":int
     }))
+
+if __name__ == "__dpl__":
+    ext = dpl.extension(meta_name="cli_arguments")
+    
+    @ext.add_function("flags")
+    def _(_, __, args):
+        return flags(args)

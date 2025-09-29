@@ -57,7 +57,6 @@ def copy(obj, memo=None):
             memo[obj_id] = obj
             return obj
 
-pp2_execute = None
 process_hlir = None
 empty_bod = []
 
@@ -538,12 +537,7 @@ def process_code(fcode, name="__main__"):
                               # Is the code HLIR or LLIR?
                               # This will be used in the future
                               # to automatically switch execution functions.
-            "llir": False,
         }
-        if preprocessing_flags["EXPERIMENTAL_LLIR"]:
-            if process_hlir is None:
-                raise Exception("process_hlir function not available!\nFlag '-use-parser2' wasnt suplied!")
-            process_hlir(frame)
         return frame
     return error.PREPROCESSING_ERROR
 
@@ -1267,9 +1261,7 @@ def execute(code, frame):
                             t_args.append(args.pop(0))
                 else:
                     t_args = args
-                res = mod_s.call(
-                    function, frame, meta_attributes["internal"]["main_path"], t_args
-                )
+                res = function(frame, meta_attributes["internal"]["main_path"], t_args)
                 if (
                     res is None
                     and info.WARNINGS
@@ -1394,9 +1386,7 @@ def execute(code, frame):
             # good luck future me
             args = process_args(frame, args[0])
             try:
-                res = mod_s.call(
-                    function, frame, module_filepath, args
-                )
+                res = function(frame, module_filepath, args)
                 if isinstance(res, int) and res:
                     return res
                 elif isinstance(res, str):
@@ -1503,29 +1493,15 @@ def run_code(code, frame=None):
     if isinstance(code, int):
         return code
     elif isinstance(code, dict):
-        is_llir = code["llir"]
         code, nframe = code["code"], code["frame"]
     elif isinstance(code, list):
         return execute(code, frame)
     else:
-        is_llir = False
         nframe = new_frame()
     if frame is not None:
         frame[0].update(nframe[0])
     else:
         frame = nframe
-    
-    # the process_code function returned
-    # LLIR? Run it using py_parser2
-    # even if theres no flag.
-    # This if some d*ckhead
-    # somehow injects LLIR into
-    # this function. Or when Im too
-    # lazy and do tests directly with this.
-    if is_llir:
-        if pp2_execute is None:
-            raise Exception("Execution function for llir isnt available\nImport py_parser2 not py_parser to use this feature!")
-        return pp2_execute(code, frame)
     
     # Run using old parser
     # the function below is recursive

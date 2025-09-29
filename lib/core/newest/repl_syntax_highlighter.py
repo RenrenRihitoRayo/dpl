@@ -15,7 +15,7 @@ try:
     try:
         json_config = json.loads(open(os.path.join(info.BINDIR, "repl_conf/colors_n_stuff.json")).read())
     except:
-        json_config = json.loads(open(os.path.join("../../repl_conf/colors_n_stuff.json")).read())
+        json_config = json.loads(open(os.path.join("../../../repl_conf/colors_n_stuff.json")).read())
     print("Loaded highlighter config...")
 except Exception:
     json_config = {"classes": {}}

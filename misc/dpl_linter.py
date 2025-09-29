@@ -1,4 +1,4 @@
-from lib.core.ast_gen import *
+from lib.core.newest.ast_gen import *
 
 class Program:
     def __init__(self, code):

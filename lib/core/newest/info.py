@@ -13,6 +13,11 @@ program_flags = set()
 program_vflags = {}
 original_argv = []
 
+# used by module_handling to determine
+# which files should use the second libdir
+lib_for = []
+SECOND_LIBDIR = None
+
 try:
     from . import constants
 except ImportError:
@@ -133,7 +138,7 @@ CHARS = {
 }
 
 OPEN_P = "[("
-CLOSE_P = (")","]","].")
+CLOSE_P = (")","]")
 
 class flags:
     WARNINGS = True      # Specific to warnings.

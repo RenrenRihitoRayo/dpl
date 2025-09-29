@@ -504,7 +504,7 @@ def expr_preruntime(arg):
         return constants.elipsis
     elif arg == "infinity":
         return inf
-    elif arg == "neg_infinity":
+    elif arg == "-infinity":
         return -inf
     elif arg == ".dict":
         return {}

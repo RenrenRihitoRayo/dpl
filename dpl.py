@@ -8,11 +8,11 @@
 # what in the import hell is this?
 import sys
 _file_ = sys.argv[0]
-import lib.core.info as info
+import lib.core.newest.info as info
 info.original_argv = sys.argv.copy()
-import lib.core.cli_arguments as cli_args
+import lib.core.newest.cli_arguments as cli_args
 prog_flags, prog_vflags = cli_args.flags(info.ARGV, remove_first=True)
-import lib.core.module_handling as mod_s
+import lib.core.newest.module_handling as mod_s
 mod_s.modules.cli_arguments = cli_args
 mod_s.modules.sys = sys
 info.program_flags = prog_flags
@@ -20,6 +20,11 @@ info.program_vflags = prog_vflags
 info.ARGC = len(info.ARGV)
 import time
 import traceback
+import json
+import os
+import configparser
+
+global_lib_config = json.load(open(os.path.join(info.BINDIR, "lib/core/config.json")))
 
 # Simple mode
 if "simple-mode" in prog_flags:
@@ -56,9 +61,8 @@ if "show-imports" in prog_flags or "show-imports-as-is" in prog_flags:
 if "init-time" in prog_flags:
     INIT_START_TIME = time.perf_counter()
 
-import lib.core.utils as utils
-import lib.core.error as error
-import os
+import lib.core.newest.utils as utils
+import lib.core.newest.error as error
 mod_s.modules.os = os
 # Python is slow. This is evidence.
 if "skip-non-essential" not in prog_flags:
@@ -77,11 +81,10 @@ if "skip-non-essential" not in prog_flags:
     mod_s.modules.shutil = shutil
     mod_s.modules.subrocess = subprocess
     import pprint
-    import lib.core.serialize_dpl as cereal # i was hungry
-    from lib.core.py_parser2_internals.py_parser2_internals import op_code_registry
-    import lib.core.ast_gen as ast_gen
+    import lib.core.newest.serialize_dpl as cereal # i was hungry
+    import lib.core.newest.ast_gen as ast_gen
     import misc.dpl_linter as linter
-    import lib.core.suggestions as suggest
+    import lib.core.newest.suggestions as suggest
 else:
     prompt = lambda text=None, *x, **y: input(text)
     WordCompleter = InMemoryHistory = lambda *x, **y: ...
@@ -90,16 +93,8 @@ else:
         "pattern": ""
     })
 
-# removed try except here.
-if "use-parser2" in prog_flags:
-    import lib.core.py_parser2 as parser
-    has_pp2 = True
-    if "ignore-expiramental" not in prog_flags: print("!!! WARNING: USING NEW EXPIRAMENTAL PARSER !!!\n")
-else:
-    import lib.core.py_parser as parser
-    has_pp2 = False
-
-import lib.core.varproc as varproc
+import lib.core.newest.py_parser as parser
+import lib.core.newest.varproc as varproc
 
 help_str = f"""Help for DPL [v{varproc.meta_attributes['internal']['version']}]
 
@@ -139,55 +134,53 @@ dpl dump-ast <file.dpl>
 dpl dump-ast-cdpl <file.cdpl>
     Dumps the ast of the given file.
     Outputs to `<file.cdpl>.dplad`
+dpl config
+    Generate configs
 
 Note AST Dumps are not for execution
 and only for program analysis.
 
 Flags and such:
-dpl -info
+dpl --info
     Prints info.
-dpl -arg-test
+dpl --arg-test
     Tests flag handling.
-'dpl -version' or 'dpl -v'
+'dpl --version' or 'dpl -v'
     Prints version and some info.
-'dpl -profile' or 'dpl -p'
+'dpl --profile' or 'dpl -p'
     Profiles the code using 'time.perf_counter' for inaccurate but fast execution.
-dpl -cprofile ...
+dpl --cprofile ...
     Profiles the code using cProfile for more accurate but slower execution.
-dpl -disable-auto-complete
+dpl --disable-auto-complete
     Disable the auto complete.
-dpl -init-time
+dpl --init-time
     Show initialization time.
-dpl -show-imports
+dpl --show-imports
     Show all imports done by dpl.
     Note thay this captures the imports also done by the imported modules.
-dpl -simple-run
+dpl --simple-run
     Skip any cli handling and just take the first argument it sees and treats it as a file.
     Usage: dpl -simple-run file
     As the name suggests it doesnt handle any other argunents.
     This will also disble profiling.
-dpl -skip-non-essential
+dpl --skip-non-essential
     This skips any non essential imports that arent used when running files.
     This will mess up the REPL if misused.
-dpl -show-parser-import
+dpl --show-parser-import
     Prints if any errors arised while importing the non-python based parser.
-dpl -no-lupa
+dpl --no-lupa
     Do not import lupa components.
 dpl -instant-help
     Prints the help string without using the command matching.
-dpl -get-internals
+dpl --get-internals
     Insert interpreter internals in "_meta"
     Variables that will be injected:
     - "argument_processing": Functions to process arguments.
     - "variable_processing": Functions to manipulate a frame.
-dpl -use-py-parser2
-    Use the new expiramental parser (INCOMPLETE)
-    You also need to include the "&enable:EXPIRAMENTAL_LLIR"
-    directive to use it.
-dpl -ignore-expiramental
-    Avoid printing warnings for expiramental
-    options.
+dpl --no-version-warning
+    Disable version specific warnings
 """
+
 
 def rec(this, ind=0):
     "Print errors [rec]ursively."
@@ -233,6 +226,55 @@ def get_start_path(start):
     print(f"{start}: Path is invalid!")
     exit(1)
 
+
+def config_for(file):
+    path = os.path.dirname(file) or "."
+    if os.path.isfile(file:=os.path.join(path, "dpl_config.ini")):
+        p = configparser.ConfigParser()
+        p.read(file)
+        return p
+    return configparser.ConfigParser()
+
+def run_file(file, args, config):
+    file = os.path.abspath(file)
+    version = config.get("dpl", "version", fallback=info.VERSION_STRING)
+    if version == global_lib_config["newest"]:
+        code = open(get_start_path(file)).read()
+        return ez_run(code, file="???")
+    elif version in global_lib_config["versions"]:
+        data = global_lib_config["versions"][version]
+        if "warning" in data and "no-version-warning" in prog_flags:
+            print(f"== IMPLEMENTATION WARNING ({version}) ==")
+            print(data["warning"])
+            print("\n")
+        run = data["call"]
+        core = __import__("lib.core."+data["core_lib"], fromlist=["*"])
+        # bare requirememts is 2.0.0
+        core.varproc.internal_attributes.update({
+            "main_path": os.path.dirname(file),
+            "main_file": file,
+        })
+        core.varproc.meta_attributes.update({
+            "argv": args,
+            "argc": len(args)
+        })
+        core.info.ARGV = args
+        core.info.ARGC = len(args)
+        core.info.program_flags = prog_flags
+        core.info.program_vflags = prog_vflags
+        if data["lib_path"] != "@default":
+            core.info.SECOND_LIBDIR = data["lib_path"]
+            core.info.lib_for = data["lib_for"]
+        exec(run, {
+            "core":core,
+            "code": open(get_start_path(file)).read(),
+            "file": file,
+            "__builtins__": {}
+        })
+    else:
+        print(f"Version {version} is unsupported!")
+        exit(1)
+
 if "instant-help" in prog_flags:
     print(help_str)
     exit(0)
@@ -257,19 +299,7 @@ def handle_args():
         return
     match (info.ARGV):
         case ["run", file, *args]:
-            file = get_start_path(file)
-            info.ARGV.clear()
-            info.ARGV.extend([file, *args])
-            varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
-            with open(file, "r") as f:
-                varproc.meta_attributes["internal"]["main_path"] = (
-                    os.path.dirname(os.path.abspath(file)) + os.sep
-                )
-                varproc.meta_attributes["internal"]["main_file"] = file
-                ez_run(
-                    f.read(),
-                    file=file
-                )
+            run_file(file, args, config_for(file))
         case ["dump-llir", file]:
             if not has_pp2:
                 print("Suply the '-use-py-parser2' flag first!")
@@ -452,7 +482,7 @@ Code format: (
                         res.append(line[2:])
             print("\n".join(res))
         case ["colorize", file]:
-            import lib.core.repl_syntax_highlighter as repl_conf
+            import lib.core.newest.repl_syntax_highlighter as repl_conf
             file = get_start_path(file)
             repl_conf.print_formatted_text(repl_conf.highlight_text(repl_conf.DPLLexer(), open(file).read()))
         case ["repl"] | []:
@@ -480,7 +510,7 @@ Code format: (
                 frame[0].update(frame_expo)
 
             if not "disable-auto-complete" in prog_flags:
-                import lib.core.repl_syntax_highlighter as repl_conf
+                import lib.core.newest.repl_syntax_highlighter as repl_conf
                 for f in frame:
                     acc.extend(utils.flatten_dict(f).keys())
                     acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))

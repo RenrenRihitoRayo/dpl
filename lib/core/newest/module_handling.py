@@ -310,6 +310,8 @@ def get_py_params(func):
 varproc.meta_attributes["file_cache"] = file_cache = {}
 def dpl_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"]):
     variables = {}
+    if file in info.lib_for:
+        file = os.path.join(info.BINDIR, "lib", info.SECOND_LIBDIR, file)
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join(
@@ -366,6 +368,8 @@ def dpl_import(frame, file, search_path=None, loc=varproc.meta_attributes["inter
 def luaj_import(
     frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"]
 ):
+    if file in info.lib_for:
+        file = os.path.join(info.BINDIR, "lib", info.SECOND_LIBDIR, file)
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     if not os.path.isabs(file):
         if search_path is not None:
@@ -440,6 +444,8 @@ def luaj_import(
 
 
 def c_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"], alias=None):
+    if file in info.lib_for:
+        file = os.path.join(info.BINDIR, "lib", info.SECOND_LIBDIR, file)
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join(
@@ -463,6 +469,8 @@ def c_import(frame, file, search_path=None, loc=varproc.meta_attributes["interna
     file_cache[file] = result
 
 def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"], alias=None):
+    if file in info.lib_for:
+        file = os.path.join(info.BINDIR, "lib", info.SECOND_LIBDIR, file)
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join(
@@ -530,7 +538,3 @@ def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["intern
     file_cache[file] = data
     file = os.path.realpath(file)
     varproc.dependencies["python"].add(file)
-
-def call(func, frame, file, args):
-    ret = func(frame, file, *args)
-    return ret

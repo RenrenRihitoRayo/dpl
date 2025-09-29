@@ -1,0 +1,11 @@
+{
+    "newest": "2.0.0",
+    "versions": {
+        "setup": {
+            "lib_path": "@default",
+            "core_lib": "frozen2_0_0",
+            "call": "code = core.py_parser.process_code(code)\ncore.py_parser.run_code(code)",
+            "warning": "This version is used for setups only, to silence this warning use '--no-version-warnings'"
+        }
+    }
+}
