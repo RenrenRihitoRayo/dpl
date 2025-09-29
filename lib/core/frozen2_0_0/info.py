@@ -144,10 +144,13 @@ class flags:
     WARNINGS = True      # Specific to warnings.
     ERRORS = True        # Logs, Warnings and Such
 
-VERSION_STRING = "2.0.0"
+VERSION_STRING = "2.0.0-setup"
 
 class Version:
     def __init__(self, ver_str):
+        self.build = None
+        if "-" in ver_str:
+            ver_str, self.build = ver_str.rsplit("-", 1)
         if not (ver := tuple(filter(str.isdigit, ver_str.split(".")))) or len(ver) > 3:
             raise Exception(f"Invalid version format: {ver_str}")
         ver = (*map(int, ver),)
@@ -175,9 +178,9 @@ class Version:
     def __iter__(self):
         return self.version_tuple
     def __repr__(self):
-        return "v"+".".join(map(str, self.version_tuple))
+        return "v"+".".join(map(str, self.version_tuple)) + ":" + self.build
     def as_id(self):
-        return "v"+"_".join(map(str, self.version_tuple))
+        return "v"+"_".join(map(str, self.version_tuple)) + ":" + self.build
 
 VERSION = Version(VERSION_STRING)
 VERSION_TRIPLE = VERSION.version_tuple

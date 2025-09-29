@@ -223,9 +223,9 @@ run the following commands.
 First line ensures DPL dependencies are installed.
 However you will need flags to not use them as DPL
 uses these by default.
-* "-no-lupa" disables Lua inter-opt (via LuaJIT)
-* "-no-cffi" disables C inter-opt
-* use "-simple-mode" to disable most dependencies
+* "--no-lupa" disables Lua inter-opt (via LuaJIT)
+* "--no-cffi" disables C inter-opt
+* use "--simple-mode" to disable most dependencies
 You can also see `requirements.txt` to remove some
 before installing the packages.
 <br><br>
