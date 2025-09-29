@@ -78,6 +78,8 @@ predictably fails.
 
 * CLI can call different versions!
 
+This only works for uncompiled scripts.
+
 ## Philosophy
 
 - The **language** shouldnt have standards.  
