@@ -194,7 +194,7 @@ In DPL we dont care if you write messy code,
 dev to dev, we know if it works, it works.
 No need to waste a weeks worth of coffe
 trying to fux a bug because your senior dev
-asked you to make the code **prettier**.
+asked you to make the code ***prettier***.
 
 ## Installation
 
