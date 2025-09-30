@@ -3,7 +3,8 @@
 > "Simplicity is everywhere in DPL, like an airport cutting expenses.
 > DPL gives you freedom. In return, it's your fault when you fail."
 
-Welcome to **DPL**, the programming language that doesn\'t try to be smart - just **dumb enough to let you do whatever you want**. DPL is minimal, messy, and proud of it.
+Welcome to **DPL**, the programming language that doesn\'t try to be smart - just **dumb enough to let you do whatever you want**.
+DPL is minimal, messy, and proud of it.
 There are no style rules. There are no guardrails. Just a loosely-held-together interpreter and your own chaotic energy.
 
 ## !! ✨✨NEW IN DPL 2.0.0✨✨ !!
@@ -99,7 +100,7 @@ and has minimal wrapper requirements.
 
 * Simple Execution Model
 
-No JIT no unsuprised async hell,
+No JIT, no unsuprising async hell,
 you get what you use.
 
 * Small standard library
@@ -112,6 +113,12 @@ the lack of libraries.
 Below 13K LOC which is big for toy
 programming languages like DuProL
 (yes DPL is a toy language... somehow...)
+
+* Opt-In optimizations
+
+DPL never changes code unless you
+tell it so, in such way you choose
+whether to optimize init time or preruntime.
 
 ## Code Sample
 
@@ -153,15 +160,45 @@ Hello, world!
 [root@localhost ~/dpl]# python3 info.py --silent # dont print per file info
 ```
 
-## DPL's Moto
+## Footnote
 
-> DPL just works.
-> What your code doesnt?
-> Thats on you not DPL.
+DPL just works, if it doesnt its your fault.
+We dont push standards, but your confusion is
+YOUR problem not DPL\'s.
+<br><br>
+Notice repetition?
+We dont enforce DRY here, why? In most cases
+you either end up having one class being
+inherited by layers of subclasses (trust me, I\'ve been there)
+and messed up dependency injection (which DPL currently has
+in its code base)
+<br><br>
+DPL once was a toy programming language,
+it still is in essence, however will still
+mature. I could say that when the entire project
+could fit into 50KB (now almost half a megabyte),
+but I can no longer say the same.
+<br><br>
+Calling DPL a toy programming language is a little
+bit... underestimating DPL...
+<br><br>
+After all DPL can call C functions, Python functions
+(with AND without wrappers), Lua functions (using lupa),
+and most importantly, overcomes every other python based
+toy languages except in speed. Still better though.
+<br><br>
+Yeah DPL was a mistake... but this mistake wasn\'t bad at all,
+in fact it came out better.
+<br><br>
+In DPL we dont care if you write messy code,
+dev to dev, we know if it works, it works.
+No need to waste a weeks worth of coffe
+trying to fux a bug because your senior dev
+asked you to make the code __prettier__.
 
 ## Installation
 
-After cloning this reporsitory
+After cloning this repository
 run the following commands.
 ```Plaintext
 [root@localhost dpl]# pip install -r requirements.txt
