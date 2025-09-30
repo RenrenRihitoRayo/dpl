@@ -1,6 +1,6 @@
 from io import StringIO
-from . import constants
-from . import varproc
+import constants
+import varproc
 
 def old_format(template, vars):
     for name, value in vars.items(): # expect a flattened dict

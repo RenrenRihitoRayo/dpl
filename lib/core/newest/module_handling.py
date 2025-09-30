@@ -28,17 +28,16 @@ import time
 import os, sys
 import traceback
 from types import ModuleType
-from . import fmt
-from . import info
-from . import error
-from . import utils
-from . import state
-from . import objects
-from . import varproc
-from . import constants
-from . import restricted
-from . import py_argument_handler
-from . import arguments as argproc
+import info
+import error
+import utils
+import state
+import objects
+import varproc
+import constants
+import restricted
+import py_argument_handler
+import arguments as argproc
 arguments_handler = py_argument_handler.arguments_handler
 
 if "no-lupa" not in info.program_flags:
@@ -271,7 +270,6 @@ class dpl:
     state = state
     version = info.Version
     ffi = None
-    fmt = fmt
     register_error = error.register_error
     restricted = restricted
     state_nil = state.bstate("nil")
@@ -310,7 +308,7 @@ def get_py_params(func):
 varproc.meta_attributes["file_cache"] = file_cache = {}
 def dpl_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"]):
     variables = {}
-    if file in info.lib_for:
+    if file in info.lib_for or info.lib_for == "*":
         file = os.path.join(info.BINDIR, "lib", info.SECOND_LIBDIR, file)
     if not os.path.isabs(file):
         if search_path is not None:
@@ -368,7 +366,7 @@ def dpl_import(frame, file, search_path=None, loc=varproc.meta_attributes["inter
 def luaj_import(
     frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"]
 ):
-    if file in info.lib_for:
+    if file in info.lib_for or info.lib_for == "*":
         file = os.path.join(info.BINDIR, "lib", info.SECOND_LIBDIR, file)
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     if not os.path.isabs(file):
@@ -444,7 +442,7 @@ def luaj_import(
 
 
 def c_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"], alias=None):
-    if file in info.lib_for:
+    if file in info.lib_for or info.lib_for == "*":
         file = os.path.join(info.BINDIR, "lib", info.SECOND_LIBDIR, file)
     if not os.path.isabs(file):
         if search_path is not None:
@@ -469,7 +467,7 @@ def c_import(frame, file, search_path=None, loc=varproc.meta_attributes["interna
     file_cache[file] = result
 
 def py_import(frame, file, search_path=None, loc=varproc.meta_attributes["internal"]["main_path"], alias=None):
-    if file in info.lib_for:
+    if file in info.lib_for or info.lib_for == "*":
         file = os.path.join(info.BINDIR, "lib", info.SECOND_LIBDIR, file)
     if not os.path.isabs(file):
         if search_path is not None:

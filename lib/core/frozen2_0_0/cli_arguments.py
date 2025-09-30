@@ -1,8 +1,9 @@
 class InvalidArgument(Exception): ...
 
-def flags(argv, types=None, remove_first=False):
+def flags(oargv, types=None, remove_first=False):
+    argv = oargv.copy()
     if remove_first:
-        if argv:
+        if oargv:
             argv.pop(0)
     indexes = {}
     values = {}
@@ -32,14 +33,16 @@ def flags(argv, types=None, remove_first=False):
             flags.add(value[1:])
         else:
             break
-    for i in indexes.keys():
-        if i <= end:
-            argv.pop(min(indexes.keys()))
+    for pos in indexes:
+        oargv[pos] = None
+    if indexes:
+        oargv.remove(None)
     return set(flags), values
 
 if __name__ == "__main__":
     from pprint import pprint
     pprint(flags([
+        "test",
         "--testv=woah",
         "-test",
         "-test2",
@@ -47,7 +50,7 @@ if __name__ == "__main__":
     ],
     {
         "myint":int
-    }))
+    }, True))
 
 if __name__ == "__dpl__":
     ext = dpl.extension(meta_name="cli_arguments")

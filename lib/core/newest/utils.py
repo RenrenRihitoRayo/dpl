@@ -1,5 +1,5 @@
 # Utilities for QOL functions
-from . import arguments as argproc
+import arguments as argproc
 
 
 def flatten_dict(d, parent_key="", sep=".", seen=None):

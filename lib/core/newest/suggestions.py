@@ -1,7 +1,6 @@
 # Give better suggestions for the REPL
 
-from . import varproc
-from . import info
+import info
 from re import compile as rcomp
 
 pattern = rcomp(r"[+-/*]|[()\[\]{}]|[.\w:\d_-]+|-?\d+(?:\.\d+)?")
@@ -29,7 +28,7 @@ def listdir(path=info.LIBDIR):
             break  # Stop after processing the top-level directory
     return directory_contents
 k = listdir()
-k.pop("core")
+
 directive = "use"
 for lib, files in k.items():
     if "include-py.txt" in files:

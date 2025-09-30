@@ -1,4 +1,4 @@
-from . import state
+import state
 
 nil = state.bstate("nil")
 none = state.bstate("none")

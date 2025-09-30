@@ -1,16 +1,16 @@
 # Used to handle arguments and expressions
 # NOT FOR THE CLI
 
-from . import dpl_ctypes
+import dpl_ctypes
 from sys import flags
 import traceback
-from . import constants
-from . import varproc
-from . import error
-from .info import *
-from . import py_argument_handler as pah
-from . import fmt
-from . import objects
+import constants
+import varproc
+import error
+from info import *
+import py_argument_handler as pah
+import fmt
+import objects
 import uuid
 import time
 

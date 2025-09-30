@@ -3,8 +3,7 @@
     "versions": {
         "setup": {
             "lib_path": "@default",
-            "core_lib": "frozen2_0_0",
-            "call": "code = core.py_parser.process_code(code)\ncore.py_parser.run_code(code)",
+            "loader": "lib.core.frozen2_0_0.load",
             "warning": "This version is used for setups only, to silence this warning use '--no-version-warnings'"
         }
     }

@@ -7,12 +7,12 @@
 import time
 import itertools
 from copy import deepcopy
-from . import py_argument_handler
-from .runtime import *
-from . import utils
-from . import objects
-from . import constants
-from . import info
+import py_argument_handler
+from runtime import *
+import utils
+import objects
+import constants
+import info
 import multiprocessing
 import threading
 import traceback
@@ -1261,7 +1261,7 @@ def execute(code, frame):
                             t_args.append(args.pop(0))
                 else:
                     t_args = args
-                res = function(frame, meta_attributes["internal"]["main_path"], t_args)
+                res = function(frame, meta_attributes["internal"]["main_path"], *t_args)
                 if (
                     res is None
                     and info.WARNINGS
@@ -1386,7 +1386,7 @@ def execute(code, frame):
             # good luck future me
             args = process_args(frame, args[0])
             try:
-                res = function(frame, module_filepath, args)
+                res = function(frame, module_filepath, *args)
                 if isinstance(res, int) and res:
                     return res
                 elif isinstance(res, str):

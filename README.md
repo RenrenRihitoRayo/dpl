@@ -300,32 +300,34 @@ as you could just install the old interpreter youll use.
 
 lib/core/py_inter/py.py
 ```python
-def run(code):
+def run_code(code, file_path):
     exec(code)
 ```
-copy varproc and info.
-info can be empty,
-varproc needs meta_attributes and
-internal_attributes as a dict
-<br><br>
 lib/core/config.py
-```python
+```json
 {
     "newest": "2.0.0",
     "versions": {
         "setup": {
             "lib_path": "@default",
-            "core_lib": "frozen2_0_0",
-            "call": "code = core.py_parser.process_code(code)\ncore.py_parser.run_code(code)",
+            "loader": "lib.core.frozen2_0_0.load",
             "warning": "This version is used for setups only, to silence this warning use '--no-version-warnings'"
         },
         "python": {
             "lib_path": "@default",
-            "core_lib": "py_inter",
-            "call": "core.py.run(code)"
+            "loader": "py_inter"
         }
     }
 }
+```
+
+The loader needs to expose at least ONE
+function which is `run_code`
+<br><br>
+Minimum Loader contents
+```python
+def run_code(file, file_path):
+    ...
 ```
 
 ## Blocks

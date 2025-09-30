@@ -1,24 +1,24 @@
 import atexit
-from . import info
-from .arguments import *
-from .varproc import *
-from . import error
-from .objects import *
-from . import constants
-from . import error
-from . import module_handling as mod_s
+import info
+from arguments import *
+from varproc import *
+import error
+from objects import *
+import constants
+import error
+import module_handling as mod_s
 import time
-from . import utils
+import utils
 
 error.error_setup_meta(meta_attributes)
 
 def my_exit_atexit(code=0):
     if info.unique_imports:
-        print(f"\nPerformed {len(info.imported):,} non-identical imports\nPerformed {info.unique_imports:,} total imports")
+        print(f"\nPerformed {len(info.imported):,} non-identicalimports\nPerformed {info.unique_imports:,} totalimports")
 
 atexit.register(my_exit_atexit)
 
-# setup runtime stuff. And yes on import.
+# setup runtime stuff. And yes onimport.
 # user will have to manually define type signatures
 # or lower the type checker strictness by setting TC_DEFAULT_WHEN_NOT_FOUND
 try:

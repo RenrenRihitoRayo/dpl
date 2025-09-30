@@ -4,10 +4,10 @@ import threading
 import os
 import sys
 from uuid import uuid4
-from . import constants
-from . import info
-from . import state
-from . import error
+import constants
+import info
+import state
+import error
 
 execute_code = None
 
@@ -176,6 +176,7 @@ def nscope(frame):
         error.info(f"New scope created!")
     return t
 
+
 def pscope(frame):
     "Pop the current scope also discarding"
     scope = frame.pop()
@@ -192,7 +193,6 @@ def pscope(frame):
     else:
         if is_debug_enabled("show_scope_updates"):
             error.info(f"Tried to discard global scope!")
-
 
 
 def rget(dct, full_name, default=constants.nil, sep=".", meta=False, resolve=False):

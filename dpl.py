@@ -7,7 +7,9 @@
 
 # what in the import hell is this?
 import sys
+og_modules = sys.modules.copy()
 _file_ = sys.argv[0]
+import lib.core.newest.load
 import lib.core.newest.info as info
 info.original_argv = sys.argv.copy()
 import lib.core.newest.cli_arguments as cli_args
@@ -23,6 +25,7 @@ import traceback
 import json
 import os
 import configparser
+import subprocess
 
 global_lib_config = json.load(open(os.path.join(info.BINDIR, "lib/core/config.json")))
 
@@ -55,7 +58,7 @@ def __my_import__(module, globals=None, locals=None, from_list=tuple(), level=0)
     info.unique_imports += 1
     return og_import(module, globals, locals, from_list, level)
 if "show-imports" in prog_flags or "show-imports-as-is" in prog_flags:
-    print("DEBUG: __import__ bypass has been set.\nExpect debug output for every import.")
+    print("DEBUG: importlib.import_module bypass has been set.\nExpect debug output for every import.")
     __builtins__.__import__ = __my_import__
 
 if "init-time" in prog_flags:
@@ -238,39 +241,66 @@ def config_for(file):
 def run_file(file, args, config):
     file = os.path.abspath(file)
     version = config.get("dpl", "version", fallback=info.VERSION_STRING)
-    if version == global_lib_config["newest"]:
+    if "--no-info" not in prog_flags and version != "newset":
+        #        .         .
+        print(f"== Using {version} =====================")
+        print("--no-info to silence")
+        print("Loaded local config:\n"+json.dumps({section: dict(config[section]) for section in config.sections()}, indent=2))
+    if version == global_lib_config["newest"] or version == "newest":
         code = open(get_start_path(file)).read()
+        varproc.meta_attributes["config"] = config
         return ez_run(code, file="???")
     elif version in global_lib_config["versions"]:
         data = global_lib_config["versions"][version]
-        if "warning" in data and "no-version-warning" in prog_flags:
+        print(f"\033[33mWARNING: \033[0mUsing version {version}")
+        if "warning" in data and "no-version-warning" not in prog_flags:
             print(f"== IMPLEMENTATION WARNING ({version}) ==")
-            print(data["warning"])
-            print("\n")
-        run = data["call"]
-        core = __import__("lib.core."+data["core_lib"], fromlist=["*"])
-        # bare requirememts is 2.0.0
-        core.varproc.internal_attributes.update({
-            "main_path": os.path.dirname(file),
-            "main_file": file,
-        })
-        core.varproc.meta_attributes.update({
-            "argv": args,
-            "argc": len(args)
-        })
-        core.info.ARGV = args
-        core.info.ARGC = len(args)
-        core.info.program_flags = prog_flags
-        core.info.program_vflags = prog_vflags
-        if data["lib_path"] != "@default":
-            core.info.SECOND_LIBDIR = data["lib_path"]
-            core.info.lib_for = data["lib_for"]
-        exec(run, {
-            "core":core,
-            "code": open(get_start_path(file)).read(),
-            "file": file,
-            "__builtins__": {}
-        })
+            print(data["warning"]+"\n")
+        
+        if "--no-info" not in prog_flags:
+            print(f"== Setup ==================={'='*len(version)}===")
+        
+        sys.modules.clear()
+        sys.modules.update(og_modules)
+       
+        try:
+            loader = __import__(data["loader"], fromlist=["*"])
+        except ModuleNotFoundError as e:
+            print(repr(e))
+            exit(1)
+        # dont enforce requirements
+        if hasattr(loader, "info"):
+            if "--no-info" not in prog_flags:
+                print(":: Setting up info...")
+            if data["lib_path"] != "@default":
+                loader.info.SECOND_LIBDIR = data["lib_path"]
+                loader.info.lib_for = data.get("lib_for", [])
+            loader.info.PERM_LIBDIR = info.PERM_LIBDIR
+            loader.info.LIBDIR = info.LIBDIR
+            print(":: Done!\n")
+        if hasattr(loader, "varproc"):
+            if "--no-info" not in prog_flags:
+                print(":: Setting up varproc...")
+            loader.varproc.internal_attributes.update({
+                "main_path": os.path.dirname(file),
+                "main_file": os.path.basename(file)
+            })
+            loader.varproc.meta_attributes["config"] = config
+            print(":: Done!\n")
+        if "--no-info" not in prog_flags:
+            print(f"== Program ================={'='*len(version)}===")
+        # at least define run_code
+        try:
+            err = loader.run_code(open(file).read())
+            if err:
+                rec(err)
+            if isinstance(err, tuple):
+                exit(err[0])
+            else:
+                exit(err)
+        except Exception as e:
+            print(repr(e))
+            exit(1)
     else:
         print(f"Version {version} is unsupported!")
         exit(1)
@@ -297,7 +327,7 @@ def handle_args():
             f"DPL v{info.VERSION}\nUsing Python {info.PYTHON_VER}\n© Darren Chase Papa 2024\nMIT License (see LICENSE)"
         )
         return
-    match (info.ARGV):
+    match (info.ARGV[1:]):
         case ["run", file, *args]:
             run_file(file, args, config_for(file))
         case ["dump-llir", file]:
@@ -455,6 +485,20 @@ Code format: (
                 case _:
                     print("Invalid command!")
                     return
+        case ["config"]:
+            with open("dpl_config.ini") as f:
+                f.write("[dpl]\n")
+                f.write("# minimum supported version\n")
+                f.write(f"min_ver = {info.VERSION_STRING}\n")
+                f.write("# maximum supported version\n")
+                f.write(f"max_ver = @none\n")
+                f.write("# custom lib path\n")
+                f.write("lib = @default\n\n")
+                f.write("[meta]\n")
+                f.write("# add custom metadata here\n")
+                f.write("# for example:\n")
+                f.write("# * author name\n")
+                f.write("# * script version\n")
         case ["get-docs", file]:
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
@@ -597,7 +641,7 @@ Code format: (
         case ["help"] | ["--help"]:
             print(help_str)
         case _:
-            print("Invalid invokation!")
+            print("Invalid invokation:", sys.argv)
             print("See 'dpl help' for more")
             exit(1)
     if "pause" in prog_flags:

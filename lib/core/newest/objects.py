@@ -2,9 +2,9 @@
 
 from itertools import zip_longest
 from copy import deepcopy as copy
-from . import varproc
-from . import constants
-from . import error
+import varproc
+import constants
+import error
 
 run_code = None
 run_fn = None

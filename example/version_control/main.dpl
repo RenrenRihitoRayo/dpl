@@ -1,3 +1,4 @@
 &use {std/text_io.py}
 
+# Test: v2.0.0-setup
 io:println("Test:", :_meta.internal.version)
