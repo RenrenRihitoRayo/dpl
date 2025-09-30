@@ -88,6 +88,10 @@ Yes DPL has 30+ keywords
 even more than pythons.
 But syntax is easy to catch.
 
+* OOP is simple (but manual)
+
+Objects with operator overloading.
+
 * Simple interopt between Python and C
 
 DPL can be used as a glue between the two
@@ -107,7 +111,24 @@ the lack of libraries.
 
 Below 13K LOC which is big for toy
 programming languages like DuProL
-(yes DPL is a toy language)
+(yes DPL is a toy language... somehow...)
+
+## Code Sample
+
+```DuProL
+&use {std/text_io.py}
+
+io:println("Hello, world!")
+
+fn greet(name)
+    io:println('Hello ${name}!')
+    return 42
+end
+
+set result = [call :greet(Alex)]
+greet(Andrew)
+io:println(:result)
+```
 
 ## How To Use DPL
 
@@ -130,23 +151,6 @@ Hello, world!
 Hello, world!
 [root@localhost ~/dpl]# # get info about the code base
 [root@localhost ~/dpl]# python3 info.py --silent # dont print per file info
-```
-
-## Code Sample
-
-```DuProL
-&use {std/text_io.py}
-
-io:println("Hello, world!")
-
-fn greet(name)
-    io:println('Hello ${name}!')
-    return 42
-end
-
-catch (result) greet(Alex)
-greet(Andrew)
-io:println(:result)
 ```
 
 ## DPL's Moto
