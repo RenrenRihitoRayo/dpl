@@ -51,7 +51,8 @@
                 "del", "enum",
                 "object", "new", "make_cons", "inherit", "from",
                 "stop", "skip", "begin", "benchmark",
-                "START_TIME", "STOP_TIME", "LOG_TIME", "get_time"
+                "START_TIME", "STOP_TIME", "LOG_TIME", "get_time",
+                "help", "doc"
             ]
         },
         "functions": {
@@ -121,11 +122,11 @@
         },
         "read": {
             "style": "fg:pink",
-            "match": ":[\\w:._\\-\\d]+"
+            "match": "\\??:[\\w:._\\-\\d]+"
         },
         "calls": {
             "style": "fg:lightblue",
-            "match": "^[\\w:._\\-\\d]+"
+            "match": "^\\s*[\\w:._\\-\\d]+"
         }
     }
 }

@@ -1,0 +1,43 @@
+&use {std/paths.py}
+&use {std/text_io.py}
+
+set timeouts = .list
+set failures = .list
+set time = 5
+
+cmd "timeout --help 2>&1 | grep -iq BusyBox" is_busy_box
+set is_busy_box = [not :is_busy_box]
+
+for file in [@paths:listdir()]
+    if [not [:file => "#-*.dpl"]]
+        skip
+    end
+    io:print('${file}: ')
+    cmd 'timeout ${time} python3 ../dpl.py --skip-non-essential --simple-run ${file} > temp.txt' code
+    if [[[:code == 15] and :is_busy_box] or [:code >= 124]]
+        io:println("Timeout!", 'Took longer than ${time}s')
+        set _ = [:timeouts@append(:file)]
+        skip
+    end
+    if [:code != 0]
+        io:println('Failed! [${code}]')
+        set _ = [:failures@append(:file)]
+        skip
+    end
+    io:println("Passed!")
+end
+
+if :timeouts
+    io:println("Tests that time out:")
+    for name in :timeouts
+        io:println("-", :name)
+    end
+end
+
+if :failures
+    io:println("Failed tests:")
+    for name in :failures
+        io:println("-", :name)
+    end
+end
+

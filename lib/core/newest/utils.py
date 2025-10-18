@@ -1,6 +1,42 @@
 # Utilities for QOL functions
-import arguments as argproc
 
+import varproc
+
+def pack(fmt, values):
+    result = {}
+    i = 0
+    n = len(values)
+    j = 0
+    while i < len(fmt) and j < n:
+        key = fmt[i]
+        if key.startswith("..."):
+            if i + 1 < len(fmt):
+                next_key = fmt[i + 1].lstrip(".")
+                result[key[3:]] = values[j:n - (len(fmt) - (i + 1))]
+                j = n - (len(fmt) - (i + 1))
+            else:
+                result[key[3:]] = values[j:]
+                j = n
+        else:
+            result[key] = values[j]
+            j += 1
+        i += 1
+    return result
+
+def unpack(data, fmt):
+    result = []
+    for key in fmt:
+        if key.startswith("..."):
+            val = varproc.rget(data, key[3:])
+            if isinstance(val, str):
+                result.extend(list(val))
+            elif isinstance(val, (list, tuple)):
+                result.extend(val)
+            else:
+                result.append(val)
+        else:
+            result.append(varproc.rget(data, key))
+    return result
 
 def flatten_dict(d, parent_key="", sep=".", seen=None):
     if seen is None:

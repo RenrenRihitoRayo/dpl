@@ -57,7 +57,8 @@ INC_EXT_BUILTIN = {
     "fn::inline",
     "string::inline",
     "benchmark",
-    "struct"
+    "struct",
+    "pattern"
 }
 
 # user exposed for INC and INC_EXT
@@ -77,7 +78,7 @@ INCREMENTS = INC_EXT
 # says otherwise
 RT_EXPR = {
     "oldformat",
-    "call", # side effects
+    "call", "lazy", "unpack", "pack", # side effects
     ".unique"
 }
 
@@ -144,7 +145,7 @@ class flags:
     WARNINGS = True      # Specific to warnings.
     ERRORS = True        # Logs, Warnings and Such
 
-VERSION_STRING = "2.0.0-setup"
+VERSION_STRING = "2.0.0"
 
 class Version:
     def __init__(self, ver_str):

@@ -66,6 +66,7 @@ if "init-time" in prog_flags:
 
 import lib.core.newest.utils as utils
 import lib.core.newest.error as error
+import lib.core.newest.serialize_dpl as cereal # i was hungry
 mod_s.modules.os = os
 # Python is slow. This is evidence.
 if "skip-non-essential" not in prog_flags:
@@ -84,7 +85,6 @@ if "skip-non-essential" not in prog_flags:
     mod_s.modules.shutil = shutil
     mod_s.modules.subrocess = subprocess
     import pprint
-    import lib.core.newest.serialize_dpl as cereal # i was hungry
     import lib.core.newest.ast_gen as ast_gen
     import misc.dpl_linter as linter
     import lib.core.newest.suggestions as suggest
@@ -206,21 +206,28 @@ def ez_run(code, file="???", process=True):
     "Run a DPL script in an easier way, hence ez_run"
     if process:
         code = parser.process_code(code)
-    if err := parser.run_code(code):
-        print(f"\n[{file}]\nFinished with an error: {err}")
+        frame = code["frame"]
+    elif isinstance(code, dict):
+        frame = code["frame"]
+    else:
+        frame = varproc.new_frame()
+    if err := parser.run_code(code, frame=frame):
+        if frame[0]["_meta"]["preprocessing_flags"]["REPL_ON_ERROR"]:
+            parser.investigation_repl(frame, err)
         rec(err)
-    if err:
+        print(f"\n[{file}]\nFinished with an error: {err}")
         if isinstance(err, tuple):
             exit(err[0])
         else:
             exit(err)
 
-def get_start_path(start):
+
+def get_start_path_raw(start):
     if os.path.isfile(start):
         return start
     elif os.path.isdir(start):
         if os.path.isfile(start_file:=os.path.join(start, "dpl_start.txt")):
-            return os.path.join(start, open(start_file, "r").read().strip())
+            return open(start_file, "r").read().strip()
         elif os.path.isfile(start_file:=os.path.join(start, "main.dpl")):
             return start_file
         else:
@@ -228,6 +235,40 @@ def get_start_path(start):
             exit(1)
     print(f"{start}: Path is invalid!")
     exit(1)
+
+
+def get_start_path(start, quiet=False):
+    cache_file = "file-cache.json"
+    cache = {}
+    if os.path.isfile(cache_file):
+        cache = json.load(open(cache_file, "r"))
+    if os.path.isfile(start):
+        path = start
+    elif os.path.isdir(start):
+        if os.path.isfile(start_file := os.path.join(start, "dpl_start.txt")):
+            path = open(start_file, "r").read().strip()
+        elif os.path.isfile(start_file := os.path.join(start, "main.dpl")):
+            path = start_file
+        else:
+            print(f"{start}: No valid start paths found!\ndpl_start.txt nor main.dpl was found in the directory.")
+            exit(1)
+    else:
+        print(f"{start}: Path is invalid!")
+        exit(1)
+    mtime = str(int(os.path.getmtime(path)))
+    compiled_path = f"{path[:-4]}.{mtime}.dplc"
+    varproc.meta_attributes["internal"]["main_file"] = path
+    if not os.path.isfile(compiled_path):
+        file_content = open(path, "r").read()
+        compiled = cereal.serialize(parser.process_code(file_content), quiet=quiet)
+        open(compiled_path, "wb").write(compiled)
+        cache[path] = {"mtime": mtime, "compiled": compiled_path}
+        json.dump(cache, open(cache_file, "w"))
+    else:
+        if path not in cache or cache[path]["mtime"] != mtime:
+            cache[path] = {"mtime": mtime, "compiled": compiled_path}
+            json.dump(cache, open(cache_file, "w"))
+    return compiled_path
 
 
 def config_for(file):
@@ -238,18 +279,26 @@ def config_for(file):
         return p
     return configparser.ConfigParser()
 
+
 def run_file(file, args, config):
     file = os.path.abspath(file)
     version = config.get("dpl", "version", fallback=info.VERSION_STRING)
-    if "--no-info" not in prog_flags and version != "newset":
-        #        .         .
+    if "no-info" not in prog_flags and version != "newset" and version != info.VERSION_STRING:
         print(f"== Using {version} =====================")
         print("--no-info to silence")
         print("Loaded local config:\n"+json.dumps({section: dict(config[section]) for section in config.sections()}, indent=2))
     if version == global_lib_config["newest"] or version == "newest":
-        code = open(get_start_path(file)).read()
+        run_time = config.getboolean("dpl", "profile_run", fallback=False)
+        if run_time:
+            start = time.perf_counter()
+        code = open(get_start_path(file, quiet=config.getboolean("compiler", "quiet", fallback=True)), "rb").read()
         varproc.meta_attributes["config"] = config
-        return ez_run(code, file="???")
+        res = ez_run(cereal.deserialize(code), file="???", process=False)
+        if run_time:
+            end = time.perf_counter()
+            s, u = utils.convert_sec(end-start)
+            print(f"DEBUG: run time: {s:.8f}{u}")
+        return res
     elif version in global_lib_config["versions"]:
         data = global_lib_config["versions"][version]
         print(f"\033[33mWARNING: \033[0mUsing version {version}")
@@ -257,7 +306,7 @@ def run_file(file, args, config):
             print(f"== IMPLEMENTATION WARNING ({version}) ==")
             print(data["warning"]+"\n")
         
-        if "--no-info" not in prog_flags:
+        if "no-info" not in prog_flags:
             print(f"== Setup ==================={'='*len(version)}===")
         
         sys.modules.clear()
@@ -270,7 +319,7 @@ def run_file(file, args, config):
             exit(1)
         # dont enforce requirements
         if hasattr(loader, "info"):
-            if "--no-info" not in prog_flags:
+            if "no-info" not in prog_flags:
                 print(":: Setting up info...")
             if data["lib_path"] != "@default":
                 loader.info.SECOND_LIBDIR = data["lib_path"]
@@ -279,19 +328,21 @@ def run_file(file, args, config):
             loader.info.LIBDIR = info.LIBDIR
             print(":: Done!\n")
         if hasattr(loader, "varproc"):
-            if "--no-info" not in prog_flags:
+            if "no-info" not in prog_flags:
                 print(":: Setting up varproc...")
             loader.varproc.internal_attributes.update({
                 "main_path": os.path.dirname(file),
                 "main_file": os.path.basename(file)
             })
             loader.varproc.meta_attributes["config"] = config
+            loader.varproc.meta_attributes["internal"]["main_path"] = get_start_path_raw(file)
             print(":: Done!\n")
-        if "--no-info" not in prog_flags:
+        if "no-info" not in prog_flags:
             print(f"== Program ================={'='*len(version)}===")
         # at least define run_code
         try:
-            err = loader.run_code(open(file).read())
+            file = get_start_path_raw(file)
+            err = loader.run_code(open(file).read(), file)
             if err:
                 rec(err)
             if isinstance(err, tuple):
@@ -316,9 +367,9 @@ if "simple-run" in prog_flags:
         END = time.perf_counter() - INIT_START_TIME
         s, u = utils.convert_sec(END)
         print(f"DEBUG: Initialization time: {s}{u}")
-    with open(get_start_path(sys.argv[0]), "r") as f:
+    with open(get_start_path(info.ARGV[1]), "r") as f:
         varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
-        ez_run(f.read(), sys.argv[0])
+        ez_run(f.read(), info.ARGV[1])
     exit(0)
 
 def handle_args():
@@ -569,7 +620,7 @@ Code format: (
                 if (
                     act
                     and (
-                        (temp := act.split(maxsplit=1)[0]) in info.INC
+                        (temp := act.split(maxsplit=1)[0]) in info.INC_EXT
                         or temp in info.INC_EXT
                     )
                     or act == "#multiline"

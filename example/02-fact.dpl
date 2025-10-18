@@ -10,30 +10,31 @@ fn fact_rec(n)
 end
 
 fn fact_loop(n)
-    set a = :n
-    while (:n > 1)
-        set a = [:a * :n]
-        dec n
+    set a = 1
+    for num in [1 ..+ :n]
+        set a = [ :a * :num ]
     end
     return :a
 end
 
-set n = 100
+set n = 900
 
-# sub 20ms
-START_TIME
-fact_loop(:n)
-STOP_TIME
-LOG_TIME 'Loop fib(${n})'
+io:println("DPL Fib benchmark")
 
-# sub 30ms
-START_TIME
-fact_rec(:n)
-STOP_TIME
-LOG_TIME 'Recursive fib(${n})'
+benchmark 50, itr
+    fact_loop(:n)
+end
 
---
-  Smallest time so far
-  Loop: 12ms
-  Recursive: 16ms
---
+io:println('fib(${n}) Iteration &{.2f|:itr(0)}&{:itr(1)}')
+
+benchmark 40, rec
+    fact_rec(:n)
+end
+
+io:println('fib(${n}) Recursive &{.2f|:rec(0)}&{:rec(1)}')
+
+
+set diff = [dpercent([:itr(0)], [:rec(0)])]
+
+io:println('Difference in percent: ${.2f:diff}')
+io:println('Loop is &{.2f|[:itr(0)] / [:rec(0)]}x faster than recursive')

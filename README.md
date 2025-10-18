@@ -81,6 +81,15 @@ predictably fails.
 
 This only works for uncompiled scripts.
 
+* Actual lazy evaluation
+
+For example `set var = [lazy(:x + 1)]` will only be
+evaluated when `var` is read
+
+* DPL Glob now supports digits
+
+`["any-90.txt" => "*-#.txt"]`
+
 ## Features
 
 * Simple syntax

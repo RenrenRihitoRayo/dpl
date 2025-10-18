@@ -1,5 +1,10 @@
 # sh*tpost of a hello world
 
+--
+  WARNING This is no longer possible in DPl 2.x.x
+  since HLIR has been changed for optimizations.
+--
+
 -- DPL stands for Dump Programming Language
    but would a dumb programming language
    allow you to define a function _raw_?
@@ -32,10 +37,10 @@ dict main
     end
     # Write the HLIR (High Level IR) your self.
     list body
-        . [! !::__line__, "!::__file__", "loop", [! 10]]
-            . [! !::__line__, "!::__file__", "io:println", [! ("Hello, world!")]]
-        . [! !::__line__, "!::__file__", "end", .list]
-        . [! !::__line__, "!::__file__", "return", [! 0]]
+        . [! !::__line__, "!::__file__", "loop", py::none, [! 10]]
+            . [! !::__line__, "!::__file__", "io:println", py::none, [! ("Hello, world!")]]
+        . [! !::__line__, "!::__file__", "end", py::none, .list]
+        . [! !::__line__, "!::__file__", "return", py::none, [! 0]]
     end
 end
 

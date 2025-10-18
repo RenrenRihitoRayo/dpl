@@ -57,7 +57,8 @@ INC_EXT_BUILTIN = {
     "fn::inline",
     "string::inline",
     "benchmark",
-    "struct"
+    "struct",
+    "pattern"
 }
 
 # user exposed for INC and INC_EXT
@@ -77,7 +78,7 @@ INCREMENTS = INC_EXT
 # says otherwise
 RT_EXPR = {
     "oldformat",
-    "call", # side effects
+    "call", "lazy", "unpack", "pack", # side effects
     ".unique"
 }
 

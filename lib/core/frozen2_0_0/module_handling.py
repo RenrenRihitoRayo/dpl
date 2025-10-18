@@ -38,6 +38,7 @@ import constants
 import restricted
 import py_argument_handler
 import arguments as argproc
+import inspect
 arguments_handler = py_argument_handler.arguments_handler
 
 if "no-lupa" not in info.program_flags:
@@ -143,24 +144,13 @@ class modules:
     time = time
     itertools = itertools
 
-
-class RawFunc:
-    def __init__(self, func):
-        self.func = func
-    def __repr__(self):
-        return f"<raw fn {self.func.__name__!r} @ {hex(id(self.func))}>"
-    def __call__(self):
-        ...
-
 class extension:
     "A class to help define methods and functions."
 
     def __init__(self, name=None, meta_name=None, alias=None):
         self.__func = {}  # functions
         self.__data = {}
-        self._name = (
-            name  # This is a scope name, dpl defined name.func_name
-        )
+        self._name = name  # This is a scope name, dpl defined name.func_name
         self.meta_name = meta_name  # while this is the mangled name, python defined "{meta_name}:{func_name}"
         if not alias is None:
             if self._name:
@@ -170,21 +160,17 @@ class extension:
             else:
                 self._name = alias
 
-    def add_func(self, name=None, typed=None):
+    def add_func(self, name=None, typed=None, sig=None):
         "Add a function."
         def wrap(func):
             nonlocal name
-            if func.__doc__ is None:
-                func.__doc__ = (
-                    f"Function `{self.meta_name}:{name}`"
-                    if self.meta_name
-                    else f"Function {self._name}.{name}"
-                ) + ": Default doc string..."
             if name is None:
-                name = getattr(func, "__name__", None) or "_"
-            self.__func[self.mangle(name)] = (
-                func
-            )
+                name = getattr(func, "__name__", '???')
+                func.__qualname__ = func.__name__ = self.mangle(name)
+            if func.__doc__ is None:
+                func.__doc__ = self.mangle(name) + ": Default doc string..."
+            func.__text_signature__ = sig or str(inspect.Signature(list(inspect.signature(func).parameters.values())[2:]))
+            self.__func[self.mangle(name)] = func
             return func
         return wrap
 

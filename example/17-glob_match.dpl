@@ -4,16 +4,19 @@
 # Simple but effective.
 
 # * matches any number of any characters
+# # matches at least one digit
 # ! at the start of the pattern will negate it
 # escape with \
 # \* literally matches *
 # \! literally matches !
+# \# literally matches #
 
 list my_list
    . "test.txt",
    . "test.md",
    . "test.eh",
    . "test-90-91.txt",
+   . "test-#-#.txt",
    . "!.txt",
    . "*.txt",
 end
@@ -25,12 +28,14 @@ list my_patterns
    . "\!.txt",
    . "*",
    # this is possible
-   . "test-*-*.txt"
+   . "test-*-*.txt",
+   . "test-#-#.txt",
+   . "test-\#-\#.txt",
 end
 
 for pattern in :my_patterns
     io:println(:pattern)
     for name in :my_list
-        io:println(" ", :name, "=", [ if [:name => :pattern] then "match" else "no match" ])
+        io:println(" ", :name, "=", ["match" if [:name => :pattern] else "no match" ])
     end
 end

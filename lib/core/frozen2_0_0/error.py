@@ -4,6 +4,9 @@ import datetime
 import enum
 import os
 
+log_stack = []
+error_stack = []
+
 class DPLError(Exception):
     def __init__(self, code):
         self._code = code
@@ -40,7 +43,12 @@ def error_setup_meta(scope):
 
     META_ERR = scope
     PREPROCESSING_FLAGS = scope["preprocessing_flags"]
-    scope["err"].update({"builtins": ERRORS, "defined_errors": list(ERRORS)})
+    scope["err"].update({
+        "builtins": ERRORS,
+        "defined_errors": list(ERRORS),
+        "log_stack": log_stack,
+        "error_stack": error_stack
+    })
     PREPROCESSING_FLAGS = scope["preprocessing_flags"]
     for pos, name in enumerate(ERRORS, 1):
         globals()[name] = pos
@@ -85,7 +93,13 @@ def error(pos, file, cause=None):
     og_print(f"\nError in line {pos} file {file!r}")
     if cause is not None:
         og_print(f"Cause:\n{cause}")
-
+    log_stack.append(err:={
+        "line": pos,
+        "file": file,
+        "message": cause,
+        "level": "error"
+    })
+    error_stack.append(err)
 
 og_print = my_print
 is_silent = []
@@ -95,7 +109,12 @@ def info(text, show_date=True):
         og_print(f"   [INFO] {datetime.datetime.now()}: {text}")
     else:
         og_print(f"   [INFO]: {text}")
-
+    log_stack.append({
+        "line": pos,
+        "file": file,
+        "message": cause,
+        "level": "info"
+    })
 
 def warning(pos, file, text):
     if file == "__main__":

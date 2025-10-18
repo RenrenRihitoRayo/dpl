@@ -8,16 +8,19 @@ frame_stack[0]["io"] = data = {
 
 @ext.add_func("print")
 def myPrint(_, __, *args, end="", sep=" "):
+    "Print args, with sep inbetween, ending with end"
     print(*args, end=end, sep=sep, file=data["output"], flush=True)
 
 
 @ext.add_func()
 def println(_, __, *args, sep=" "):
+    "Prints args, with sep inbetween, always inserts newline"
     print(*args, sep=sep, file=data["output"], flush=True)
 
 
 @ext.add_func()
-def debug(arg):
+def debug(_, __, arg):
+    "Print the debug info of an object"
     if hasattr(_, __, arg, "__dpl_repr__"):
         print(arg.__dpl_repr__())
     else:
@@ -26,6 +29,7 @@ def debug(arg):
 
 @ext.add_func("input")
 def myInput(_, __, name=None, prompt=None, default=dpl.state_none):
+    "Take input from the user"
     if data["take_input"]:
         res = input(prompt if prompt else "")
     else:
@@ -37,16 +41,19 @@ def myInput(_, __, name=None, prompt=None, default=dpl.state_none):
 
 @ext.add_func()
 def setoutputfile(_, __, file):
+    "Sets the output file for text"
     data["output"] = file
 
 
 @ext.add_func()
 def resetoutputfile(_, __):
+    "Reset the output file to stdout"
     data["output"] = modules.sys.stdout
 
 
 @ext.add_func()
 def rawoutput(_, __, *values):
+    "Does not buffer output, any int will be converted into a character via ascii code"
     s = []
     for i in values:
         if isinstance(i, int):
@@ -58,10 +65,11 @@ def rawoutput(_, __, *values):
             s.append(i.decode("utf-8"))
         else:
             s.append(str(i))
-    modules.sys.stdout.write("".join(s))
-    modules.sys.stdout.flush()
+    data["output"].write("".join(s))
+    data["output"].flush()
 
 
 @ext.add_func()
 def flush(_, __):
-    modules.sys.stdout.flush()
+    "Manually flush the current output file"
+    data["output"].flush()

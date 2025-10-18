@@ -1,0 +1,10 @@
+&use {std/text_io.py}
+&enable:REPL_ON_ERROR
+
+fn greet(name)
+    io:println('Hello, ${name}')
+end
+
+dump_scope
+
+raise 1, "oops"

@@ -1,9 +1,24 @@
 use {std/text_io.py}
 
 START_TIME
+loop 1000
+    pass
+end
+STOP_TIME
+LOG_TIME
+
+START_TIME
+for i in [0 .. 1000]
+    pass
+end
+STOP_TIME
+LOG_TIME
+
+START_TIME
 set a = 0
-while (:a < 250_000)
+while (:a < 1000)
     inc a
 end
 STOP_TIME
 LOG_TIME
+

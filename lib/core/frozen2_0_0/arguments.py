@@ -12,6 +12,7 @@ import py_argument_handler as pah
 import fmt
 import objects
 import uuid
+import utils
 import time
 
 globals().update(vars(dpl_ctypes))
@@ -33,6 +34,12 @@ class Expression(list):
                 string += f' "{i}"' if " " in i else f" {i}"
         return f"[{string.strip()}]"
                 
+
+class Lazy(Expression):
+    def __repr__(self):
+        return f"lazy{{{self[1]!r}}}"
+
+varproc.Lazy = Lazy
 
 objects.Expression = Expression
 
@@ -56,6 +63,107 @@ precedence = {}
 for row, line in enumerate(precedence_list):
     for name in line:
         precedence[name] = len(precedence_list)-row
+
+
+def glob_match(pattern, text):
+    negate = False
+    if pattern.startswith("\\!"):
+        pattern = pattern[1:]
+    elif pattern.startswith("!"):
+        pattern = pattern[1:]
+        negate = True
+    def match(p, t):
+        if p == "*":
+            return True
+        if p == "#":
+            return t.isdigit()
+        if "*" not in p and "#" not in p:
+            return p.replace("\\[star_lit]", "*").replace("\\[pound_lit]", "#") == t
+        pre, com, post = p.partition("#")
+        if com == "#":
+            if not match(pre, t[:len(pre)]):
+                return False
+            t = t[len(pre):]
+            l = len(t)
+            i = 0
+            while i < l:
+                if not t[i].isdigit():
+                    break
+                i += 1
+            if i == 0:
+                return False
+            return match(post, t[i:])
+        pre, com, post = p.partition("*")
+        if com == "*":
+            if not t.startswith(pre):
+                return False
+            t = t[len(pre):]
+            if post == "":
+                return True
+            for i in range(len(t) + 1):
+                if match(post, t[i:]):
+                    return True
+        return False
+    pattern = pattern.replace("\\*", "\\[star_lit]").replace("\\#", "\\[pound_lit]")
+    if pattern == "*":
+        result = True
+    else:
+        result = match(pattern, text)
+    return not result if negate else result
+
+
+def match_pattern(pattern, values):
+    star_idx = None
+    star_name = None
+    for i, p in enumerate(pattern):
+        if not isinstance(p, str):
+             continue
+        if p.startswith("..."):
+            star_idx = i
+            star_name = p[3:]
+            break
+    if star_idx is None:
+        if len(pattern) != len(values):
+            return None
+        bindings = {}
+        for p, v in zip(pattern, values):
+            if not isinstance(p, str):
+                if p != v: return None
+                continue
+            elif p.startswith('"') and p.endswith('"') and p[1:-1] != v:
+                return None
+            else:
+                bindings[p] = v
+        return bindings
+    head = pattern[:star_idx]
+    tail = pattern[star_idx + 1:]
+    if len(values) < len(head) + len(tail):
+        return None
+    head_values = values[:len(head)]
+    tail_values = values[-len(tail):] if tail else []
+    bindings = {}
+    for p, v in zip(head, head_values):
+        if not isinstance(p, str):
+             if p != v: return None
+             continue
+        elif p.startswith('"') and p.endswith('"') and p[1:-1] != v:
+             return None
+        else:
+            bindings[p] = v
+    for p, v in zip(tail, tail_values):
+        if not isinstance(p, str):
+             if p != v: return None
+             continue
+        elif p.startswith('"') and p.endswith('"') and p[1:-1] != v:
+             return None
+        else:
+            bindings[p] = v
+    mid = values[len(head):len(values) - len(tail)] if tail else values[len(head):]
+    if not mid:
+        return None
+    bindings[star_name] = mid
+    return bindings
+
 
 def nest_math(tokens):
     if not tokens:
@@ -107,39 +215,6 @@ def nest_math(tokens):
     if res:
         return res[0]
 
-def glob_match(pattern, text):
-    negate = False
-    if pattern.startswith("\\!"):
-        pattern = pattern[1:]
-    elif pattern.startswith("!"):
-        pattern = pattern[1:]
-        negate = True
-
-    def match(p, t):
-        if p == "*":
-            return True
-        if "*" not in p:
-            return p.replace("\xFF\u200B", "*") == t
-
-        pre, _, post = p.partition("*")
-
-        if not t.startswith(pre):
-            return False
-
-        t = t[len(pre):]
-        if post == "":
-            return True
-        for i in range(len(t) + 1):
-            if match(post, t[i:]):
-                return True
-        return False
-    pattern = pattern.replace("\\*", "\xFF\u200B")
-    if pattern == "*":
-        result = True
-    else:
-        result = match(pattern, text)
-    return not result if negate else result
-
 simple_ops = {
     '+': lambda a, b: a + b,
     '-': lambda a, b: a - b,
@@ -161,8 +236,8 @@ simple_ops = {
     "**": lambda a, b: a ** b,
     "=": lambda name, value: {name: value},
     "=>": lambda text, pattern: constants.true if glob_match(pattern, text) else constants.false,
-    "..": lambda min, max: tuple(my_range(min, max)),
-    "..+": lambda min, max: tuple(my_range(min, max+1)),
+    "..": lambda min, max: my_range(min, max),
+    "..+": lambda min, max: my_range(min, max+1),
     "isinstanceof": lambda ins, typ: constants.true if isinstance(ins, typ) else constants.false,
 }
 
@@ -656,17 +731,6 @@ def to_static(code, env=None):
                     code[pos] = value
             else:
                 code[pos] = to_static(i, env=env)
-        elif isinstance(i, tuple):
-            if is_static(i):
-                value = tuple(evaluate(env, to_static(list(i), env=env)))
-                if isinstance(value, str):
-                    code[pos] = f'"{value}"'
-                else:
-                    code[pos] = value
-            else:
-                code[pos] = to_static(i, env=env)
-        elif not isinstance(i, str):
-            continue
     return code if t is None else t(code)
 
 
@@ -681,6 +745,7 @@ class kwarg:
     def __repr__(self):
         return f"<{self.name} = {self.value!r}>"
 
+
 def evaluate(frame, expression):
     "Evaluate an expression"
     if not isinstance(expression, Expression):
@@ -690,187 +755,212 @@ def evaluate(frame, expression):
     # of it statements
     # now if the length is not the correct one
     # we skip a barrage of conditions
-    if processed and processed[0] == "!":
-        return processed[1:]
-    elif processed and processed[0] == ".":
-        r = nest_math(processed[1:])
-        if r is None:
-            error.error(698, "lib/core/arguments.py", f"Invalid expression: {Expression(processed[1:])!r}")
-            raise error.DPLError(error.SYNTAX_ERROR)
-        return r
-    elif len(processed) == 3:
+    if processed:
+        if processed[0] == "!":
+            return processed[1:]
+        elif processed[0] == ".":
+            r = evaluate(frame, nest_math(processed[1:]))
+            if r is None:
+                error.error(0, "lib/core/arguments.py", f"Invalid expression: {Expression(processed[1:])!r}")
+                raise error.DPLError(error.SYNTAX_ERROR)
+            return r
+        elif processed[0] == "lazy":
+            return Lazy([frame, Expression(processed[1])])
+        elif processed[0] == "dict":
+            temp = {}
+            for i in processed[1:]:
+                temp.update(i)
+            return temp
+        elif processed[0] == "tuple":
+            return tuple(processed[1:])
+    if len(processed) == 3:
+        e_ins = processed[0]
         if isinstance(processed[1], str) and processed[1] in simple_ops:
             return simple_ops[processed[1]](processed[0], processed[2])
-        elif processed[0] == "pycall":
+        elif processed[1] == "->":
+            obj, _, attr = processed
+            return getattr(obj, attr, constants.nil)
+        elif processed[0] == "?":
+            return processed[1](*process_args(frame, processed[2]))
+        elif e_ins == "pycall":
             args = pah.arguments_handler()
             args.parse(process_args(frame, processed[2]))
             return args.call(processed[1])
-        elif processed[0] == "fmt":
+        elif e_ins == "fmt":
             return format(str(processed[1]), processed[2])
-        elif processed[0] == "call":
+        elif e_ins == "call":
             return run_fn(processed[1]["capture"]["_frame_stack"], processed[1], *processed[2])
-        elif processed[0] == "call::static":
+        elif e_ins == "call::static":
             func = varproc.rget(frame[-1], processed[1], default=None, resolve=True)
             return run_fn(func["capture"]["_frame_stack"], func, *processed[2])
-        elif processed[0] == "range":
+        elif e_ins == "range":
             return tuple(my_range(processed[1], processed[2]))
-        elif processed[0] == "irange":
+        elif e_ins == "irange":
             return my_range(processed[1], processed[2])
+        elif e_ins == "fn":
+            return objects.make_function(
+                frame,
+                "::local",
+                [(0, "::internal", "return", None, [Expression(processed[2])])],
+                processed[1]
+            )
+        elif e_ins == "join":
+            if isinstance(processed[1], dict):
+                return "".join(map(lambda x: run_fn(frame, processed[1], x), processed[2]))
+            else:
+                return "".join(map(processed[1], processed[2]))
+        elif e_ins == "pack":
+            return utils.pack(processed[1], processed[2])
+        elif e_ins == "vpack":
+            return list(utils.pack(processed[1], processed[2]).values())
+        elif processed[0] == "@" and processed[1] in methods:
+            return methods[processed[1]](frame, process_args(frame, processed[2]))
+        elif processed[0] == "@":
+            return processed[1](frame, None, process_args(frame, processed[2]))[0]
     elif len(processed) == 2:
-        if processed[0] == "not":
+        e_ins = processed[0]
+        if e_ins == "not":
             return constants.true if not processed[1] else constants.false
-        elif processed[0] == "-":
+        elif e_ins == "nil?":
+            return processed[1] == constants.nil
+        elif e_ins == "none?":
+            return processed[1] == constants.none
+        elif e_ins == "def?":
+            value = varproc.rget(frame[-1], processed[1], default=None)
+            if value is None:
+                return constants.false
+            return constants.true
+        elif e_ins == "?tuple":
+            try:
+                return tuple(processed[1])
+            except:
+                return constants.nil
+        elif e_ins == "?se5":
+            try:
+                return set(processed[1])
+            except:
+                return constants.nil
+        elif e_ins == "?dict":
+            return str(processed[1])
+        elif e_ins == "?bytes":
+            try:
+                item = processed[0]
+                return bytes(item) if not isinstance(item, str) else item.encode("utf-8")
+            except:
+                return constants.nil
+        elif e_ins == "?int":
+            try:
+                return int(processed[1])
+            except:
+                return constants.nil
+        elif e_ins == "?float":
+            try:
+                return float(processed[1])
+            except:
+                return constants.nil
+        elif e_ins == "?dict":
+            try:
+                return dict(processed[1])
+            except:
+                return constants.nil
+        elif e_ins == "-":
             return -processed[1]
-        elif processed[0] == "~":
+        elif e_ins == "~":
             return ~processed[1]
-        elif processed[0] == "type":
+        elif e_ins == "type":
             return getattr(type(processed[1]), "__name__", constants.nil)
-        elif processed[0] == "sum":
+        elif e_ins == "sum":
             args = processed[1]
             t = type(args[0])
             start = args[0]
             for i in args[1:]:
                 start += t(i)
             return start
-        elif processed[0] == "eval":
+        elif e_ins == "eval":
             return evaluate(frame, processed[1])
-        elif processed[0] == "oldformat":
+        elif e_ins == "oldformat":
             local = flatten_dict(frame[-1])
             text = processed[1]
             return fmt_old_format(text, local)
-        elif processed[0] == "to_ascii":
+        elif e_ins == "to_ascii":
             return chr(processed[1])
-        elif processed[0] == "from_ascii":
+        elif e_ins == "from_ascii":
             return ord(processed[1])
-        elif processed[0] == "len":
+        elif e_ins == "len":
             return len(processed[1])
-        elif processed[0] == "head:body:tail":
+        elif e_ins == "head:body:tail":
             head, *rest, tail = processed[1]
             return head, rest, tail
-        elif processed[0] == "head:body":
+        elif e_ins == "head:body":
             head, *rest = processed[1]
             return head, rest
-        elif processed[0] == "body:tail":
+        elif e_ins == "body:tail":
             *rest, tail = processed[1]
             return rest, tail
-        elif processed[0] == "head":
+        elif e_ins == "head":
             return processed[1][0]
-        elif processed[0] == "tail":
+        elif e_ins == "tail":
             return processed[1][-1]
-        elif processed[0] == "typeof":
+        elif e_ins == "join":
+            return "".join(map(str, processed[1]))
+        elif e_ins == "typeof":
             for type_ in type_to_name:
                 if isinstance(processed[1], type_):
                     return type_to_name[type_]
             return "?::unknown"
-        elif processed[0] == "dpercent":
+        elif e_ins == "dpercent":
             min, max = process_args(frame, processed[1])
-            return ((abs(min - max))/((min + max) * 2)) * 100
-        elif processed[0] == "median":
+            return (abs(max - min)/((max + min)/2)) * 100
+        elif e_ins == "median":
             min, max = process_args(frame, processed[1])
             return ((max - min)/2)+min
-        elif processed[0] == "irange":
+        elif e_ins == "irange":
             return range(processed[1])
-        elif processed[0] == "reverse":
+        elif e_ins == "reverse":
             return type(processed[1])(reversed(processed[1]))
-        elif processed[0] == "ireverse":
+        elif e_ins == "ireverse":
             return reversed(processed[1])
-        elif processed[0] == "range":
+        elif e_ins == "range":
             return tuple(range(processed[1]))
+        elif e_ins == "unpack":
+            return utils.unpack(frame[-1], processed[1])
+        elif isinstance(processed[1], tuple):
+            try:
+                return processed[0][process_arg(frame, processed[1][0])]
+            except:
+                return constants.nil
+    elif len(processed) == 4:
+        if processed[0] == "join" and processed[2] == "with":
+            return processed[3].join(map(str, processed[1]))
+        elif processed[1] == "or" and processed[3] == "instead":
+            return processed[0] if processed[0] else processed[2]
+        elif processed[1] == "@":
+            args = pah.arguments_handler(process_args(frame, processed[3]))
+            return args.call(getattr(processed[0], processed[2]))
+    elif len(processed) == 5:
+        if processed[0] == "join" and processed[3] == "with":
+            if isinstance(processed[1], dict):
+                return processed[4].join(map(lambda x: run_fn(frame, processed[1], x), processed[2]))
+            else:
+                return processed[4].join(map(processed[1], processed[2]))
+        elif processed[1] == "if" and processed[3] == "else":
+            return evaluate(frame, processed[0] if processed[2] else processed[4])
     elif 1 > len(processed) <= 4 and processed[0] == "slice":
         return slice(*processed[1:])
-    match (processed):
-        # conditionals
-        case ["if", value, "then", true_v, "else", false_v]:
-            return true_v if value else false_v
-        case [obj, tuple(index)]:
-            if not obj:
-                return constants.nil
-            index = process_arg(frame, index[0])
-            if isinstance(index, (str, int, float, tuple)) and isinstance(obj, dict):
-                return obj.get(index, constants.nil)
-            elif isinstance(index, int) and isinstance(obj, (str, tuple, list)):
-                try:
-                    return obj[index]
-                except Exception as e:
-                    return constants.nil
-            else:
-                return constants.nil
-        # types
-        case ["tuple", *lst]:
-            return tuple(lst)
-        case ["?tuple", lst]:
-            return tuple(lst)
-        case ["?set", lst]:
-            return set(lst)
-        case ["?dict", lst]:
-            return dict(lst)
-        case ["?string", item]:
-            return str(item)
-        case ["?bytes", item]:
-            try:
-                return bytes(item) if not isinstance(item, str) else item.encode("utf-8")
-            except:
-                return constants.nil
-        case ["?int", item]:
-            try:
-                return int(item)
-            except:
-                return constants.nil
-        case ["?float", item]:
-            try:
-                return float(item)
-            except:
-                return constants.nil
-        case ["?dict", item]:
-            try:
-                return dict(item)
-            except:
-                return constants.nil
-        case ["dict", *args]:
-            temp = {}
-            for i in args:
-                temp.update(i)
-            return temp
-        # values
-        case ["nil?", value]:
-            return value == constants.nil
-        case ["none?", value]:
-            return value == constants.none
-        case ["def?", name]:
-            value = varproc.rget(frame[-1], name, default=None)
-            if value is None:
-                return constants.false
-            return constants.true
-        case [value1, "or", value2, "instead"]:
-            return value1 if value1 else value2
-        # values
-        case ["set", name, "=", value]:
-            varproc.rset(frame[-1], name, value)
-            return value
-        case ["@", method, tuple(args)] if method in methods:
-            return methods[method](frame, process_args(frame, args))
-        case ["?", method, tuple(args)]:
-            return method(*process_args(frame, args))
-        case ["@", ins, tuple(args)]:
-            return ins(frame, None, *process_args(frame, args))[0]
-        case [obj, "@", method, tuple(args)]:
-            args = pah.arguments_handler(process_args(frame, args))
-            return args.call(getattr(obj, method))
-        case [obj, "->", attr]:
-            return getattr(obj, attr, constants.nil)
-        # other
-        case default:
-            for name, fn in matches.items():
-                try:
-                    if not (res:=fn(frame, default)) is None:
-                        return res
-                except:
-                    raise Exception(f"Error while evaluating: {default}\nMatcher: {name}\n{traceback.format_exc()}") from None
+    for name, fn in matches.items():
+        try:
+            if not (res:=fn(frame, default)) is None:
+                return res
+        except:
+            raise Exception(f"Error while evaluating: {default}\nMatcher: {name}\n{traceback.format_exc()}") from None
     raise Exception(f"Unknown expression: {Expression(processed)!r}")
 
+
+varproc.evaluate = evaluate
 sep = " ,"
 special_sep = "@()+/*[]π<>=!π%"
 sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//", "%%", "..", "..+", "]."]
+
 
 def group(text):
     res = []

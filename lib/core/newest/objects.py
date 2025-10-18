@@ -20,6 +20,10 @@ def register_run_fn(run):
     return run
 
 class object_type(dict):
+    def __init__(self, d=None):
+        super().__init__(d)
+        self["_type_name"] = self.__class__.__name__
+    
     def __instancecheck__(self, instance):
         return instance["_type_name"] == self["_type_name"]
 
@@ -202,24 +206,23 @@ class reference_type(object_type):
 class function_type(object_type):
     def __repr__(self, less=False):
         if not less and self["self"]:
-            return f"<method {self['name']}({', '.join(self['args'])}) of {self['self']['_type_name']}>"
+            return f"<method {self['name']}({', '.join(self['args'])}) of {self['self']['_type_name']} at {hex(id(self))}>"
         if less:
             return f"{self['name']}({', '.join(self['args'])})"
-        return f"<function {self['name']}({', '.join(self['args'])})>"
+        return f"<function {self['name']}({', '.join(self['args'])}) at {hex(id(self))}>"
 
     def __dpl_repr__(self, less=False):
         if not less and self["self"]:
-            return f"<method {self['name']}({', '.join(self['args'])}) of {self['self']['_type_name']}>"
+            return f"<method {self['name']}({', '.join(self['args'])}) of {self['self']['_type_name']} at {hex(id(self))}>"
         if less:
             return f"{self['name']}({', '.join(self['args'])})"
-        return f"<function {self['name']}({', '.join(self['args'])})>"
+        return f"<function {self['name']}({', '.join(self['args'])}) at {hex(id(self))}>"
 
 
 objects = (
     reference_type,
     function_type
 )
-
 
 
 def make_reference(scope_index, scope_uuid, name, value, data=constants.none):

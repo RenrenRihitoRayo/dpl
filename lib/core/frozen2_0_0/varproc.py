@@ -10,6 +10,8 @@ import state
 import error
 
 execute_code = None
+Lazy = None
+evaluate = None
 
 def register_execute(fn):
     global execute_code
@@ -54,10 +56,15 @@ preprocessing_flags = {
     "EXPRESSION_FOLDING": constants.true,
     # Fixed expression folding,
     # more stable than before
+    "DEAD_CODE_ELLIMIMATION": constants.false,
     "WARNINGS": constants.true, # display warnings
     "STRICT": constants.false, # treat warnings as errors
     "RUNTIME_ERRORS": constants.true, # Yep this is a thing
     "EXPERIMENTAL_LLIR": constants.false, # enable expiramental llir and new execution loop.
+    "REPL_ON_ERROR": constants.false,
+    # when enabled REPL_ON_ERROR would invoke a REPL when an error is encountered,
+    # this makes it possible to investigate what may have happened.
+    # on exit the error will propagate as the exit code
     "_set_only_when_defined": 1,
 }
 
@@ -201,23 +208,8 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=False, resolve=Fal
         temp = dct.get(full_name, default)
         if is_debug_enabled("show_value_updates"):
             error.info(f"Variable {full_name!r} was read!")
-        if meta and isinstance(temp, dict):
-            if "_internal::meta_value" in temp:
-                return temp["_internal::meta_value"]
-            elif "_internal::get_meta_value" in temp:
-                frame = dct["_frame_stack"]
-                lscope = nscope(frame)
-                fn = temp["_internal::get_meta_value"]
-                if "self" in fn:
-                    frame[-1]["self"] = temp
-                if "capture" in fn:
-                    frame[-1]["_capture"] = fn["capture"]
-                frame[-1]["_returns"] = ("_internal::return",)
-                if (err := execute_code(fn["body"], frame)) > 0:
-                    raise error.DPLError(err)
-                pscope(frame)
-                if "_internal::return" in frame[-1]:
-                    return frame[-1]["_internal::return"]
+        if not meta and evaluate and Lazy and isinstance(temp, Lazy):
+            return evaluate(temp[0], temp[1])
         return temp
     path = [*enumerate(full_name.split(sep), 1)][::-1]
     last = len(path)
@@ -233,23 +225,9 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=False, resolve=Fal
         elif pos == last and name in node:
             if is_debug_enabled("show_value_updates"):
                 error.info(f"Variable {full_name!r} was read!")
-            if meta and isinstance(node[name], dict):
-                if "_internal::meta_value" in node[name]:
-                    return node[name]["_internal::meta_value"]
-                elif "_internal::get_meta_value" in node[name]:
-                    frame = dct["_frame_stack"]
-                    lscope = nscope(frame)
-                    fn = node[name]["_internal::get_meta_value"]
-                    if "self" in fn:
-                        frame[-1]["self"] = node[name]
-                    if "capture" in fn:
-                        frame[-1]["_capture"] = fn["capture"]
-                    frame[-1]["_returns"] = ("_internal::return",)
-                    if (err := execute_code(fn["body"], frame)) > 0:
-                        raise error.DPLError(err)
-                    pscope(frame)
-                    if "_internal::return" in frame[-1]:
-                        return frame[-1]["_internal::return"]
+            
+            if not meta and evaluate and Lazy and isinstance(node[name], Lazy):
+                return evaluate(node[name][0], node[name][1])
             return node[name]
         else:
             break

@@ -2,43 +2,34 @@ ext = dpl.extension(meta_name="io", alias=__alias__)
 
 @ext.add_func("open")
 def myOpen(_, local, file_name, mode="r"):
+    """
+    Open a file..
+    """
     try:
         if modules.os.path.isabs(file_name):
             file = file_name
         else:
             file = modules.os.path.join(local, file_name)
-        return (open(file),)
+        return open(file),
     except Exception as e:
         return dpl.error.get_error_string("PYTHON_ERROR", repr(e))
 
 
 @ext.add_func()
-def with_file(frame, local, body, name, _eq_, file_name, mode="r"):
-    if _eq_ != "=":
-        return dpl.error.get_error_string("SYNTAX_ERROR", f"Expected it to be `body io:with_file {name} **=** {file_name!r} {mode!r}`") 
-    try:
-        if modules.os.path.isabs(file_name):
-            file = file_name
-        else:
-            file = modules.os.path.join(local, file_name)
-        with open(file, mode) as f:
-            frame[-1][name] = f
-            return dpl.run_code(body, frame=frame)
-    except Exception as e:
-        return dpl.error.get_error_string("PYTHON_ERROR", repr(e))
-
-@ext.add_func(typed="$$[2] :: TextIOWrapper int \n $$[3] :: TextIOWrapper int int")
 def seek(_, __, file_object, position, whence=0):
+    """
+    file.seek()
+    """
     file_object.seek(position, whence)
 
 
 @ext.add_func(typed="$$ :: TextIOWrapper")
 def read(_, __, file_object):
     try:
-        return (file_object.read(),)
+        return file_object.read(),
     except Exception as e:
         file_object.close()
-        return (e,)
+        return dpl.state_nil,
 
 
 @ext.add_func()
@@ -47,7 +38,7 @@ def write(_, __, file_object, content):
         file_object.write(content)
     except Exception as e:
         file_object.close()
-        return f"err:{dpl.error.PYTHON_ERROR}:{repr(e)}"
+        return dpl.state_nil,
 
 
 @ext.add_func()
