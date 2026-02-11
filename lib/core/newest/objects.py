@@ -21,7 +21,7 @@ def register_run_fn(run):
 
 class object_type(dict):
     def __init__(self, d=None):
-        super().__init__(d)
+        super().__init__(d or {})
         self["_type_name"] = self.__class__.__name__
     
     def __instancecheck__(self, instance):

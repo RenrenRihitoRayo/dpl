@@ -238,7 +238,9 @@ def get_start_path_raw(start):
 
 
 def get_start_path(start, quiet=False):
-    cache_file = "file-cache.json"
+    dir_path = os.path.dirname(start) or "."
+    cached = os.path.join(dir_path, "dpl_ccache")
+    cache_file = os.path.join(cached, "file-cache.json")
     cache = {}
     if os.path.isfile(cache_file):
         cache = json.load(open(cache_file, "r"))
@@ -256,7 +258,12 @@ def get_start_path(start, quiet=False):
         print(f"{start}: Path is invalid!")
         exit(1)
     mtime = str(int(os.path.getmtime(path)))
-    compiled_path = f"{path[:-4]}.{mtime}.dplc"
+    if not os.path.isdir(cached):
+        if os.path.exists(cached):
+            raise Exception(f"Cache folder in {cached} is a file and not a directory!")
+        else:
+            os.mkdir(cached)
+    compiled_path = os.path.join(cached, f"{os.path.basename(path[:-4])}.{mtime}.dplc")
     varproc.meta_attributes["internal"]["main_file"] = path
     if not os.path.isfile(compiled_path):
         file_content = open(path, "r").read()
@@ -367,7 +374,7 @@ if "simple-run" in prog_flags:
         END = time.perf_counter() - INIT_START_TIME
         s, u = utils.convert_sec(END)
         print(f"DEBUG: Initialization time: {s}{u}")
-    with open(get_start_path(info.ARGV[1]), "r") as f:
+    with open(get_start_path_raw(info.ARGV[1]), "r") as f:
         varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
         ez_run(f.read(), info.ARGV[1])
     exit(0)

@@ -1,4 +1,3 @@
-mkdir "errors" &> /dev/null
 
 failed_test=()
 timed_out=()
@@ -18,10 +17,10 @@ for file in *; do
 		command_res=$?
 		if [ "$command_res" -eq "124" ]; then
 			if file_msg=$(grep "^$file :timeout: " "excluded.txt"); then
-		        echo -e ${file_msg#* :timeout: }
+                echo -e "\033[0;33mTimeout ($time)" ${file_msg#* :timeout: } "\033[0m"
 		        continue
 		    elif file_msg=$(grep "^$file :: " "excluded.txt"); then
-		        echo -e ${file_msg#* :: }
+		        echo -e ${file_msg#* :: } "\033[0m"
 		        continue
 		    else
     		    echo -e "\033[0;33mTimeout ($time)\033[0m"
@@ -32,11 +31,11 @@ for file in *; do
 		fi
 		if [ "$command_res" -ne "0" ]; then
 		    if file_msg=$(grep "^$file :$command_res: " "excluded.txt"); then
-		        echo -e ${file_msg#* :$command_res: }
+		        echo -e "[$command_res]" ${file_msg#* :$command_res: }
 		    elif file_msg=$(grep "^$file :: " "excluded.txt"); then
-		        echo -e ${file_msg#* :: }
+		        echo -e "[*]" ${file_msg#* :: }
 		    else
-    		    echo -e "\031[0;32mFailed [$command_res]\033[0m"
+    		    echo -e "\033[0;31mFailed [$command_res]\033[0m"
     			cp temp.txt "./errors/${file}.err"
     			fails=$((fails + 1))
     			failed_test+=($file)
@@ -63,7 +62,7 @@ if [ $fails -ne 0 ]; then
 elif [ $fails -eq 0 ] && [ ${#timed_out[@]} == 0 ]; then
 	echo -e "\033[0;32mAll tests passed!\033[0m"
 else
-    echo -e "\031[0;32mSome tests failed!\033[0m"
+    echo -e "\033[0;31mSome tests failed!\033[0m"
 fi
 
 rm temp.txt &> /dev/null

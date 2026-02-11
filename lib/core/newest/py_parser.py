@@ -387,7 +387,8 @@ def process_code(fcode, name="__main__"):
                 break
         else:
             try:
-                ins, *args = nest_args(exprs_preruntime(group(line)))
+                l = group(line)
+                ins, *args = nest_args(exprs_preruntime(l))
                 if isinstance(ins, Expression):
                     try:
                         ins = to_static(ins)
@@ -439,14 +440,14 @@ def process_code(fcode, name="__main__"):
                             error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
                             return error.PREPROCESSING_ERROR
                         sub_pos, bod = temp
-                        body[process_arg(nframe, args[0])] = process_blocks(bod)
+                        body[process_arg(nframe, args[0])] = process_blocks(None, bod)
                     elif ins == "default" and not args:
                         temp = get_block(switch_block, sub_pos)
                         if temp is None:
                             error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
                             return error.PREPROCESSING_ERROR
                         sub_pos, bod = temp
-                        body[None] = process_blocks(bod)
+                        body[None] = process_blocks(None, bod)
                     else:
                         error.error(line_pos, file, f"Switch statement is invalid!")
                         return error.SYNTAX_ERROR

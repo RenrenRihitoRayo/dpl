@@ -792,6 +792,9 @@ def evaluate(frame, expression):
             return run_fn(processed[1]["capture"]["_frame_stack"], processed[1], *processed[2])
         elif e_ins == "call::static":
             func = varproc.rget(frame[-1], processed[1], default=None, resolve=True)
+            if func is None:
+                print(f"Warning call::static to {processed[1]!r} was patched with nil!")
+                return constants.nil
             return run_fn(func["capture"]["_frame_stack"], func, *processed[2])
         elif e_ins == "range":
             return tuple(my_range(processed[1], processed[2]))
@@ -830,12 +833,14 @@ def evaluate(frame, expression):
             if value is None:
                 return constants.false
             return constants.true
+        elif e_ins == "?string":
+            return str(processed[1])
         elif e_ins == "?tuple":
             try:
                 return tuple(processed[1])
             except:
                 return constants.nil
-        elif e_ins == "?se5":
+        elif e_ins == "?set":
             try:
                 return set(processed[1])
             except:
@@ -1017,6 +1022,24 @@ def group(text):
         i = res.pop(0)
         if not isinstance(i, str):
             nres.append(i)
+        elif is_id(i) and len(res) >= 2 and res[0] == "!" and res[1] == "(":
+            a = []
+            name = i
+            k = 1
+            print("WORKS!!!")
+            print("::", res)
+            res.pop(0) # remove !
+            res.pop(0) # remove (
+            while res and k > 1:
+                current = res.pop(0)
+                print(current)
+                if   current == "(": k += 1
+                elif current == ")": k -= 1
+                else: a.append(current);
+            print("::", res)
+            nres.append(Expression(["call", f":{name}", a]))
+            nres.append(")")
+            print("::", nres)
         elif res and isinstance(res[0], str) and (tmp:=i+res[0]) in sym:
             nres.append(tmp)
             res.pop(0)

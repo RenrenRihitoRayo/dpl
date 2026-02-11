@@ -9,5 +9,5 @@ import varproc
 
 def run_code(file, file_path):
     return py_parser.run_code(
-        py_parser.process_code(file)
+        py_parser.process_code(file), file_path
     )

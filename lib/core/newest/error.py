@@ -110,9 +110,9 @@ def info(text, show_date=True):
     else:
         og_print(f"   [INFO]: {text}")
     log_stack.append({
-        "line": pos,
-        "file": file,
-        "message": cause,
+        "line": "??",
+        "file": "??",
+        "message": text,
         "level": "info"
     })
 

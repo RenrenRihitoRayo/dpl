@@ -1,7 +1,5 @@
 &use {std/text_io.py}
 
-
-
 if [ :_meta.argc == 2 ]
     set message = [:_meta.argv(1)]
 end
