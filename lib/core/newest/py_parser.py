@@ -395,9 +395,12 @@ def process_code(fcode, name="__main__"):
                     except Exception as e:
                         error.error(lpos, file, repr(e))
                         return error.TYPE_ERROR
+            except error.DPLError as e:
+                error.error(lpos, name, f"Caught error: {error.error_stack[-1]['message']}")
+                return e.code
             except Exception as e:
-                error.error(lpos, name, repr(e))
-                return error.SYNTAX_ERROR
+                error.error(lpos, name, traceback.format_exc())
+                return error.PREPROCESSING_ERROR
             if ins == "return" and any(is_reference_var(x) for x in args if isinstance(x, str)):
                 error.error(lpos, file, "Return statement returns a reference!")
                 return error.TYPE_ERROR

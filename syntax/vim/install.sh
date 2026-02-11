@@ -3,4 +3,4 @@ mkdir ~/.vim/ftdetect > /dev/null
 mkdir ~/.vim/syntax > /dev/null
 
 cp ./syntax/dpl.vim ~/.vim/syntax
-cp ./ftdetect/dpl.vim ~/.vim/ftdedect
+cp ./ftdetect/dpl.vim ~/.vim/ftdetect/dpl.vim

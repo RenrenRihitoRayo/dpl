@@ -23,7 +23,7 @@ fn home() (flask:route("/"))
         "</form>"
 	"<script>"
 	"document.getElementById('text').focus()"
-	"</script>
+	"</script>"
     end
     return :home
 end

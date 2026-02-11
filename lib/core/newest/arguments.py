@@ -1017,6 +1017,9 @@ def group(text):
             id_tmp.append(i)
     if id_tmp:
         res.append("".join(id_tmp))
+    if str_tmp:
+        error.error(0, "<internal>", "String may be unterminated!")
+        raise error.DPLError(error.SYNTAX_ERROR)
     nres = []
     while res:
         i = res.pop(0)
@@ -1026,8 +1029,6 @@ def group(text):
             a = []
             name = i
             k = 1
-            print("WORKS!!!")
-            print("::", res)
             res.pop(0) # remove !
             res.pop(0) # remove (
             while res and k > 1:
@@ -1036,10 +1037,8 @@ def group(text):
                 if   current == "(": k += 1
                 elif current == ")": k -= 1
                 else: a.append(current);
-            print("::", res)
             nres.append(Expression(["call", f":{name}", a]))
             nres.append(")")
-            print("::", nres)
         elif res and isinstance(res[0], str) and (tmp:=i+res[0]) in sym:
             nres.append(tmp)
             res.pop(0)

@@ -31,9 +31,9 @@ for file in *; do
 		fi
 		if [ "$command_res" -ne "0" ]; then
 		    if file_msg=$(grep "^$file :$command_res: " "excluded.txt"); then
-		        echo -e "[$command_res]" ${file_msg#* :$command_res: }
+		        echo -e "\033[0;33m[$command_res]" ${file_msg#* :$command_res: } "\033[0m"
 		    elif file_msg=$(grep "^$file :: " "excluded.txt"); then
-		        echo -e "[*]" ${file_msg#* :: }
+                echo -e "\033[0;33m[* ($command_res)]" ${file_msg#* :: } "\033[0m"
 		    else
     		    echo -e "\033[0;31mFailed [$command_res]\033[0m"
     			cp temp.txt "./errors/${file}.err"
@@ -62,7 +62,8 @@ if [ $fails -ne 0 ]; then
 elif [ $fails -eq 0 ] && [ ${#timed_out[@]} == 0 ]; then
 	echo -e "\033[0;32mAll tests passed!\033[0m"
 else
-    echo -e "\033[0;31mSome tests failed!\033[0m"
+    echo -e "\033[0;33mSome tests failed!\033[0m"
+    echo "These may be expected."
 fi
 
 rm temp.txt &> /dev/null

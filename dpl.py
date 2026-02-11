@@ -202,15 +202,23 @@ def rec(this, ind=0):
                 )
 
 
-def ez_run(code, file="???", process=True):
+def ez_run(code, file="???", argv=None, process=True):
     "Run a DPL script in an easier way, hence ez_run"
     if process:
         code = parser.process_code(code)
+        if isinstance(code, int):
+            print(f"File {file} returned an error {code}")
+            return code
         frame = code["frame"]
     elif isinstance(code, dict):
         frame = code["frame"]
     else:
         frame = varproc.new_frame()
+    if argv is not None:
+        frame[0]["_meta"]["argv"] = argv
+        frame[0]["_meta"]["argc"] = len(argv)
+    frame[0]["_meta"]["internal"]["main_path"] = os.path.dirname(file)
+    frame[0]["_meta"]["internal"]["main_file"] = file
     if err := parser.run_code(code, frame=frame):
         if frame[0]["_meta"]["preprocessing_flags"]["REPL_ON_ERROR"]:
             parser.investigation_repl(frame, err)
@@ -374,9 +382,11 @@ if "simple-run" in prog_flags:
         END = time.perf_counter() - INIT_START_TIME
         s, u = utils.convert_sec(END)
         print(f"DEBUG: Initialization time: {s}{u}")
-    with open(get_start_path_raw(info.ARGV[1]), "r") as f:
+    with open(path:=get_start_path_raw(info.ARGV[1]), "r") as f:
         varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
-        ez_run(f.read(), info.ARGV[1])
+        if err:=ez_run(f.read(), file=path, argv=info.ARGV[1], process=True):
+            rec(err)
+            exit(err)
     exit(0)
 
 def handle_args():

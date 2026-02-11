@@ -28,7 +28,7 @@ def debug(_, __, arg):
 
 
 @ext.add_func("input")
-def myInput(_, __, name=None, prompt=None, default=dpl.state_none):
+def myInput(frame, __, name=None, prompt=None, default=dpl.state_none):
     "Take input from the user"
     if data["take_input"]:
         res = input(prompt if prompt else "")
