@@ -1,5 +1,3 @@
-# ‼️‼️ **DISCONTINUED** ‼️‼️
-
 # DPL – The Dumb Programming Language
 
 > "Simplicity is everywhere in DPL, like an airport cutting expenses.

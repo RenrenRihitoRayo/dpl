@@ -296,12 +296,12 @@ def nest_args(tokens):
         if not isinstance(token, str):
             stack[-1].append(token)
             continue
-        if token in OPEN_P:
+        elif token in OPEN_P:
             new_list = []
             stack[-1].append(new_list)
             stack.append(new_list)
         elif token in CLOSE_P:
-            if len(stack) == 1:
+            if len(stack) < 1:
                 raise ValueError("Mismatched parentheses")
             stack.pop()
             if token == ")":
@@ -789,7 +789,14 @@ def evaluate(frame, expression):
         elif e_ins == "fmt":
             return format(str(processed[1]), processed[2])
         elif e_ins == "call":
-            return run_fn(processed[1]["capture"]["_frame_stack"], processed[1], *processed[2])
+            if isinstance(processed[1], dict):
+                return run_fn(processed[1]["capture"]["_frame_stack"], processed[1], *process_args(frame, processed[2]))
+            else:
+                t = processed[1](frame, None, *process_args(frame, processed[2]))
+                if t is None:
+                    return constants.nil
+                else:
+                    return t
         elif e_ins == "call::static":
             func = varproc.rget(frame[-1], processed[1], default=None, resolve=True)
             if func is None:
@@ -1020,31 +1027,32 @@ def group(text):
     if str_tmp:
         error.error(0, "<internal>", "String may be unterminated!")
         raise error.DPLError(error.SYNTAX_ERROR)
-    nres = []
-    while res:
-        i = res.pop(0)
-        if not isinstance(i, str):
-            nres.append(i)
-        elif is_id(i) and len(res) >= 2 and res[0] == "!" and res[1] == "(":
-            a = []
-            name = i
-            k = 1
-            res.pop(0) # remove !
-            res.pop(0) # remove (
-            while res and k > 1:
-                current = res.pop(0)
-                print(current)
-                if   current == "(": k += 1
-                elif current == ")": k -= 1
-                else: a.append(current);
-            nres.append(Expression(["call", f":{name}", a]))
-            nres.append(")")
-        elif res and isinstance(res[0], str) and (tmp:=i+res[0]) in sym:
-            nres.append(tmp)
-            res.pop(0)
-        else:
-            nres.append(i)
-    return nres
+    def process_nested(res):
+        nres = []
+        while res:
+            i = res.pop(0)
+            if not isinstance(i, str):
+                nres.append(i)
+            elif is_id(i) and len(res) >= 2 and res[0] == "!" and res[1] == "(":
+                a = []
+                name = i
+                k = 1
+                res.pop(0) # remove !
+                res.pop(0) # remove (
+                while res and k > 0:
+                    current = res.pop(0)
+                    if   current == "(": k += 1
+                    elif current == ")": k -= 1
+                    if k <= 0: break
+                    a.append(current)
+                nres.append(Expression(["call", f":{name}", nest_args(process_nested(a))]))
+            elif res and isinstance(res[0], str) and (tmp:=i+res[0]) in sym:
+                nres.append(tmp)
+                res.pop(0)
+            else:
+                nres.append(i)
+        return nres
+    return process_nested(res)
 
 
 def exprs_preruntime(args):
