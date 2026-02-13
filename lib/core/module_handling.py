@@ -28,16 +28,16 @@ import time
 import os, sys
 import traceback
 from types import ModuleType
-import info
-import error
-import utils
-import state
-import objects
-import varproc
-import constants
-import restricted
-import py_argument_handler
-import arguments as argproc
+from . import info
+from . import error
+from . import utils
+from . import state
+from . import objects
+from . import varproc
+from . import constants
+from . import restricted
+from . import py_argument_handler
+from . import arguments as argproc
 import inspect
 arguments_handler = py_argument_handler.arguments_handler
 
@@ -48,7 +48,13 @@ global_ffi = None
 if "no-cffi" not in info.program_flags:
     from shlex import split as parse_line
     from cffi import FFI
+    import ctypes
     global_ffi = FFI()
+    global_ffi.cdef("""
+    typedef void PyObject;
+    """)
+    def to_pyobject(obj):
+        return ctypes.pointer(ctypes.py_object(obj))
 
 def get_path(path, local=None):
     "Strictly for cdef files"
@@ -111,12 +117,17 @@ def process_cdef(frame, code, local=None):
         for name in data["_foreign"]["func"]:
             def temp():
                 fn = getattr(lib, name, "???")
-                data[name] = lambda _, __, *args: (fn(*args),)
+                data[name] = lambda frame, path, *args: (fn(
+                    # ctypes.cast(id(frame), ctypes.POINTER(ctypes.c_void_p)).contents.value,
+                    global_ffi.cast("PyObject*", id(frame)),
+                    path.encode("utf-8"),
+                    *args
+                ),)
             temp()
         for name in data["_foreign"]["type"]:
             data[name] = name
     else:
-        print(f"Library not found: {data['_path']}")
+        print(f"Library not found: {data['_path'][os.name]}")
         return
     return data
 

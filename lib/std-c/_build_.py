@@ -10,8 +10,8 @@ from os import system, name, remove
 
 # Add more here
 compilers = {
-    "gcc": "-shared -fPIE -o {file_out} {file_in}",
-    "clang": "-shared -fPIE -o {file_out} {file_in}",
+    "gcc": "-shared -fPIC -I. -o {file_out} {file_in}",
+    "clang": "-shared -fPIC -I. -o {file_out} {file_in}",
 }
 
 ext = ".dll" if name == "nt" else ".so"

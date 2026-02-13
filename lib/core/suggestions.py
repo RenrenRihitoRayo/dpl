@@ -1,6 +1,6 @@
 # Give better suggestions for the REPL
 
-import info
+from . import info
 from re import compile as rcomp
 
 pattern = rcomp(r"[+-/*]|[()\[\]{}]|[.\w:\d_-]+|-?\d+(?:\.\d+)?")

@@ -10,5 +10,5 @@
 /* Where the library file is */
 #path-posix "std-c/lib/test_c.so@global"
 #path-nt "std-c/lib/test_c.dll@global"
-#func "greet"
-int greet(char* name);
+#func "print_greetings"
+PyObject* print_greetings(PyObject* frame, char* path);

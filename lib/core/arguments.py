@@ -1,18 +1,18 @@
 # Used to handle arguments and expressions
 # NOT FOR THE CLI
 
-import dpl_ctypes
+from . import dpl_ctypes
 from sys import flags
 import traceback
-import constants
-import varproc
-import error
-from info import *
-import py_argument_handler as pah
-import fmt
-import objects
+from . import constants
+from . import varproc
+from . import error
+from .info import *
+from . import py_argument_handler as pah
+from . import fmt
+from . import objects
 import uuid
-import utils
+from . import utils
 import time
 
 globals().update(vars(dpl_ctypes))

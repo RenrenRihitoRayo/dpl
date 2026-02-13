@@ -4,10 +4,10 @@ import threading
 import os
 import sys
 from uuid import uuid4
-import constants
-import info
-import state
-import error
+from . import constants
+from . import info
+from . import state
+from . import error
 
 execute_code = None
 Lazy = None

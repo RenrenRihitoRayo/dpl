@@ -9,6 +9,16 @@ There are no style rules. There are no guardrails. Just a loosely-held-together 
 
 ## !! ✨✨NEW IN DPL 2.0.0✨✨ !!
 
+* A new expression! 
+
+Instead of `[call :func()]` you can do `func!()` which
+is just a shorthand but is much more convenient!
+
+* C interopt has been improved vastly!
+
+Example in `lib/std-c/lib/tect_c.c` (its cdef file is `lib/std-c/test_c.cdef`) 
+has shown how to use the python c api to be able to manipulate the local scope!
+
 * Objects now have short-hand constructors!
 
 You can use `make_cons object` to automatically make a constructor for that object,

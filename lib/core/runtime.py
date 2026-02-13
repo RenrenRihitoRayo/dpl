@@ -1,14 +1,14 @@
 import atexit
-import info
-from arguments import *
-from varproc import *
-import error
-from objects import *
-import constants
-import error
-import module_handling as mod_s
+from . import info
+from .arguments import *
+from .varproc import *
+from . import error
+from .objects import *
+from . import constants
+from . import error
+from . import module_handling as mod_s
 import time
-import utils
+from . import utils
 
 error.error_setup_meta(meta_attributes)
 

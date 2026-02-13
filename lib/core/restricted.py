@@ -14,7 +14,7 @@ def restricted(func=None):
     return this
 
 
-restricted_builtins = __main__.__builtins__.__dict__.copy()
+restricted_builtins = (__main__.__builtins__ if isinstance(__main__.__builtins__, dict) else __main__.__builtins__.__dict__).copy()
 restricted_builtins.update(
     {"__builtins__": {"__import__": restricted(__import__), "open": restricted(open)}}
 )

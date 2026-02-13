@@ -2,14 +2,8 @@
    cdef and dlopen is hidden
    from the user for simplicity --
 &use:c {std-c/test_c.cdef}
-
--- Include io --
 &use {std/text_io.py}
 
 -- Hello, from C! --
-test_c.print_greeting()
---  Number: 148   --
-test_c.print_num(148)
-
-ecatch (result) test_c.fib(10)
-io:println('fib(10) = ${result}')
+test_c.print_greetings()
+io:println(:test)

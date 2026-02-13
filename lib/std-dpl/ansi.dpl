@@ -91,7 +91,7 @@ fn ansi.print_color(color)
 end
 
 fn ansi.change_style(style)
-    if [not [[type :style] == int]]
+    if [[type :style] != int]
         raise :_meta.err.TYPE_ERROR, "style must be an int!"
     end
     io:rawoutput(27 '[${style}m')
@@ -115,6 +115,10 @@ end
 
 fn ansi.load_pos()
     io:rawoutput(27 '[u')
+end
+
+fn ansi.reset()
+    io:rawoutput(27, "[0m")
 end
 
 # Test suite
@@ -144,20 +148,23 @@ ifmain
     io:input("Press enter for a rainbow!")
     
     # fun thing
-    for a in [irange 30 38]
-    for b in [irange 30 38]
-    for c in [irange 30 38]
-    ansi.print_color(:a)
-    io:rawprint(w)
-    ansi.print_color(:b)
-    io:rawprint(o)
-    ansi.print_color(:c)
-    io:rawprint(w)
+    for a in [range 100 256]
+        for b in [range 100 256]
+            for c in [range 100 256]
+                ansi.print_rgb_fg(:a, :b, :c)
+                io:print("Hello! ")
+                skip
+                ansi.print_color(:a)
+                io:print(w)
+                ansi.print_color(:b)
+                io:print(o)
+                ansi.print_color(:c)
+                io:print(w)
+                ansi.change_style(:ansi.style.reset_all)
+                io:print("!")
+            end
+        end
+    end
     ansi.change_style(:ansi.style.reset_all)
-    io:rawprint("!")
-    end
-    end
-    end
-    ansi.change_style(:ansi.style.reset_all)
-    io:rawprintln()
+    io:println()
 end

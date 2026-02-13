@@ -1,6 +1,6 @@
 # Utilities for QOL functions
 
-import varproc
+from . import varproc
 
 def pack(fmt, values):
     result = {}

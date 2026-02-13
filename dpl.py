@@ -9,12 +9,11 @@
 import sys
 og_modules = sys.modules.copy()
 _file_ = sys.argv[0]
-import lib.core.newest.load
-import lib.core.newest.info as info
+import lib.core.info as info
 info.original_argv = sys.argv.copy()
-import lib.core.newest.cli_arguments as cli_args
+import lib.core.cli_arguments as cli_args
 prog_flags, prog_vflags = cli_args.flags(info.ARGV, remove_first=True)
-import lib.core.newest.module_handling as mod_s
+import lib.core.module_handling as mod_s
 mod_s.modules.cli_arguments = cli_args
 mod_s.modules.sys = sys
 info.program_flags = prog_flags
@@ -26,8 +25,6 @@ import json
 import os
 import configparser
 import subprocess
-
-global_lib_config = json.load(open(os.path.join(info.BINDIR, "lib/core/config.json")))
 
 # Simple mode
 if "simple-mode" in prog_flags:
@@ -64,9 +61,9 @@ if "show-imports" in prog_flags or "show-imports-as-is" in prog_flags:
 if "init-time" in prog_flags:
     INIT_START_TIME = time.perf_counter()
 
-import lib.core.newest.utils as utils
-import lib.core.newest.error as error
-import lib.core.newest.serialize_dpl as cereal # i was hungry
+import lib.core.utils as utils
+import lib.core.error as error
+import lib.core.serialize_dpl as cereal # i was hungry
 mod_s.modules.os = os
 # Python is slow. This is evidence.
 if "skip-non-essential" not in prog_flags:
@@ -85,9 +82,9 @@ if "skip-non-essential" not in prog_flags:
     mod_s.modules.shutil = shutil
     mod_s.modules.subrocess = subprocess
     import pprint
-    import lib.core.newest.ast_gen as ast_gen
+    import lib.core.ast_gen as ast_gen
     import misc.dpl_linter as linter
-    import lib.core.newest.suggestions as suggest
+    import lib.core.suggestions as suggest
 else:
     prompt = lambda text=None, *x, **y: input(text)
     WordCompleter = InMemoryHistory = lambda *x, **y: ...
@@ -96,8 +93,10 @@ else:
         "pattern": ""
     })
 
-import lib.core.newest.py_parser as parser
-import lib.core.newest.varproc as varproc
+if "cprofile" in prog_flags:
+    import cProfile, pstats
+import lib.core.py_parser as parser
+import lib.core.varproc as varproc
 
 help_str = f"""Help for DPL [v{varproc.meta_attributes['internal']['version']}]
 
@@ -180,8 +179,8 @@ dpl --get-internals
     Variables that will be injected:
     - "argument_processing": Functions to process arguments.
     - "variable_processing": Functions to manipulate a frame.
-dpl --no-version-warning
-    Disable version specific warnings
+dpl --dry-run
+    Exits after init, never runs cli or any dpl execution other code.
 """
 
 
@@ -294,83 +293,6 @@ def config_for(file):
         return p
     return configparser.ConfigParser()
 
-
-def run_file(file, args, config):
-    file = os.path.abspath(file)
-    version = config.get("dpl", "version", fallback=info.VERSION_STRING)
-    if "no-info" not in prog_flags and version != "newset" and version != info.VERSION_STRING:
-        print(f"== Using {version} =====================")
-        print("--no-info to silence")
-        print("Loaded local config:\n"+json.dumps({section: dict(config[section]) for section in config.sections()}, indent=2))
-    if version == global_lib_config["newest"] or version == "newest":
-        run_time = config.getboolean("dpl", "profile_run", fallback=False)
-        if run_time:
-            start = time.perf_counter()
-        code = open(get_start_path(file, quiet=config.getboolean("compiler", "quiet", fallback=True)), "rb").read()
-        varproc.meta_attributes["config"] = config
-        res = ez_run(cereal.deserialize(code), file="???", process=False)
-        if run_time:
-            end = time.perf_counter()
-            s, u = utils.convert_sec(end-start)
-            print(f"DEBUG: run time: {s:.8f}{u}")
-        return res
-    elif version in global_lib_config["versions"]:
-        data = global_lib_config["versions"][version]
-        print(f"\033[33mWARNING: \033[0mUsing version {version}")
-        if "warning" in data and "no-version-warning" not in prog_flags:
-            print(f"== IMPLEMENTATION WARNING ({version}) ==")
-            print(data["warning"]+"\n")
-        
-        if "no-info" not in prog_flags:
-            print(f"== Setup ==================={'='*len(version)}===")
-        
-        sys.modules.clear()
-        sys.modules.update(og_modules)
-       
-        try:
-            loader = __import__(data["loader"], fromlist=["*"])
-        except ModuleNotFoundError as e:
-            print(repr(e))
-            exit(1)
-        # dont enforce requirements
-        if hasattr(loader, "info"):
-            if "no-info" not in prog_flags:
-                print(":: Setting up info...")
-            if data["lib_path"] != "@default":
-                loader.info.SECOND_LIBDIR = data["lib_path"]
-                loader.info.lib_for = data.get("lib_for", [])
-            loader.info.PERM_LIBDIR = info.PERM_LIBDIR
-            loader.info.LIBDIR = info.LIBDIR
-            print(":: Done!\n")
-        if hasattr(loader, "varproc"):
-            if "no-info" not in prog_flags:
-                print(":: Setting up varproc...")
-            loader.varproc.internal_attributes.update({
-                "main_path": os.path.dirname(file),
-                "main_file": os.path.basename(file)
-            })
-            loader.varproc.meta_attributes["config"] = config
-            loader.varproc.meta_attributes["internal"]["main_path"] = get_start_path_raw(file)
-            print(":: Done!\n")
-        if "no-info" not in prog_flags:
-            print(f"== Program ================={'='*len(version)}===")
-        # at least define run_code
-        try:
-            file = get_start_path_raw(file)
-            err = loader.run_code(open(file).read(), file)
-            if err:
-                rec(err)
-            if isinstance(err, tuple):
-                exit(err[0])
-            else:
-                exit(err)
-        except Exception as e:
-            print(repr(e))
-            exit(1)
-    else:
-        print(f"Version {version} is unsupported!")
-        exit(1)
-
 if "instant-help" in prog_flags:
     print(help_str)
     exit(0)
@@ -382,11 +304,17 @@ if "simple-run" in prog_flags:
         END = time.perf_counter() - INIT_START_TIME
         s, u = utils.convert_sec(END)
         print(f"DEBUG: Initialization time: {s}{u}")
+    if "profile" in prog_flags:
+        START = time.perf_counter()
     with open(path:=get_start_path_raw(info.ARGV[1]), "r") as f:
         varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
         if err:=ez_run(f.read(), file=path, argv=info.ARGV[1], process=True):
             rec(err)
             exit(err)
+    if "profile" in prog_flags:
+        END = time.perf_counter() - START
+        s, u = utils.convert_sec(END)
+        print(f"DEBUG: Elapsed Time: {s}{u}")
     exit(0)
 
 def handle_args():
@@ -397,7 +325,15 @@ def handle_args():
         return
     match (info.ARGV[1:]):
         case ["run", file, *args]:
-            run_file(file, args, config_for(file))
+            if "profile" in prog_flags:
+                START = time.perf_counter()
+            if err:=ez_run(open(file).read(), argv=args, file=file):
+                rec(err)
+                exit(err)
+            if "profile" in prog_flags:
+                END = time.perf_counter() - START
+                s, u = utils.convert_sec(END)
+                print(f"DEBUG: Elapsed time: {s}{u}")
         case ["dump-llir", file]:
             if not has_pp2:
                 print("Suply the '-use-py-parser2' flag first!")
@@ -594,7 +530,7 @@ Code format: (
                         res.append(line[2:])
             print("\n".join(res))
         case ["colorize", file]:
-            import lib.core.newest.repl_syntax_highlighter as repl_conf
+            import lib.core.repl_syntax_highlighter as repl_conf
             file = get_start_path(file)
             repl_conf.print_formatted_text(repl_conf.highlight_text(repl_conf.DPLLexer(), open(file).read()))
         case ["repl"] | []:
@@ -622,7 +558,7 @@ Code format: (
                 frame[0].update(frame_expo)
 
             if not "disable-auto-complete" in prog_flags:
-                import lib.core.newest.repl_syntax_highlighter as repl_conf
+                import lib.core.repl_syntax_highlighter as repl_conf
                 for f in frame:
                     acc.extend(utils.flatten_dict(f).keys())
                     acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
@@ -736,10 +672,7 @@ if __name__ == "__main__":
     if "cprofile" in prog_flags:
         profiler.disable()
         default = "tottime"
-        order_by = None
-        for i in prog_flags:
-            if i.startswith("order-profile="):
-                order_by = i[14:]
+        order_by = prog_vflags.get("order-profile")
         print("\nProfile Result")
         stats = pstats.Stats(profiler)
         stats.sort_stats(order_by or default).print_stats()

@@ -7,12 +7,12 @@
 import time
 import itertools
 from copy import deepcopy
-import py_argument_handler
-from runtime import *
-import utils
-import objects
-import constants
-import info
+from . import py_argument_handler
+from .runtime import *
+from . import utils
+from . import objects
+from . import constants
+from . import info
 import threading
 import traceback
 import sys
@@ -328,7 +328,7 @@ def process_code(fcode, name="__main__"):
                         file = os.path.join(os.path.dirname(name), args[0])
                     search_path = "_loc"
                 if mod_s.luaj_import(nframe, file, search_path, loc="."):
-                    print(f"luaj: Something wrong happened...\nLine {lpos}\nFile {name}")
+                    print(f"use:luaj: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
             elif ins == "use:c" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
@@ -339,7 +339,7 @@ def process_code(fcode, name="__main__"):
                         file = os.path.join(os.path.dirname(name), args[0])
                     search_path = "_loc"
                 if mod_s.c_import(nframe, file, search_path, loc="."):
-                    print(f"c: Something wrong happened...\nLine {lpos}\nFile {name}")
+                    print(f"use:c: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
             elif ins == "use:c" and argc == 3 and args[1] == "as":
                 if args[0].startswith("{") and args[0].endswith("}"):
@@ -350,7 +350,7 @@ def process_code(fcode, name="__main__"):
                         file = os.path.join(os.path.dirname(name), args[0])
                     search_path = "_loc"
                 if mod_s.c_import(nframe, file, search_path, loc=".", alias=args[2]):
-                    print(f"c: Something wrong happened...\nLine {lpos}\nFile {name}")
+                    print(f"use:c: Something wrong happened...\nLine {lpos}\nFile {name}")
                     return error.PREPROCESSING_ERROR
             elif ins == "embed" and argc == 3 and args[1] == "as":
                 if args[0] == name:
