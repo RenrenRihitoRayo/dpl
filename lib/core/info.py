@@ -96,8 +96,7 @@ EXPR = {
     "!", "..", "..+",
     "+", "-", "/", "*", "//", "%", "%%",
     "=>", "or", "and", "not", "call::static",
-    "len", "typeof", "to_ascii", "from_ascii", "slice",
-    
+    "len", "typeof", "to_ascii", "from_ascii", "slice",    
 }
 
 FUNCTIONS = {
@@ -120,6 +119,7 @@ KEYWORDS = {
     'raise',
     'set', 'del',
     'struct', 'dict', 'list',
+    'make_cons'
 }
 
 ALL_INTRINSICS = INC_EXT | EXPR | {"end"} | KEYWORDS

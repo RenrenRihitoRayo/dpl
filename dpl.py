@@ -26,6 +26,15 @@ import os
 import configparser
 import subprocess
 
+from distutils.sysconfig import get_python_inc
+
+python_include_dir = get_python_inc()
+header_path = os.path.join(python_include_dir, 'Python.h')
+if not os.path.isfile(header_path):
+    py_include = None
+else:
+    py_include = header_path
+
 # Simple mode
 if "simple-mode" in prog_flags:
     prog_flags.update((
@@ -98,6 +107,65 @@ if "cprofile" in prog_flags:
 import lib.core.py_parser as parser
 import lib.core.varproc as varproc
 
+gen_templates = {
+        "c_lib":{
+            "greeting.cdef:most important file! allows dpl to know what functions and\ntypes to define in order to be able to fetch the functions.":
+"""\
+#lib "greeting"
+
+#path-posix "greeting.so@local"
+#func "[raw]greeting"
+void greeting(char* name);
+""",
+            "greeting.c:the logic of the c library":
+"""\
+#include <stdio.h>
+
+void greeting(char* name) {
+    printf("Hello, %s!\\n", name);
+}
+""",
+            "build.sh:just a helper":
+"""\
+#!/bin/bash
+
+gcc -o greeting.so -fPIC -shared greeting.c
+""",
+            "main.dpl:the script that uses the function":
+"""\
+&use:c "greeting.cdef"
+&use {std/text_io.py}
+
+greeting.greeting(["DPL"@encode("utf-8")])
+io:println("Called greeting.greeting!")
+"""
+    },
+    "hw": {
+        "hello_world.dpl":
+"""\
+&use {std/text_io.py}
+
+# Try to change this into the following
+# "admin"
+# leave it as is
+# or anything
+set var = "Hello, world!"
+
+match
+    with "admin"
+        io:println("Login?")
+    end
+    case [:var == "Hello, world!"]
+        io:println(:var)
+    end
+    default
+        io:println("var is not known")
+    end
+end
+"""
+    }
+}
+
 help_str = f"""Help for DPL [v{varproc.meta_attributes['internal']['version']}]
 
 Commands:
@@ -136,8 +204,11 @@ dpl dump-ast <file.dpl>
 dpl dump-ast-cdpl <file.cdpl>
     Dumps the ast of the given file.
     Outputs to `<file.cdpl>.dplad`
-dpl config
-    Generate configs
+dpl generate <template> <dir?>
+    Generate a minimal `template` in the specified dir (it will be created if it doesnt exist),
+    if dir is not given it will be created in the local directory.
+
+    `template` can be c_lib, hw
 
 Note AST Dumps are not for execution
 and only for program analysis.
@@ -242,56 +313,6 @@ def get_start_path_raw(start):
             exit(1)
     print(f"{start}: Path is invalid!")
     exit(1)
-
-
-def get_start_path(start, quiet=False):
-    dir_path = os.path.dirname(start) or "."
-    cached = os.path.join(dir_path, "dpl_ccache")
-    cache_file = os.path.join(cached, "file-cache.json")
-    cache = {}
-    if os.path.isfile(cache_file):
-        cache = json.load(open(cache_file, "r"))
-    if os.path.isfile(start):
-        path = start
-    elif os.path.isdir(start):
-        if os.path.isfile(start_file := os.path.join(start, "dpl_start.txt")):
-            path = open(start_file, "r").read().strip()
-        elif os.path.isfile(start_file := os.path.join(start, "main.dpl")):
-            path = start_file
-        else:
-            print(f"{start}: No valid start paths found!\ndpl_start.txt nor main.dpl was found in the directory.")
-            exit(1)
-    else:
-        print(f"{start}: Path is invalid!")
-        exit(1)
-    mtime = str(int(os.path.getmtime(path)))
-    if not os.path.isdir(cached):
-        if os.path.exists(cached):
-            raise Exception(f"Cache folder in {cached} is a file and not a directory!")
-        else:
-            os.mkdir(cached)
-    compiled_path = os.path.join(cached, f"{os.path.basename(path[:-4])}.{mtime}.dplc")
-    varproc.meta_attributes["internal"]["main_file"] = path
-    if not os.path.isfile(compiled_path):
-        file_content = open(path, "r").read()
-        compiled = cereal.serialize(parser.process_code(file_content), quiet=quiet)
-        open(compiled_path, "wb").write(compiled)
-        cache[path] = {"mtime": mtime, "compiled": compiled_path}
-        json.dump(cache, open(cache_file, "w"))
-    else:
-        if path not in cache or cache[path]["mtime"] != mtime:
-            cache[path] = {"mtime": mtime, "compiled": compiled_path}
-            json.dump(cache, open(cache_file, "w"))
-    return compiled_path
-
-
-def config_for(file):
-    path = os.path.dirname(file) or "."
-    if os.path.isfile(file:=os.path.join(path, "dpl_config.ini")):
-        p = configparser.ConfigParser()
-        p.read(file)
-        return p
-    return configparser.ConfigParser()
 
 if "instant-help" in prog_flags:
     print(help_str)
@@ -489,20 +510,6 @@ Code format: (
                 case _:
                     print("Invalid command!")
                     return
-        case ["config"]:
-            with open("dpl_config.ini") as f:
-                f.write("[dpl]\n")
-                f.write("# minimum supported version\n")
-                f.write(f"min_ver = {info.VERSION_STRING}\n")
-                f.write("# maximum supported version\n")
-                f.write(f"max_ver = @none\n")
-                f.write("# custom lib path\n")
-                f.write("lib = @default\n\n")
-                f.write("[meta]\n")
-                f.write("# add custom metadata here\n")
-                f.write("# for example:\n")
-                f.write("# * author name\n")
-                f.write("# * script version\n")
         case ["get-docs", file]:
             if not os.path.isfile(file):
                 print("Invalid file path:", file)
@@ -531,7 +538,7 @@ Code format: (
             print("\n".join(res))
         case ["colorize", file]:
             import lib.core.repl_syntax_highlighter as repl_conf
-            file = get_start_path(file)
+            file = get_start_path_raw(file)
             repl_conf.print_formatted_text(repl_conf.highlight_text(repl_conf.DPLLexer(), open(file).read()))
         case ["repl"] | []:
             error.error_setup_meta(varproc.meta_attributes)
@@ -644,6 +651,49 @@ Code format: (
                     print(f"[{v.source_file}:{v.line_pos}] {v.function_name!r}({', '.join(v.function_parameters)})")
         case ["help"] | ["--help"]:
             print(help_str)
+        case ["generate", template]:
+            if template not in gen_templates:
+                print("Template must be:", ", ".join(gen_templates))
+                exit(0)
+            for pname, content in gen_templates[template].items():
+                if ":" in pname:
+                    pname, phelp = pname.split(":", 1)
+                else:
+                    phelp = None
+                if content == ...:
+                    os.makedirs(pname, exist_ok=False)
+                else:
+                    if os.path.exists(pname):
+                        print(f"Warning {pname} will be overwritten!")
+                    else:
+                        with open(pname, "w") as f:
+                            f.write(content)
+                        print(f"Created {pname}")
+                        if phelp is not None:
+                            print("  Info:", phelp.replace("\n", "\n        "))
+        case ["generate", template, path]:
+            if template not in gen_templates:
+                print("Template must be:", ", ".join(gen_templates))
+                exit(0)
+            if not os.path.isdir(path):
+                os.makedirs(path, exist_ok=True)
+            for name, content in gen_templates[template].items():
+                pname = os.path.join(path, name)
+                if ":" in pname:
+                    pname, phelp = pname.split(":", 1)
+                else:
+                    phelp = None
+                if content == ...:
+                    os.makedirs(pname, exist_ok=False)
+                else:
+                    if os.path.exists(pname):
+                        print(f"Warning {pname} will be overwritten!")
+                    else:
+                        with open(pname, "w") as f:
+                            f.write(content)
+                        print(f"Created {pname}")
+                        if phelp is not None:
+                            print("  Info:", phelp.replace("\n", "\n        "))
         case _:
             print("Invalid invokation:", sys.argv)
             print("See 'dpl help' for more")

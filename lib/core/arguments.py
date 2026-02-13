@@ -752,10 +752,11 @@ def evaluate(frame, expression):
         return expression
     processed = process_args(frame, expression)
     # back then this was just one layer
-    # of it statements
+    # of if statements
     # now if the length is not the correct one
     # we skip a barrage of conditions
-    if processed:
+    length = len(processed)
+    if length:
         if processed[0] == "!":
             return processed[1:]
         elif processed[0] == ".":
@@ -773,7 +774,7 @@ def evaluate(frame, expression):
             return temp
         elif processed[0] == "tuple":
             return tuple(processed[1:])
-    if len(processed) == 3:
+    if length == 3:
         e_ins = processed[0]
         if isinstance(processed[1], str) and processed[1] in simple_ops:
             return simple_ops[processed[1]](processed[0], processed[2])
@@ -816,9 +817,9 @@ def evaluate(frame, expression):
             )
         elif e_ins == "join":
             if isinstance(processed[1], dict):
-                return "".join(map(lambda x: run_fn(frame, processed[1], x), processed[2]))
+                return "".join(run_fn(frame, processed[1], x) for x in processed[2])
             else:
-                return "".join(map(processed[1], processed[2]))
+                return "".join(processed[1](x) for x in processed[2])
         elif e_ins == "pack":
             return utils.pack(processed[1], processed[2])
         elif e_ins == "vpack":
@@ -827,7 +828,7 @@ def evaluate(frame, expression):
             return methods[processed[1]](frame, process_args(frame, processed[2]))
         elif processed[0] == "@":
             return processed[1](frame, None, process_args(frame, processed[2]))[0]
-    elif len(processed) == 2:
+    elif length == 2:
         e_ins = processed[0]
         if e_ins == "not":
             return constants.true if not processed[1] else constants.false
@@ -914,7 +915,7 @@ def evaluate(frame, expression):
         elif e_ins == "tail":
             return processed[1][-1]
         elif e_ins == "join":
-            return "".join(map(str, processed[1]))
+            return "".join(str(x) for x in processed[1])
         elif e_ins == "typeof":
             for type_ in type_to_name:
                 if isinstance(processed[1], type_):
@@ -941,23 +942,23 @@ def evaluate(frame, expression):
                 return processed[0][process_arg(frame, processed[1][0])]
             except:
                 return constants.nil
-    elif len(processed) == 4:
+    elif length == 4:
         if processed[0] == "join" and processed[2] == "with":
-            return processed[3].join(map(str, processed[1]))
+            return processed[3].join(str(x) for x in processed[1])
         elif processed[1] == "or" and processed[3] == "instead":
             return processed[0] if processed[0] else processed[2]
         elif processed[1] == "@":
             args = pah.arguments_handler(process_args(frame, processed[3]))
             return args.call(getattr(processed[0], processed[2]))
-    elif len(processed) == 5:
+    elif length == 5:
         if processed[0] == "join" and processed[3] == "with":
             if isinstance(processed[1], dict):
-                return processed[4].join(map(lambda x: run_fn(frame, processed[1], x), processed[2]))
+                return processed[4].join(run_fn(frame, processed[1], x) for x in processed[2])
             else:
-                return processed[4].join(map(processed[1], processed[2]))
+                return processed[4].join(processed[1](x) for x in processed[2])
         elif processed[1] == "if" and processed[3] == "else":
             return evaluate(frame, processed[0] if processed[2] else processed[4])
-    elif 1 > len(processed) <= 4 and processed[0] == "slice":
+    elif 1 > length <= 4 and processed[0] == "slice":
         return slice(*processed[1:])
     for name, fn in matches.items():
         try:
@@ -1056,13 +1057,13 @@ def group(text):
 
 
 def exprs_preruntime(args):
-    return [*map(expr_preruntime, args)]
+    return [expr_preruntime(e) for e in  args]
 
 def process_arg(frame, e):
     return expr_runtime(frame, e)
 
 def process_args(frame, e):
-    return list(map(lambda x: process_arg(frame, x), e))
+    return [process_arg(frame, x) for x in e]
 
 class argproc_setter:
     def set_execute(func):

@@ -116,14 +116,20 @@ def process_cdef(frame, code, local=None):
             return
         for name in data["_foreign"]["func"]:
             def temp():
+                nonlocal name
+                is_raw = False
+                if name.startswith("[raw]"):
+                    is_raw = True
+                    name = name[5:]
                 fn = getattr(lib, name, "???")
-                data[name] = lambda frame, path, *args: (fn(
-                    # ctypes.cast(id(frame), ctypes.POINTER(ctypes.c_void_p)).contents.value,
+                data[name] = (lambda frame, path, *args: (fn(
                     global_ffi.cast("PyObject*", id(frame)),
                     path.encode("utf-8"),
                     *args
-                ),)
-            temp()
+                ),)) if not is_raw else (lambda _, __, *args: (fn(
+                    *args  
+                ),))
+            temp() # ensures binding of local variables
         for name in data["_foreign"]["type"]:
             data[name] = name
     else:
@@ -444,7 +450,7 @@ def c_import(frame, file, search_path=None, loc=varproc.meta_attributes["interna
     if not os.path.isabs(file):
         if search_path is not None:
             file = os.path.join(
-                {"_std": info.LINDIR, "_loc": loc}.get(
+                {"_std": info.BINDIR, "_loc": loc}.get(
                     search_path, search_path
                 ),
                 file,

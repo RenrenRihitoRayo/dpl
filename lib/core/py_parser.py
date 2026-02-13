@@ -337,6 +337,8 @@ def process_code(fcode, name="__main__"):
                 else:
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
+                    else:
+                        file = args[0]
                     search_path = "_loc"
                 if mod_s.c_import(nframe, file, search_path, loc="."):
                     print(f"use:c: Something wrong happened...\nLine {lpos}\nFile {name}")
@@ -683,6 +685,7 @@ def execute(code, frame):
 
     instruction_pointer = 0
     code_length = len(code)
+    lrset = rset; lrget = rget
 
     for line_position, module_filepath, ins, block, oargs in code:
         ins = process_arg(frame, ins)
@@ -697,20 +700,20 @@ def execute(code, frame):
             )
             return error.PYTHON_ERROR
         if ins == "inc" and argc == 1:
-            rset(frame[-1], args[0], rget(frame[-1], args[0], default=0) + 1)
+            lrset(frame[-1], args[0], lrget(frame[-1], args[0], default=0) + 1)
         elif ins == "inc" and argc == 2:
-            rset(frame[-1], args[0], res if (res:=rget(frame[-1], args[0], default=0) + 1) < args[1] else 0)
+            lrset(frame[-1], args[0], res if (res:=lrget(frame[-1], args[0], default=0) + 1) < args[1] else 0)
         elif ins == "dec" and argc == 1:
-            rset(frame[-1], args[0], rget(frame[-1], args[0], default=0) - 1)
+            lrset(frame[-1], args[0], lrget(frame[-1], args[0], default=0) - 1)
         elif ins == "dec" and argc == 3:
-            rset(frame[-1], args[0], res if (res:=rget(frame[-1], args[0], default=0) - 1) > args[1] else args[2])
+            lrset(frame[-1], args[0], res if (res:=lrget(frame[-1], args[0], default=0) - 1) > args[1] else args[2])
         elif ins == "doc": ...
         elif ins == "setref" and argc == 3 and args[1] == "=":
             reference, _, value = args
             if reference["scope"] >= len(frame) or reference["scope_uuid"] != frame[reference["scope"]]["_scope_uuid"]:
                 error.error(line_position, module_filepath, f"Reference for {reference['name']} is invalid and may have outlived its original scope!")
                 return error.REFERENCE_ERROR
-            rset(frame[reference["scope"]], reference["name"], value)
+            lrset(frame[reference["scope"]], reference["name"], value)
             reference["value"] = value
         elif ins == "sleep" and argc == 1 and isinstance(args[0], (int, float)):
             time.sleep(args[0])
@@ -742,7 +745,7 @@ def execute(code, frame):
                         return err
                 else:
                     error.error(line_position, module_filepath, f"Invalid tag: {tag!r}")
-            rset(frame[-1], function_name, func)
+            lrset(frame[-1], function_name, func)
 
             if entry_point and module_filepath == "__main__":
                 function_obj = func
@@ -778,7 +781,7 @@ def execute(code, frame):
         elif ins == "check" and argc == 2:
             name, body = args
             fn = make_function(frame[-1], name, [(0, "::internal", "return", [], [Expression(body)])], ("self",))
-            rset(frame[-1], name, fn)
+            lrset(frame[-1], name, fn)
         elif ins == "use" and argc == 1:
             if args[0].startswith("{") and args[0].endswith("}"):
                 f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
@@ -881,7 +884,7 @@ def execute(code, frame):
             if (err := parse_match(frame, block, args[0])) > 0:
                 return err
         elif ins == "get_time" and argc == 1:
-            rset(frame[-1], args[0], time.time())
+            lrset(frame[-1], args[0], time.time())
         elif ins == "for" and argc == 3 and args[1] == "in":
             if block:
                 name, _, iter = args
@@ -923,7 +926,7 @@ def execute(code, frame):
         elif ins == "dump_vars" and argc == 1 and isinstance(args[0], dict):
             pprint(args[0], hide=False)
         elif ins == "dump_vars_fancy" and argc == 1:
-            pprint({args[0]: rget(frame[-1], args[0])}, hide=False)
+            pprint({args[0]: lrget(frame[-1], args[0])}, hide=False)
         elif ins == "get_time" and argc == 1:
             frame[-1][args[0]] = time.time()
         elif ins == "loop" and argc == 1:
@@ -972,15 +975,15 @@ def execute(code, frame):
             if args[0] != "_":
                 if isinstance(args[0], (tuple, list)):
                     for name, value in utils.pack(args[0], args[2]).items():
-                        rset(frame[-1], name, value)
+                        lrset(frame[-1], name, value)
                 else:
-                    rset(frame[-1], args[0], args[2])
+                    lrset(frame[-1], args[0], args[2])
         elif ins == "set" and argc == 5 and args[1] == "=" and args[3] == "satisfies":
             if args[0] != "_":
                 name, _, value, _, predicates = args
                 fn_pred = []
                 for i in predicates:
-                    if (f:=rget(frame[-1], i)) == constants.nil:
+                    if (f:=lrget(frame[-1], i)) == constants.nil:
                         error.error(line_position, module_filepath, f"Check {i!r} does not exist!")
                         return error.CHECK_ERROR
                     fn_pred.append(f)
@@ -990,13 +993,13 @@ def execute(code, frame):
                             if not run_func(frame, fn, v):
                                 error.error(line_position, module_filepath, f"Variable {n!r} ({v!r}) did not pass check {fn['name']}({fn['body'][0][4][0]})")
                                 return error.CHECK_ERROR
-                        rset(frame[-1], name, value)
+                        lrset(frame[-1], name, value)
                 else:
                     for fn in fn_pred:
                         if not run_func(frame, fn, value):
                             error.error(line_position, module_filepath, f"Variable {name!r} ({value!r}) did not pass check {fn['name']}({str(fn['body'][0][4][0])[1:-1]})")
                             return error.CHECK_ERROR
-                    rset(frame[-1], name, value)
+                    lrset(frame[-1], name, value)
         elif ins == "set" and argc == 6 and args[1] == "=" and args[3] == "satisfies" and args[4] == "check":
             if args[0] != "_":
                 name, _, value, _, _, predicate = args
@@ -1006,24 +1009,24 @@ def execute(code, frame):
                         if not run_func(frame, fn_pred, v):
                             error.error(line_position, module_filepath, f"Variable {n!r} ({v!r}) did not pass check {fn_pred['name']}({fn_pred['body'][0][4][0]})")
                             return error.CHECK_ERROR
-                        rset(frame[-1], name, value)
+                        lrset(frame[-1], name, value)
                 else:
                     if not run_func(frame, fn_pred, value):
                         error.error(line_position, module_filepath, f"Variable {name!r} ({value!r}) did not pass check {fn_pred['name']}({str(fn_pred['body'][0][4][0])[1:-1]})")
                         return error.CHECK_ERROR
-                    rset(frame[-1], name, value)
+                    lrset(frame[-1], name, value)
         elif ins == "mset" and argc == 3 and args[1] == "=":
             if args[0] != "_":
                 if isinstance(args[0], (tuple, list)):
                     for name, value in zip(args[0], args[2]):
-                        rset(frame[-1], name, value, meta=True)
+                        lrset(frame[-1], name, value, meta=True)
                 else:
-                    rset(frame[-1], args[0], args[2], meta=True)
+                    lrset(frame[-1], args[0], args[2], meta=True)
         elif ins == "del" and argc >= 1:
             for name in args:
                 rpop(frame[-1], name)
         elif ins == "object" and argc == 1:
-            rset(frame[-1], args[0], make_object(args[0], frame))
+            lrset(frame[-1], args[0], make_object(args[0], frame))
         elif ins == "new" and argc == 2:
             object_scope, object_name = args
             if object_scope == constants.nil:
@@ -1034,7 +1037,7 @@ def execute(code, frame):
                 if isinstance(value, function_type):
                     value["self"] = obj
             obj["_instance_name"] = object_name
-            rset(frame[-1], object_name, obj)
+            lrset(frame[-1], object_name, obj)
         elif ins == "make_cons" and argc == 1:
             attrs = list(name for name, value in args[0].items() if not name.startswith("_") and not isinstance(value, function_type))
             func = make_method("new", [
@@ -1049,7 +1052,7 @@ def execute(code, frame):
         elif ins == "method" and argc >= 2:
             name, params = args
             scope_name, method_name = name.rsplit(".", 1)
-            self = rget(frame[-1], scope_name)
+            self = lrget(frame[-1], scope_name)
             if self == constants.nil:
                 error.error(
                     line_position, module_filepath, "Cannot bind a method to a value that isnt a scope!"
@@ -1065,7 +1068,7 @@ def execute(code, frame):
                 func["help"] = "\n".join(doc)
         elif ins == "help" and argc == 1:
             if isinstance(args[0], str):
-                args[0] = rget(frame[-1], args[0])
+                args[0] = lrget(frame[-1], args[0])
             if isinstance(args[0], dict):
                 print(f"{args[0].__repr__(less=True)}:\n  {args[0].get('help', 'no docs').replace(chr(10), chr(10)+'  ')}")
             else:
@@ -1095,7 +1098,7 @@ def execute(code, frame):
                         delta = time.perf_counter() - start
                         with dlock:
                             deltas.append(delta)
-                    tht = threading.Thread(target=th)
+                    tht = threading.Thread(talrget=th)
                     tht.deamon = True
                     tht.start()
             else:
@@ -1107,24 +1110,24 @@ def execute(code, frame):
                     delta = time.perf_counter() - start
                     deltas.append(delta)
             ct, unit = utils.convert_sec(sum(deltas)/len(deltas))
-            rset(frame[-1], var_name, (ct, unit))
+            lrset(frame[-1], var_name, (ct, unit))
         elif ins == "inherit" and argc == 5 and args[1] == "from" and args[3] == "for":
             attrs, _, parent, _, child = args
             if attrs == "all":
                 for attr in parent:
                     if attr.startswith("_"):
                         continue
-                    val = copy(rget(parent, attr))
+                    val = copy(lrget(parent, attr))
                     if isinstance(val, function_type):
                         val["self"] = child
-                    rset(child, attr, val)
+                    lrset(child, attr, val)
             else:
                 for attr in attrs:
                     if attr in parent:
-                        val = copy(rget(parent, attr))
+                        val = copy(lrget(parent, attr))
                         if isinstance(val, function_type):
                             val["self"] = child
-                        rset(child, attr, val)
+                        lrset(child, attr, val)
         elif ins == "START_TIME" and argc == 0:
             start_time = time.perf_counter()
         elif ins == "STOP_TIME" and argc == 0:
@@ -1149,11 +1152,11 @@ def execute(code, frame):
             if any(isinstance(x, reference_type) for x in args):
                 error.error(line_position, module_filepath, "Function returned a reference, perhaps they were supposed to be dereferenced?")
                 return error.TYPE_ERROR
-            if (latched_names := rget(frame[-1], "_returns")) != constants.nil:
+            if (latched_names := lrget(frame[-1], "_returns")) != constants.nil:
                 if latched_names == "_":
                     return error.STOP_FUNCTION
                 if len(latched_names) == 1:
-                    rset(
+                    lrset(
                         frame[-1]["_nonlocal"],
                         latched_names[0],
                         args[0]
@@ -1162,11 +1165,11 @@ def execute(code, frame):
                         else args)
                 else:
                     for name, value in zip(latched_names, args):
-                        rset(frame[-1]["_nonlocal"], name, value)
+                        lrset(frame[-1]["_nonlocal"], name, value)
             return error.STOP_FUNCTION
         elif ins == "catch" and argc == 3:  # catch return value of a function
             rets, func_name, args = args
-            if (function_obj := rget(frame[-1], func_name, default=rget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
+            if (function_obj := lrget(frame[-1], func_name, default=lrget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
                 error.error(line_position, module_filepath, f"Invalid function {func_name!r}!")
                 break
             if function_obj["tags"]["preserve-args"]:
@@ -1221,7 +1224,7 @@ def execute(code, frame):
             pscope(frame)
         elif ins == "safe" and argc == 5 and args[0] == "catch":  # catch return value of a function
             _, ecode, rets, func_name, args = args
-            if (function_obj := rget(frame[-1], func_name, default=rget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
+            if (function_obj := lrget(frame[-1], func_name, default=lrget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
                 error.error(line_position, module_filepath, f"Invalid function {func_name!r}!")
                 break
             if function_obj["tags"]["preserve-args"]:
@@ -1279,7 +1282,7 @@ def execute(code, frame):
             investigation_repl(frame)
         elif ins == "safe" and argc == 3:  # catch return value of a function
             ecode, func_name, args = args
-            if (function_obj := rget(frame[-1], func_name, default=rget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
+            if (function_obj := lrget(frame[-1], func_name, default=lrget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
                 error.error(line_position, module_filepath, f"Invalid function {func_name!r}!")
                 break
             if function_obj["tags"]["preserve-args"]:
@@ -1337,7 +1340,7 @@ def execute(code, frame):
         elif ins == "ecatch" and argc == 3:  # catch return value of a python function
             rets, name, args = args
             args = process_args(frame, args)
-            if (function := rget(frame[-1], name, default=rget(frame[0], name))) == constants.nil or not hasattr(function, "__call__"):
+            if (function := lrget(frame[-1], name, default=lrget(frame[0], name))) == constants.nil or not hasattr(function, "__call__"):
                 error.error(line_position, module_filepath, f"Invalid function {name!r}!")
                 return error.NAME_ERROR
             try:
@@ -1353,7 +1356,7 @@ def execute(code, frame):
                 if isinstance(res, tuple):
                     if rets != "_":
                         for name, value in zip(rets, res):
-                            rset(frame[-1], name, value)
+                            lrset(frame[-1], name, value)
                 elif isinstance(res, int) and res:
                     return res
                 elif isinstance(res, str):
@@ -1391,7 +1394,7 @@ def execute(code, frame):
         elif ins == "struct" and argc == 4 and args[2] == "as":
             struct, args, _, name = args
             args = process_args(frame, args)
-            rset(frame[-1], name, mod_s.global_ffi.new(struct, args))
+            lrset(frame[-1], name, mod_s.global_ffi.new(struct, args))
         elif ins == "raise" and isinstance(args[0], int) and argc == 2:
             error.error(line_position, module_filepath, args[1])
             return args[0]
@@ -1399,7 +1402,7 @@ def execute(code, frame):
             error.error(line_position, module_filepath, f"Error [{args[0]}]: {error.ERRORS_DICT.get(args[0], '???')}")
             return args[0]
         elif (
-            (function_obj := rget(frame[-1], ins, default=rget(frame[0], ins)))
+            (function_obj := lrget(frame[-1], ins, default=lrget(frame[0], ins)))
             != constants.nil
             and isinstance(function_obj, dict)
             and "body" in function_obj and
@@ -1457,7 +1460,7 @@ def execute(code, frame):
                 return err
             pscope(frame)
         elif (
-            function := rget(frame[-1], ins, default=rget(frame[0], ins))
+            function := lrget(frame[-1], ins, default=lrget(frame[0], ins))
         ) != constants.nil and hasattr(
             function, "__call__"
         ):  # call a python function
@@ -1512,7 +1515,7 @@ def execute(code, frame):
                 "from": f"dpl:{module_filepath}:{line_position}"
             })
         else:
-            if not isinstance((obj := rget(frame[-1], ins)), dict) and obj in (
+            if not isinstance((obj := lrget(frame[-1], ins)), dict) and obj in (
                 None,
                 constants.none,
             ):

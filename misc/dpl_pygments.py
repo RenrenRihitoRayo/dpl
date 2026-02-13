@@ -12,11 +12,12 @@ class DPLLexer(RegexLexer):
         'root': [
             (r'\s+', Text),
             (r'#[^\n]*', Comment.Single),
+            (r'--*.--', Comment.Single),
             (r'".*?"', String.Double),
-            (r'\b(set|fn|method|return|end|case|with|del|object|new|for|pass|in|and|not|or|switch|set|if|loop|match|stop|skip)\b', Keyword),
+            (r'\b(set|fn(:?\:\:(inline|static))?|string|list|dict|declare|deci|make_cons|method|return|end|case|with|del|object|new|for|pass|in|and|not|or|switch|set|if|loop|match|stop|skip)\b', Keyword),
             (r':[a-zA-Z_][a-zA-Z0-9_]*', Name.Variable),
             (r'\d+\.\d+|\d+', Number),
-            (r'[+\-*/=<>!&|]', Operator),
+            (r'\b[+\-*/=<>!&|]\b', Operator),
             (r'\w+', Name),
         ],
     }
