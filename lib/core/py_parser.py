@@ -183,6 +183,9 @@ def process_blocks(frame, code):
             except Exception as e:
                 error.error(lpos, fpos, traceback.format_exc() + ":: to_static couldnt process")
                 exit(error.PREPROCESSING_ERROR)
+        if ins in INC_TERMINAL:
+            res.append(entire_line)
+            break
         if ins in INC_EXT and not body:
             temp = get_block(code, pos)
             if temp is None:
@@ -745,7 +748,7 @@ def execute(code, frame):
                         return err
                 else:
                     error.error(line_position, module_filepath, f"Invalid tag: {tag!r}")
-            lrset(frame[-1], function_name, func)
+            frame[-1][function_name] = func
 
             if entry_point and module_filepath == "__main__":
                 function_obj = func
@@ -795,36 +798,6 @@ def execute(code, frame):
                 error.error(lpos, module_filepath, f"Not found while including: {f}")
                 return error.PREPROCESSING_ERROR
             if mod_s.py_import(frame, f, search_path, loc=os.path.dirname(module_filepath)):
-                print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_filepath}")
-                return error.RUNTIME_ERROR
-        elif ins == "use" and argc == 3 and args[1] == "as":
-            if args[0].startswith("{") and args[0].endswith("}"):
-                f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
-                search_path = "_std"
-            else:
-                f = os.path.join(os.path.dirname(name), (ofile := args[0]))
-                if name != "__main__":
-                    f = os.path.join(os.path.dirname(name), f)
-                search_path = "_loc"
-            if not os.path.exists(f):
-                error.error(lpos, module_filepath, f"Not found while including: {f}")
-                return error.PREPROCESSING_ERROR
-            if mod_s.py_import(frame, f, search_path, loc=os.path.dirname(module_filepath), alias=args[2]):
-                print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_filepath}")
-                return error.RUNTIME_ERROR
-        elif ins == "use:luaj" and argc == 1:
-            if args[0].startswith("{") and args[0].endswith("}"):
-                f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
-                search_path = "_std"
-            else:
-                f = os.path.join(os.path.dirname(name), (ofile := args[0]))
-                if name != "__main__":
-                    f = os.path.join(os.path.dirname(name), f)
-                search_path = "_loc"
-            if not os.path.exists(f):
-                error.error(lpos, module_filepath, f"Not found while including: {f}")
-                return error.PREPROCESSING_ERROR
-            if mod_s.luaj_import(frame, f, search_path, loc=os.path.dirname(module_filepath)):
                 print(f"python: Something wrong happened...\nLine {line_position}\nFile {module_filepath}")
                 return error.RUNTIME_ERROR
         elif ins == "_intern.switch::static" and argc == 2:
@@ -887,20 +860,20 @@ def execute(code, frame):
             lrset(frame[-1], args[0], time.time())
         elif ins == "for" and argc == 3 and args[1] == "in":
             if block:
-                name, _, iter = args
+                name, _, iter_ = args
                 index = None
                 if isinstance(name, tuple):
                     index, name = name
-                    iter = enumerate(iter)
-                for i in iter:
+                    iter_ = enumerate(iter_)
+                for i in iter_:
                     if index is not None:
                         frame[-1][index], i = i
                     frame[-1][name] = i
                     err = execute(block, frame)
                     if err:
-                        if err == error.STOP_RESULT:
+                        if err == STOP_RESULT:
                             break
-                        elif err == error.SKIP_RESULT:
+                        elif err == SKIP_RESULT:
                             continue
                         return err
         elif ins == "enum" and argc == 1:
@@ -927,8 +900,6 @@ def execute(code, frame):
             pprint(args[0], hide=False)
         elif ins == "dump_vars_fancy" and argc == 1:
             pprint({args[0]: lrget(frame[-1], args[0])}, hide=False)
-        elif ins == "get_time" and argc == 1:
-            frame[-1][args[0]] = time.time()
         elif ins == "loop" and argc == 1:
             if block:
                 for _ in range(args[0]):
@@ -953,15 +924,10 @@ def execute(code, frame):
                         elif err == error.SKIP_RESULT:
                             continue
                         return err
-        elif ins == "check_schema" and argc == 3:
-            data, as_, schema = args
-            if not type_checker.check_schema(data, schema):
-                error.error(line_position, module_filepath, "Data doesnt comply with schema!")
-                return error.TYPE_ERROR
         elif ins == "stop" and argc == 0:
-            return error.STOP_RESULT
+            return STOP_RESULT
         elif ins == "skip" and argc == 0:
-            return error.SKIP_RESULT
+            return SKIP_RESULT
         elif ins == "exec" and argc == 3:
             if err:=run(process_code(args[0], name=args[1]), frame=args[2]):
                 return err
@@ -972,34 +938,32 @@ def execute(code, frame):
         elif ins == "fallthrough" and argc == 0:
             return error.FALLTHROUGH
         elif ins == "set" and argc == 3 and args[1] == "=":
-            if args[0] != "_":
-                if isinstance(args[0], (tuple, list)):
-                    for name, value in utils.pack(args[0], args[2]).items():
-                        lrset(frame[-1], name, value)
-                else:
-                    lrset(frame[-1], args[0], args[2])
+            if isinstance(args[0], (tuple, list)):
+                for name, value in utils.pack(args[0], args[2]).items():
+                    lrset(frame[-1], name, value)
+            else:
+                lrset(frame[-1], args[0], args[2])
         elif ins == "set" and argc == 5 and args[1] == "=" and args[3] == "satisfies":
-            if args[0] != "_":
-                name, _, value, _, predicates = args
-                fn_pred = []
-                for i in predicates:
-                    if (f:=lrget(frame[-1], i)) == constants.nil:
-                        error.error(line_position, module_filepath, f"Check {i!r} does not exist!")
-                        return error.CHECK_ERROR
-                    fn_pred.append(f)
-                if isinstance(args[0], (tuple, list)):
-                    for n, v in zip(name, value):
-                        for fn in fn_pred:
-                            if not run_func(frame, fn, v):
-                                error.error(line_position, module_filepath, f"Variable {n!r} ({v!r}) did not pass check {fn['name']}({fn['body'][0][4][0]})")
-                                return error.CHECK_ERROR
-                        lrset(frame[-1], name, value)
-                else:
+            name, _, value, _, predicates = args
+            fn_pred = []
+            for i in predicates:
+                if (f:=lrget(frame[-1], i)) == constants.nil:
+                    error.error(line_position, module_filepath, f"Check {i!r} does not exist!")
+                    return error.CHECK_ERROR
+                fn_pred.append(f)
+            if isinstance(args[0], (tuple, list)):
+                for n, v in zip(name, value):
                     for fn in fn_pred:
-                        if not run_func(frame, fn, value):
-                            error.error(line_position, module_filepath, f"Variable {name!r} ({value!r}) did not pass check {fn['name']}({str(fn['body'][0][4][0])[1:-1]})")
+                        if not run_func(frame, fn, v):
+                            error.error(line_position, module_filepath, f"Variable {n!r} ({v!r}) did not pass check {fn['name']}({fn['body'][0][4][0]})")
                             return error.CHECK_ERROR
                     lrset(frame[-1], name, value)
+            else:
+                for fn in fn_pred:
+                    if not run_func(frame, fn, value):
+                        error.error(line_position, module_filepath, f"Variable {name!r} ({value!r}) did not pass check {fn['name']}({str(fn['body'][0][4][0])[1:-1]})")
+                        return error.CHECK_ERROR
+                lrset(frame[-1], name, value)
         elif ins == "set" and argc == 6 and args[1] == "=" and args[3] == "satisfies" and args[4] == "check":
             if args[0] != "_":
                 name, _, value, _, _, predicate = args

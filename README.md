@@ -156,6 +156,25 @@ Most recent at top.
 
 ## !! ✨✨NEW IN DPL 2.0.0✨✨ (as of 2026) !!
 
+* More optimizations
+
+Argument processing have been optimized.
+```DuProL
+
+START_TIME
+
+set x = 1
+for i in [range 1000000]
+    set x = [:x * 2]
+end
+
+STOP_TIME
+LOG_TIME
+```
+Python 3.14: 3.13 seconds. (3.13 microseconds per iter)<br>
+Pypy3: 388 miliseconds. (388 nanoseconds per iter)<br>
+On Arch, intel i3.
+
 * A new expression! 
 
 Instead of `[call :func()]` you can do `func!()` which

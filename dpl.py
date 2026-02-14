@@ -359,7 +359,7 @@ def handle_args():
             if not has_pp2:
                 print("Suply the '-use-py-parser2' flag first!")
                 exit(1)
-            file = get_start_path(file)
+            file = get_start_path_raw(file)
             with open(os.path.basename(file)+".llir", "w") as output:
                 varproc.meta_attributes["internal"]["main_path"] = (
                     os.path.dirname(os.path.abspath(file)) + os.sep
@@ -408,7 +408,7 @@ Pipe line:
                     output.write(pprint.pformat(out))
                     print("Done!")
         case ["dump-hlir", file]:
-            file = get_start_path(file)
+            file = get_start_path_raw(file)
             with open(os.path.basename(file)+".hlir", "w") as output:
                 varproc.meta_attributes["internal"]["main_path"] = (
                     os.path.dirname(os.path.abspath(file)) + os.sep
@@ -431,16 +431,16 @@ Code format: (
                     output.write(pprint.pformat(parser.process_code(inputf.read())))
                     print("Done!")
         case ["dump-ast", file]:
-            file = get_start_path(file)
+            file = get_start_path_raw(file)
             with open(f"{file}.dplad", "w") as output:
                 with open(file) as input:
                     ast_gen.walk(ast_gen.gen_ast_from_str(input.read()), file=output)
         case ["dump-ast-cdpl", file]:
-            file = get_start_path(file)
+            file = get_start_path_raw(file)
             with open(f"{file}.dplad", "w") as output:
                 ast_gen.walk(ast_gen.gen_ast_from_cdpl(file), file=output)
         case ["rc", file, *args]:
-            file = get_start_path(file)
+            file = get_start_path_raw(file)
             info.ARGV.clear()
             info.ARGV.extend([file, *args])
             varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
@@ -461,7 +461,7 @@ Code format: (
                 print("Error:", repr(e))
                 exit(1)
         case ["compile", file]:
-            file = get_start_path(file)
+            file = get_start_path_raw(file)
             output = file.rsplit(".", 1)[0] + ".cdpl"
             try:
                 with open(file, "r") as in_file:

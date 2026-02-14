@@ -263,7 +263,14 @@ type_annotations = {
 dpl_constants = {
     "py::none": None,
     "py::true": True,
-    "py::false": False
+    "py::false": False,
+    "true": 1,
+    "false": 0,
+    "nil": constants.nil,
+    "none": constants.none,
+    "inf": inf,
+    "-inf": -inf,
+    "...": constants.elipsis
 }
 
 type_to_name = {value: name for name, value in (type_annotations | dpl_constants).items()}
@@ -560,27 +567,13 @@ def expr_preruntime(arg):
     if not isinstance(arg, str):
         return arg
     elif is_int(arg):
-        return int(arg.replace(",", ""))
-    elif is_float(arg.replace(",", "")):
+        return int(arg.replace("_", ""))
+    elif is_float(arg.replace("_", "")):
         return float(arg)
     elif is_bin(arg):
         return int(arg, 2)
     elif is_hex(arg):
         return int(arg, 16)
-    elif arg == "true":
-        return constants.true
-    elif arg == "false":
-        return constants.false
-    elif arg == "none":
-        return constants.none
-    elif arg == "nil":
-        return constants.nil
-    elif arg == "...":
-        return constants.elipsis
-    elif arg == "infinity":
-        return inf
-    elif arg == "-infinity":
-        return -inf
     elif arg == ".dict":
         return {}
     elif arg == ".list":
@@ -589,16 +582,28 @@ def expr_preruntime(arg):
         return set()
     elif arg == ".tuple":
         return set()
-    elif arg == ".unique::static":
-        return f"{uuid.uuid4()}::{VERSION.as_id()}::{int(time.time()*10000)}"
     elif arg in dpl_constants:
-        arg = dpl_constants[arg]
+        return dpl_constants[arg]
     elif arg in type_annotations:
-        arg = type_annotations[arg]
-    elif arg == "π":
-        return 22/7
-    return arg
-
+        return type_annotations[arg]
+    elif is_special_read_var(arg):
+        return ID(arg[2:], "spec")
+    elif is_read_var(arg):
+        return ID(arg[1:], "norm")
+    elif arg.startswith('"') and arg.endswith('"'):
+        t = arg[1:-1]
+        for c, cc in CHARS.items():
+            t = t.replace(c, cc)
+        return t
+    elif arg in ("?tuple", "?args", "?float", "?int", "?string", "?bytes", "?set", "?list", "nil?", "none?", "def?") or arg in sym or arg in special_sep or arg in sep:
+        return arg
+    elif is_id(arg):
+        return ID(arg)
+    elif arg.startswith("'") and arg.endswith("'"):
+        return InterpolatedString(arg[1:-1])
+    elif arg.startswith("{") and arg.endswith("}"):
+        return arg
+    raise Exception(repr(arg))
 
 def handle_in_string_expr(text, data):
     args = nest_args(exprs_preruntime(group(text)))
@@ -610,74 +615,23 @@ def expr_runtime(frame, arg):
     "Process an argument at runtime"
     if isinstance(arg, Expression):
         return evaluate(frame, arg)
-    elif not isinstance(arg, str):
-        return arg
-    elif is_read_var(arg):
-        if varproc.debug_settings["allow_automatic_global_name_resolution"]:
-            v = varproc.rget(
-                frame[-1],
-                arg[1:],
-                default=None,
-            )
-            if v is None:
-                v = varproc.rget(frame[0], arg[1:])
-        else:
-            v = rget(frame[-1], arg[1:])
-        if get_debug("disable_nil_values") and v == constants.nil:
-            raise Exception(f"{arg!r} is nil!")
-        return v
-    elif is_special_read_var(arg):
-        if varproc.debug_settings["allow_automatic_global_name_resolution"]:
-            v = varproc.rget(
-                frame[-1],
-                arg[2:],
-                default=None,
-                meta=True
-            )
-            if v is None:
-                v = varproc.rget(frame[0], arg[1:], meta=True)
-        else:
-            v = rget(frame[-1], arg[2:])
-        if get_debug("disable_nil_values") and v == constants.nil:
-            raise Exception(f"{arg!r} is nil!")
-        return v
-    elif is_reference_var(arg):
-        full_name = arg[:-5]
-        return objects.make_reference(frame[-1]["_scope_number"], frame[-1]["_scope_uuid"], full_name, varproc.rget(
-                frame[-1],
-                full_name,
-                default=varproc.rget(frame[0], full_name),
-            ), {})
-    elif is_deref(arg):
-        reference = varproc.rget(
-                frame[-1],
-                arg[:-7],
-                default=varproc.rget(frame[0], arg[:-7]),
-        )
-        return reference["value"]
-    elif arg == ".input":
-        return input()
-    elif arg == ".unique":
-        return f"{uuid.uuid4()}::{VERSION.as_id()}::{int(time.time()*10000)}"
-    elif is_id(arg):
-        return arg
-    elif arg.startswith('"') and arg.endswith('"'):
-        t = arg[1:-1]
-        for c, cc in CHARS.items():
-            t = t.replace(c, cc)
-        return t
-    elif arg.startswith("'") and arg.endswith("'"):
-        text = arg[1:-1]
+    elif isinstance(arg, ID):
+        if arg.read == "norm":
+            v = rget(frame[-1], arg)
+            if get_debug("disable_nil_values") and v == constants.nil:
+                raise Exception(f"{arg!r} is nil!")
+            return v
+        elif arg.read == "spec":
+            v = varproc.rget(frame[-1], arg, meta=True)
+            if get_debug("disable_nil_values") and v == constants.nil:
+                raise Exception(f"{arg!r} is nil!")
+            return v
+    elif isinstance(arg, InterpolatedString):
+        text = arg
         for c, cc in CHARS.items():
             text = text.replace(c, cc)
         return fmt_format(text, frame, expr_fn=lambda text, _: handle_in_string_expr(text, frame))
-    elif (arg.startswith("{") and arg.endswith("}")) or arg in sep or arg in special_sep:
-        return arg
-    elif arg in ("?tuple", "?args", "?float", "?int", "?string", "?bytes", "?set", "?list", "nil?", "none?", "def?") or arg in sym:
-        return arg
-    else:
-        raise Exception(f"Invalid literal: {arg}")
-
+    return arg
 
 def my_range(start, end):
     def pos(start, end):
@@ -707,10 +661,10 @@ def is_static(code):
             continue
         elif i in RT_EXPR:
             return False
-        elif is_read_var(i):
+        elif isinstance(i, ID) and i.read is not None:
             return False
         # formatted string, must always be on runtime
-        elif i.startswith("'") and i.startswith("'"):
+        elif isinstance(i, InterpolatedString):
             return False
     return True
 
@@ -745,6 +699,36 @@ class kwarg:
     def __repr__(self):
         return f"<{self.name} = {self.value!r}>"
 
+class ID:
+    def __init__(self, name, read=None):
+        self.name = name
+        self.split = name.split(".") # memory hungry but faster
+        self.read = read
+        self.path_len = len(self.split)
+        # read can be
+        # norm = normal variable read
+        # spec = special variable read
+        # None = treat as a normal string
+    def startswith(self, other):
+        return self.name.startswith(other)
+    def endswith(self, other):
+        return self.name.endswith(other)
+    def __eq__(self, other):
+        return self.name == other
+    def __ne__(self, other):
+        return self.name != other
+    def __hash__(self):
+        return hash(self.name)
+    def __mul__(self, other):
+        return self.name * other
+    def __contains__(self, other):
+        return other in self.name
+    def __repr__(self):
+        return self.name
+
+class InterpolatedString(str):
+    def __init__(self, string):
+        super().__init__(string)
 
 def evaluate(frame, expression):
     "Evaluate an expression"

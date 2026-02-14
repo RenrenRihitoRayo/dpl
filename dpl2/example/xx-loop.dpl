@@ -1,9 +1,0 @@
-&use {std/text_io.py}
-
-START_TIME
-set this = 90
-for i in [range 100000]
-    set this = [:this * 2]
-end
-STOP_TIME
-LOG_TIME

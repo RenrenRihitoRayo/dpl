@@ -1,1 +1,0 @@
-types = dpl.extension("types", alias=__alias__)types.items["int"] = inttypes.items["str"] = strtypes.items["flt"] = floattypes.items["list"] = listtypes.items["dict"] = dicttypes.items["tuple"] = tupletypes.items["complex"] = complextypes.items["any"] = dpl.state.bstate("types:any")types.items["Exception"] = Exception
