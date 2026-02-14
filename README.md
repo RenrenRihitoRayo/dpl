@@ -7,99 +7,6 @@ Welcome to **DPL**, the programming language that doesn\'t try to be smart - jus
 DPL is minimal, messy, and proud of it.
 There are no style rules. There are no guardrails. Just a loosely-held-together interpreter and your own chaotic energy.
 
-## !! ✨✨NEW IN DPL 2.0.0✨✨ !!
-
-* A new expression! 
-
-Instead of `[call :func()]` you can do `func!()` which
-is just a shorthand but is much more convenient!
-
-* C interopt has been improved vastly!
-
-Example in `lib/std-c/lib/tect_c.c` (its cdef file is `lib/std-c/test_c.cdef`) 
-has shown how to use the python c api to be able to manipulate the local scope!
-
-* Objects now have short-hand constructors!
-
-You can use `make_cons object` to automatically make a constructor for that object,
-given that you have defined them implicitly in the object.
-
-* New debug output!
-
-Using `io:debug(object)` in `std/text_io.py`,
-will yield more interesting output for objects.
-
-* `declare` in multiline dictionaries.
-
-You can use declare to define keys that would be
-implicitly defined.
-
-* Multiline dictionaries and lists can now be nested!
-
-```DuProL
-
-dict d1
-    set depth = 1
-    dict d2
-        set depth = 2
-    end
-    list test
-        . item1
-        . item2
-        . item3
-        list
-            . item4
-            . item5
-        end
-        dict
-            set depth = 4
-        end
-    end
-end
-
-```
-
-* Flask wrapper is available in `std/other/flask.py`
-
-There is an example given in the examples directory.
-
-* Reworked the switch statement
-
-* Text IO can disable input
-
-* Files that are included are cached for fast init time
-
-* Objects now support operator overloading!
-
-* Static inline function calls
-
-* Expression Folding has been fixed
-
-* Parameter and Variable Checks
-
-* Actual Expressions
-
-* In-instruction blocks
-
-* Added "excluded.txt"
-
-This is to more efficiently ignore
-test cases that intentionally or
-predictably fails.
-
-* CLI can call different versions!
-
-This only works for uncompiled scripts.
-
-* Actual lazy evaluation
-
-For example `set var = [lazy(:x + 1)]` will only be
-evaluated when `var` is read
-
-* DPL Glob now supports digits
-
-`["any-90.txt" => "*-#.txt"]`
-
 ## Features
 
 * Simple syntax
@@ -247,4 +154,17 @@ Most recent at top.
 
 # 2.0.0
 
-Updates will be added here.
+## !! ✨✨NEW IN DPL 2.0.0✨✨(as of 2026) !!
+
+* A new expression! 
+
+Instead of `[call :func()]` you can do `func!()` which
+is just a shorthand but is much more convenient!
+
+* C interopt has been improved vastly!
+
+Example in `lib/std-c/lib/tect_c.c` (its cdef file is `lib/std-c/test_c.cdef`) 
+has shown how to use the python c api to be able to manipulate the local scope!
+
+* Performance Improvement
+
