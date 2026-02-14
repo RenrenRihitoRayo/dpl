@@ -122,6 +122,12 @@ KEYWORDS = {
     'make_cons'
 }
 
+INC_TERMINAL = {
+    'end',
+    'skip', 'stop',
+    'raise'
+}
+
 ALL_INTRINSICS = INC_EXT | EXPR | {"end"} | KEYWORDS
 
 CHARS = {

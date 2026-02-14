@@ -202,20 +202,18 @@ def pscope(frame):
             error.info(f"Tried to discard global scope!")
 
 
-def rget(dct, full_name, default=constants.nil, sep=".", meta=False, resolve=False):
+def rget(dct, full_name, default=constants.nil, meta=False, resolve=False):
     "Get a variable"
-    if sep not in full_name:
+    if "." not in full_name:
         temp = dct.get(full_name, default)
         if is_debug_enabled("show_value_updates"):
             error.info(f"Variable {full_name!r} was read!")
         if not meta and evaluate and Lazy and isinstance(temp, Lazy):
             return evaluate(temp[0], temp[1])
         return temp
-    path = [*enumerate(full_name.split(sep), 1)][::-1]
-    last = len(path)
+    last = full_name.path_len
     node = dct
-    while path:
-        pos, name = path.pop()
+    for pos, name in enumerate(full_name.split, 1):
         if (
             pos != last
             and name in node
@@ -239,15 +237,14 @@ def rget(dct, full_name, default=constants.nil, sep=".", meta=False, resolve=Fal
     return default
 
 
-def rpop(dct, full_name, default=constants.nil, sep="."):
+def rpop(dct, full_name, default=constants.nil):
     "Pop a variable"
-    if sep not in full_name:
+    if "." not in full_name:
         temp = dct.get(full_name, default)
         return temp
-    path = [*enumerate(full_name.split(sep), 1)][::-1]
-    last = len(path)
+    last = full_name.path_len
     node = dct
-    while path:
+    for pos, name in enumerate(full_name.split, 1):
         pos, name = path.pop()
         if (
             pos != last
@@ -264,46 +261,19 @@ def rpop(dct, full_name, default=constants.nil, sep="."):
     return default
 
 
-def rset(dct, full_name, value, sep=".", meta=False):
+def rset(dct, full_name, value, meta=False):
     "Set a variable"
-    if full_name == "_":
-        return
-    if not isinstance(full_name, str):
-        return
-    if sep not in full_name:
+    if "." not in full_name:
             if dct.get("_set_only_when_defined") and full_name not in dct:
                 error.warn(
                     f"Tried to set {full_name!r} but scope was set to set only when defined."
                 )
                 return
-            if meta:
-                item = dct.get(full_name, {
-                    "_internal::meta_value": value
-                })
-                if "_internal::set_meta_value" in item:
-                    frame = dct["_frame_stack"]
-                    lscope = nscope(frame)
-                    fn = item["_internal::set_meta_value"]
-                    if "self" in fn:
-                        frame[-1]["self"] = item
-                    if "capture" in fn:
-                        frame[-1]["_capture"] = fn["capture"]
-                    if fn["args"]:
-                        frame[-1][fn["args"][0]] = value
-                    else:
-                        frame[-1]["value"] = value
-                    if (err := execute_code(fn["body"], frame)) > 0:
-                        raise error.DPLError(err)
-                    pscope(frame)
-                dct[full_name] = item
-                return
             dct[full_name] = value
             return
-    path = [*enumerate(full_name.split(sep), 1)][::-1]
-    last = len(path)
+    last = full_name.path_len
     node = dct
-    while path:
-        pos, name = path.pop()
+    for pos, name in enumerate(full_path.split):
         if (
             pos != last
             and name in node

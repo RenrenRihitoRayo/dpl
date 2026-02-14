@@ -1,6 +1,0 @@
-
-check positive(:self > 0)
-
-set a = -1 satisfies(positive)
-# inline
-set a = -1 satisfies check(:self > 0)
