@@ -154,7 +154,7 @@ Most recent at top.
 
 # 2.0.0
 
-## !! ✨✨NEW IN DPL 2.0.0✨✨(as of 2026) !!
+## !! ✨✨NEW IN DPL 2.0.0✨✨ (as of 2026) !!
 
 * A new expression! 
 
