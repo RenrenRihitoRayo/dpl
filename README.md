@@ -177,7 +177,8 @@ for i in [range 100000]
     set x = [:x * 2]
 end
 ```
-Python 3.14: 580-590ms (5.85 microseconds per iteration)<br>
-Pypy3 7.x.x: 240-250ms (2.45 microseconds per iteration)<br>
+<pre>
+Python 3.14: 580-590ms (5.85 microseconds per iteration)
+Pypy3 7.x.x: 240-250ms (2.45 microseconds per iteration)
 On Arch, intel i3.
-
+</pre>
