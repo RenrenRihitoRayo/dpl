@@ -1,0 +1,149 @@
+%YAML 1.2
+---
+name: "DPL"
+file_extensions:
+  - 'dpl'
+scope: source.dpl
+variables:
+  todo: '\b(TODO|ERROR|WARNING|NOTICE)\b:?' # Text that require emphasis
+contexts:
+  main:
+    - match: '\&[\w\:\.\d\-]+'
+      scope: keyword.control.dpl
+      pop: true
+
+    - match: '-?\d+(_|\d)?(\.\d+)?'
+      scope: constant.numeric
+      pop: true
+
+    - match: '^\s*\b(switch|match|case|with|inc|dec|fallthrough|default|if|loops|expect|while|f?return|loop|for|end|pass|fn|method|stop|skip)\b'
+      scope: keyword.control.dpl
+
+    - match: '^\s*?#:?' # this is intentional as comments can only stay on separate lines
+      scope: comment.line.dpl
+      push: line_comment_doc
+
+    - match: '^\s*?#' # this is intentional as comments can only stay on separate lines
+      scope: comment.line.dpl
+      push: line_comment
+
+    - match: '^\s*\b(cmd|help|del|new|cmd|object|exit|DEFINE_ERROR|ecatch|catch|START_TIME|STOP_TIME|LOG_TIME)\b'
+      scope: support.function
+
+    - match: '\b(in|as)\b'
+      scope: keyword.control.dpl
+
+    - match: "\\["
+      push: expresion
+
+    - match: '\b(true|false|nil|none)\b'
+      scope: constant.dpl
+      pop: true
+
+    - match: '\.\.\.'
+      scope: constant.dpl
+      pop: true
+
+    - match: '\?(list|dict|tuple|string|int|float)'
+      scope: support.type
+      pop: true
+
+    - match: '"'
+      scope: punctuation.definition.string.start.dpl
+      push: double_quoted_string
+
+    - match: "'"
+      scope: punctuation.definition.string.start.dpl
+      push: single_quoted_string
+
+    - match: "--doc"
+      scope: comment.line.dpl
+      push: ml_comment_doc
+
+    - match: '--'
+      scope: comment.line.dpl
+      push: ml_comment
+
+    - match: '^\s*[\w\:\.\d\-]+'
+      scope: support.function
+
+    - match: ':[\w\:\._]+'
+      scope: keyword.operator
+
+    - match: '[\w\:\._]+'
+      scope: variable.other.dpl
+
+    - match: '[\+\-=<>*\^_/]'
+      scope: keyword.operator.dpl
+
+    - match: '\{[^}]+\}'
+      scope: string.quoted.double
+
+  expresion:
+    - match: '\b(len|d?range|d?rawrange|call|tail|head:tail|head:body|body:tail|head|from_ascii|to_ascii|oldformat|eval)\b'
+      scope: keyword.operator
+    - match: '\b(in|not|and|or|if|then|else|call)\b'
+      scope: support.function
+    - match: "\\]"
+      pop: true
+    - include: main
+
+  double_quoted_string:
+    - meta_scope: string.quoted.double.dpl
+    - match: '\\\[.*?\]'
+      scope: constant.character.escape.dpl
+    - match: '\\.'
+      scope: constant.character.escape.dpl
+    - match: "\n"
+      scope: invalid
+      pop: true
+    - match: '"'
+      scope: punctuation.definition.string.end.dpl
+      pop: true
+
+  ml_comment:
+    - meta_scope: comment.line.dpl
+    - match: "{{todo}}"
+      scope: constant.character.escape.dpl
+    - match: "--"
+      scope: comment.line.dpl
+      pop: true
+
+  single_quoted_string:
+    - meta_scope: string.quoted.double.dpl
+    - match: '\\\[.*?\]'
+      scope: constant.character.escape.dpl
+    - match: "\n"
+      scope: invalid
+      pop: true
+    - match: '\\.'
+      scope: constant.character.escape.dpl
+    - match: '\$\{[^}]+\}'
+      scope: keyword.operator.dpl
+    - match: "'"
+      scope: punctuation.definition.string.end.dpl
+      pop: true
+
+
+  ml_comment_doc:
+    - match: "{{todo}}"
+      scope: comment.line.dpl
+    - match: "--"
+      scope: comment.line.dpl
+      pop: true
+    - match: '.'
+      scope: constant.character.escape.dpl
+
+  line_comment:
+    - meta_scope: comment.line.dpl
+    - match: "{{todo}}"
+      scope: constant.character.escape.dpl
+    - match: $  # End of line comment
+      pop: true
+
+  line_comment_doc:
+    - meta_scope: comment.line.dpl
+    - match: "{{todo}}"
+      scope: constant.character.escape.dpl
+    - match: $  # End of line comment
+      pop: true

@@ -1,0 +1,69 @@
+# In my own programming language!
+
+&use {std/to_py.py}
+&use {std/text_io.py}
+
+# No wrappers, raw import
+&import "tkinter"
+
+set num = 1
+
+
+# Add fun text
+dict text
+    set 5 = "Click more!"
+    set 25 = "I wonder what happens if you click some more..."
+    set 255 = "You like clicking dont you?"
+    set 500 = "You click fast..."
+    set 1000 = "Are you okay?"
+    set 2000 = "You do know the steps double everytime right?"
+    set 4000 = "Well you sure are persistent..."
+    set 8000 = "Are you nuts?\nFine go click some more."
+    set 16000 = "FINE YOU WIN!!!"
+    set 16001 = "WHY ARE YOU STILL HERE"
+    defi "GO AWAY!"
+    defi "WHY DONT YOU JUST CLOSE THE APP???"
+    defi "THIS IS A DAMN DEMO YK???"
+    defi "..."
+    set  16100 = "Why wont you just close the damn"
+    defi "STUPID"
+    defi "APP"
+    defi "ITS NOT"
+    defi "THAT HARD"
+    defi ""
+    defi "CLOSE"
+    defi "IT"
+    defi "OR I WILL"
+    defi nil
+end
+
+
+set app = [pycall :tkinter.Tk()]
+
+set label = [pycall :tkinter.Label(:app [text="Keep clickin'"])]
+set _ = [:label@pack()]
+
+fn update_text()
+    if [:num in :text]
+        if [nil? [:text(:num)]]
+            exit
+        end
+        set _ = [:label@config([text=[:text(:num)]])]
+    end
+end
+
+fn button_command()
+    set _ = [:button@config([text='Clicked ${num} times!'])]
+    update_text()
+    inc _global.num
+end
+ecatch (button) to_py:to_py(:button_command)
+
+
+set _ = [:app@title("This is from DPL! No wrappers!")]
+set _ = [:app@geometry("500x200")]
+
+set button = [pycall :tkinter.Button(:app [text='Clicked ${num} times!'] [command=:button])]
+set _ = [:tkinter.Button@pack(:button)]
+
+set _ = [:app@mainloop()]

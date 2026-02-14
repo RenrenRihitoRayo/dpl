@@ -1,0 +1,6 @@
+&use {std/text_io.py}
+
+fn main::entry_point()
+    io:println("Hello, world!")
+    return 0
+end

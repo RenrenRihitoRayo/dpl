@@ -1,0 +1,19 @@
+&use {std/text_io.py}
+
+dict d1
+    set depth = 1
+    dict d2
+        set depth = 2
+    end
+    list test
+        . "item1"
+        . "item2"
+        . "item3"
+        list
+            . "item4"
+            . "item5"
+        end
+    end
+end
+
+dump_vars_fancy d1

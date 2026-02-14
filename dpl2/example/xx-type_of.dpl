@@ -1,0 +1,14 @@
+&use {std/text_io.py}
+
+-- output should be
+   py::string
+   py::int
+   py::sequence
+   py::dict
+   py::float
+   respectively --
+set this = [! "test", 90, [! test], [key = value], 90.0 ]
+
+for item in :this
+    io:println([typeof :item], :item)
+end

@@ -1,0 +1,23 @@
+use {std/text_io.py}
+
+on_new_scope
+    set scope.huh = "scope initialization!"
+    globals.io:println("Scope initialized!")
+end
+
+on_pop_scope
+    globals.io:println("Scope closed!")
+end
+
+fn test()
+    io:println(:huh)
+end
+
+test()
+
+--
+  Output:
+  Scope initialized!
+  scope initialization!
+  Scope closed!
+--

@@ -1,0 +1,8 @@
+&use {std/text_io.py}
+
+set uiiai = ["uiiai " * 100]
+
+for char in :uiiai
+    io:println(:char)
+    sleep
+end

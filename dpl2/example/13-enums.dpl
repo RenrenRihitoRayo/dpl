@@ -1,0 +1,11 @@
+use {std/text_io.py}
+
+dict colors
+    def Green
+    def Red
+    def Blue
+end
+
+for name in :colors
+    io:println(:name, [:colors(:name)])
+end

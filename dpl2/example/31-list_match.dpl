@@ -1,0 +1,85 @@
+&use {std/text_io.py}
+
+# classic ocaml recursion example
+# but in DPL
+# O(n)
+fn last(list)
+    # showcase new statement
+    match::pattern :list
+        case (head)
+            return :head
+        end
+        case (head ...tail)
+            return [call :last(:tail)]
+        end
+    end
+end
+
+# classic ocaml recursion example
+# but in DPL
+# O(1)
+fn last_c1(list)
+    return [:list(-1)]
+end
+
+io:println([call :last([! 1 2 3 4 5 6 7 8 9 10])])
+
+io:println([call :last_c1([! 1 2 3 4 5 6 7 8 9 10])])
+
+benchmark 2000, last
+    last([! 1 2 3 4])
+end
+
+io:println('last &{.2f|:last(0)}&{:last(1)}')
+
+# 75%~ faster
+benchmark 2000, last_c1
+    last_c1([! 1 2 3 4])
+end
+
+io:println('last_c1 &{.2f|:last_c1(0)}&{:last_c1(1)}')
+
+set diff = [dpercent([:last_c1(0)], [:last(0)])]
+
+io:println('Difference in percent: ${.2f:diff}')
+io:println('Constant is &{.2f|[:last(0)] / [:last_c1(0)]}x faster than recursive')
+
+list program
+. [! push 90]
+. [! push 80]
+. [! add]
+. [! print "90 + 80 ="]
+. [! .print]
+. [! 69]
+end
+
+set stack = .list
+
+for line in :program
+    match::pattern :line
+        case ("print" text)
+            io:println(:text)
+        end
+        case (".print")
+            io:println([:stack@pop()])
+        end
+        case ("push" arg) (primitive::string primitive::int)
+            set _ = [:stack@append(:arg)]
+        end
+        case ("pop")
+            set _ = [:stack@pop()]
+        end
+        case ("add")
+            set b = [:stack@pop()]
+            set a = [:stack@pop()]
+            set _ = [:stack@append([:a + :b])]
+        end
+        case (69)
+            io:println("nice")
+        end
+        default
+            io:println("Error!", :line)
+            stop
+        end
+    end
+end

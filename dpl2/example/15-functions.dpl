@@ -1,0 +1,28 @@
+&use {std/text_io.py}
+
+--
+  DPL 1.4.9
+  Now allows function calls in expressions.
+  Using DPL functions in expressions are
+  easier.
+
+  DPl 1.4.9 also introduces
+  the new 'entry_point' tag which allows the user
+  to define an entry_point without needing to
+  call it manually.
+  When the main function returns a non-zero,
+  it also raises that error.
+--
+
+fn square(val)
+  return [:val ** 2]
+end
+
+# the tag 'entry_point' tells DPL
+# to run the function ON definition.
+# so as soon as this is defined it runs.
+# also passes argc and argv.
+fn main(argc, argv) entry_point
+  io:println([call :square( [call :square( 4 )] )])
+  return 0
+end

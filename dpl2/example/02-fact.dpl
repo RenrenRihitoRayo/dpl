@@ -1,0 +1,40 @@
+&use {std/text_io.py}
+
+fn fact_rec(n)
+    if [:n <= 1]
+        return 1
+    end
+    set temp = [:n - 1]
+    catch (a) _global.fact_rec(:temp)
+    return [:a * :n]
+end
+
+fn fact_loop(n)
+    set a = 1
+    for num in [1 ..+ :n]
+        set a = [ :a * :num ]
+    end
+    return :a
+end
+
+set n = 900
+
+io:println("DPL Fib benchmark")
+
+benchmark 50, itr
+    fact_loop(:n)
+end
+
+io:println('fib(${n}) Iteration &{.2f|:itr(0)}&{:itr(1)}')
+
+benchmark 40, rec
+    fact_rec(:n)
+end
+
+io:println('fib(${n}) Recursive &{.2f|:rec(0)}&{:rec(1)}')
+
+
+set diff = [dpercent([:itr(0)], [:rec(0)])]
+
+io:println('Difference in percent: ${.2f:diff}')
+io:println('Loop is &{.2f|[:itr(0)] / [:rec(0)]}x faster than recursive')

@@ -1,0 +1,22 @@
+&use {std/text_io.py}
+
+# doesnt copy scope but stores it as ref
+set this = [lazy(:x + 90)]
+
+# "?:" tells DPL to read literal value and
+# dont evaluate lazy expressions
+io:println(?:this)
+
+# ":" evaluates lazy expressions
+# <nil>
+io:println(:this)
+
+set x = 90
+
+# 180
+io:println(:this)
+
+set x = 10
+
+# 100
+io:println(:this)

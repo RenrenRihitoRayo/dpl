@@ -1,0 +1,170 @@
+--doc
+  DPL moule for printing ANSI codes
+  
+  Colors:
+    * Foreground (ansi.fg):
+        * black
+        * red
+        * green
+        * yellow
+        * blue
+        * magenta
+        * cyan
+        * white
+    * Background (ansi.bg):
+        (Same as above)
+  
+  Styles (ansi.style):
+    * reset_all
+    * bold
+    * italic
+    * underline
+    * blink
+    * inverse
+    * strike
+  Reset:
+    * [style_name]_reset
+      Ex: ansi.style.bold_reset
+    * ansi.reset same as ansi.style.reset_all
+  
+  
+  Functions:
+  ansi.print_color(color_code: int)
+  ansi.change_style(style_code: int)
+  ansi.print_rgb_bg(r: int, b: int, g: int)
+  ansi.print_rgb_fg(r: int, b: int, g: int)
+  
+  Written by: Darren Papa
+--
+
+&use {std/text_io.py}
+
+# our module object
+object ansi
+
+# Basically C style enum
+dict ansi.fg
+    set black = 30
+    def red
+    def green
+    def yellow
+    def blue
+    def magenta
+    def cyan
+    def white
+end
+
+dict ansi.bg
+    set black = 40
+    def red
+    def green
+    def yellow
+    def blue
+    def magenta
+    def cyan
+    def white
+end
+
+dict ansi.style
+    set reset_all = 0
+    set bold = 1
+    set italic = 3
+    def underline
+    def blink
+    set inverse = 7
+    set strike = 9
+    set bold_reset = 22
+    def italic_reset
+    def underline_reset
+    def blink_reset
+    set inverse_reset = 27
+    set strike_reset = 29
+end
+
+set ansi.reset = 0
+
+fn ansi.print_color(color)
+    if [not [[type :color] == int]]
+        raise :_meta.err.TYPE_ERROR, "color must be an int!"
+    end
+    io:rawoutput(27 '[0;${color}m')
+end
+
+fn ansi.change_style(style)
+    if [[type :style] != int]
+        raise :_meta.err.TYPE_ERROR, "style must be an int!"
+    end
+    io:rawoutput(27 '[${style}m')
+end
+
+fn ansi.print_rgb_bg(r, g, b)
+    io:rawoutput(27 '[48;2;${r};${g};${b}m')
+end
+
+fn ansi.print_rgb_fg(r, g, b)
+    io:rawoutput(27 '[38;2;${r};${g};${b}m')
+end
+
+fn ansi.goto_top()
+    io:rawoutput(27 '[H')
+end
+
+fn ansi.save_pos()
+    io:rawoutput(27 '[s')
+end
+
+fn ansi.load_pos()
+    io:rawoutput(27 '[u')
+end
+
+fn ansi.reset()
+    io:rawoutput(27, "[0m")
+end
+
+# Test suite
+ifmain
+    ansi.print_color(:ansi.fg.cyan)
+    io:println("Test!")
+    ansi.change_style(:ansi.style.bold)
+    io:println("Bold style!")
+    ansi.change_style(:ansi.style.bold_reset)
+    ansi.change_style(:ansi.style.underline)
+    io:println("Emphasis is key!")
+    ansi.change_style(:ansi.style.underline_reset)
+    ansi.change_style(:ansi.style.italic)
+    io:println("How about some pizzaz?")
+    io:println("Though italics seems to be inconsistent...")
+    ansi.change_style(:ansi.style.italic_reset)
+    ansi.change_style(:ansi.style.blink)
+    io:println("Yeah blinking seems to be unsupported on almost everything...")
+    ansi.change_style(:ansi.style.blink_reset)
+    ansi.change_style(:ansi.style.strike)
+    io:println("Mostly the same for strike throughs...")
+    ansi.change_style(:ansi.style.strike_reset)
+    ansi.change_style(:ansi.style.inverse)
+    io:println("Invert!")
+    ansi.change_style(:ansi.style.inverse_reset)
+    ansi.change_style(:ansi.style.reset_all)
+    io:input("Press enter for a rainbow!")
+    
+    # fun thing
+    for a in [range 100 256]
+        for b in [range 100 256]
+            for c in [range 100 256]
+                ansi.print_rgb_fg(:a, :b, :c)
+                io:print("Hello! ")
+                skip
+                ansi.print_color(:a)
+                io:print(w)
+                ansi.print_color(:b)
+                io:print(o)
+                ansi.print_color(:c)
+                io:print(w)
+                ansi.change_style(:ansi.style.reset_all)
+                io:print("!")
+            end
+        end
+    end
+    ansi.change_style(:ansi.style.reset_all)
+    io:println()
+end

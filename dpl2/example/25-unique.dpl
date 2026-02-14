@@ -1,0 +1,26 @@
+&use {std/text_io.py}
+
+# .unique and .unique::static produces
+# cuztomized uuid4 strings (avoids collisions)
+
+# meaning just using the uuids generated
+# we can pin point what version of DPL
+# was used and even track when it was created
+# suitable for keeping track of data
+# in a unique but also trackable way
+# without discloding to much
+# info
+# uuid4::dpl_version::int(unix_timestamp*10000)
+
+loop 10
+    # produces unique string
+    # always on runtime
+    io:println(.unique)
+end
+
+loop 10
+    # produces unique string
+    # on preruntime so below should
+    # print same id
+    io:println(.unique::static)
+end

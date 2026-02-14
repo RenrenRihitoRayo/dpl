@@ -1,0 +1,16 @@
+&use {std/text_io.py}
+
+switch :_meta.os_name
+    case "nt"
+        io:println("Hello, windows!")
+    end
+    case "posix"
+        io:println("Hello, linux enthusiasts!")
+    end
+    case "jython"
+        io:println("At this point just use pypy.")
+    end
+    default
+        io:println("System not recognized.")
+    end
+end

@@ -1,0 +1,11 @@
+&use {std/text_io.py}
+
+fn greet(name)
+    doc "A function to greet a person"
+    doc ":name: A string"
+    io:println('Hello ${name}!')
+end
+
+greet("Darren")
+
+help :greet

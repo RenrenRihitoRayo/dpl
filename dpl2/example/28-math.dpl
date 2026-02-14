@@ -1,0 +1,12 @@
+&use {std/text_io.py}
+
+# yes actual operations with precedence
+# supports arithmetic, and, or, and not
+# as well as comparisons
+# explicit though
+set res = [. 1 + 8 * 2]
+
+if [:res != 17]
+    raise :_meta.err.RUNTIME_ERROR, "result is unexpected"
+end
+io:println('\e[33mResult: ${:res}\e[0m')

@@ -1,0 +1,76 @@
+&use {std/text_io.py}
+
+fn div(a, b)
+    if [:b == 0]
+        raise :_meta.err.RUNTIME_ERROR, "b is zero"
+    end
+    return [:a / :b]
+end
+
+# instead of the above
+# we allow user to define an assert
+# in the function declaration itself
+fn div(a, (b checks :self != 0))
+    return [:a / :b]
+end
+
+# even default values (yes below raises an error)
+# fn div(a, [(b checks :self != 0) = 0])
+#     return [:a / :b]
+# end
+# output of above is:
+# Error in line near 18 file '/storage/emulated/0/dpl/example/26-checks.dpl'
+# Cause:
+# Default value of 'b' (0) of function div does not pass check [:self != 0]
+#
+# [/storage/emulated/0/dpl/example/26-checks.dpl]
+# Finished with an error: 3
+# Error Name: RUNTIME_ERROR
+
+# callable by itself (error is handled internally
+# basically these are just lambdas)
+io:println([call :div.checks.b(0)])
+io:println([call :div.checks.b(1)])
+
+div(1, 2)
+# error here
+div(1, 0)
+
+# output:
+# 0
+# 1
+#
+# Error in line 37 file '/storage/emulated/0/dpl/example/26-checks.dpl'
+# Cause:
+# Argument 'b' (0) of function div does not pass check [:self != 0]
+#
+# [/storage/emulated/0/dpl/example/26-checks.dpl]
+# Finished with an error: 3
+# Error Name: RUNTIME_ERROR
+
+check positive(:self > 0)
+check small(:self < 100)
+
+# instead of
+fn some_fn((value checks [[call :positive(:self)] and [call :small(:self)]]))
+    ...
+end
+
+# use this
+fn some_fn((value follows positive, small))
+    ...
+end
+
+some_fn(9)
+some_fn(-9)
+# output
+# 0
+# 1
+#
+# Error in line 65 file '/storage/emulated/0/dpl/example/26-checks.dpl'
+# Cause:
+# Argument 'value' (-9) of function some_fn does not pass check [call :positive (':self',)]
+#
+# [/storage/emulated/0/dpl/example/26-checks.dpl]
+# Finished with an error: 3
+# Error Name: RUNTIME_ERROR
