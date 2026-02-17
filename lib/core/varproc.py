@@ -245,7 +245,6 @@ def rpop(dct, full_name, default=constants.nil):
     last = full_name.path_len
     node = dct
     for pos, name in enumerate(full_name.split, 1):
-        pos, name = path.pop()
         if (
             pos != last
             and name in node
@@ -273,7 +272,7 @@ def rset(dct, full_name, value, meta=False):
             return
     last = full_name.path_len
     node = dct
-    for pos, name in enumerate(full_path.split):
+    for pos, name in enumerate(full_name.split, 1):
         if (
             pos != last
             and name in node

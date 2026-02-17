@@ -1,0 +1,12 @@
+&use {std/text_io.py}
+
+START_TIME
+
+set x = 1
+for i in [range 1000000]
+    set x = [:x * 2]
+end
+
+STOP_TIME
+LOG_TIME
+

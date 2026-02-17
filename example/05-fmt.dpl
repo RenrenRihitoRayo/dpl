@@ -14,14 +14,14 @@
 set this = 90
 
 set object = .dict
-set object.name = "what"
+set object.name = what
 set object.list = (1 2 3 4 5 6)
 
 # spikes but on average 1.5ms in this case
 # min 1ms max 1.6ms
 # prints: what 1 92 22
 START_TIME
-io:println('${object.name} &{object.list(0)} &{:this + 2} &{sum :object.list}')
+io:println('&{:object.name} &{:object.list(0)} &{:this + 2} &{sum :object.list}')
 STOP_TIME
 LOG_TIME "new format strings (old syntax unchanged)"
 

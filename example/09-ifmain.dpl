@@ -1,0 +1,5 @@
+&use {std/text_io.py}
+
+ifmain
+	io:println("Ran as a main script!")
+end

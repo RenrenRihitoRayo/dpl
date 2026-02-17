@@ -4,6 +4,8 @@ timed_out=()
 fails=0
 time=5s
 
+rm errors/*
+
 for file in *; do
 	if [ "${file%%-*}" = "xx" ]; then
 		continue

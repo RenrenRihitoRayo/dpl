@@ -197,12 +197,6 @@ class object_type(dict):
                     attributes.append(name)
         return f'<object {self["_type_name"]}\n  instance name: {self["_instance_name"] if "_instance_name" in self else "class definition"}\n  attrs: {", ".join(attributes) or "no attributes"}\n  implicit attributes: {", ".join(implicit) if implicit else "no implicit attributes"}\n  methods:\n    {(","+chr(10)+"    ").join(methods) if methods else "no methods"}>'
 
-
-class reference_type(object_type):
-    def __repr__(self):
-        return f"<reference {self['name']} = {self['value']!r} in scope {self['scope']}:{self['scope_uuid']}>"
-
-
 class function_type(object_type):
     def __repr__(self, less=False):
         if not less and self["self"]:
@@ -220,8 +214,7 @@ class function_type(object_type):
 
 
 objects = (
-    reference_type,
-    function_type
+    function_type,
 )
 
 
@@ -270,7 +263,7 @@ def make_function(capture, name, body, params):
     for pos, an in enumerate(params_):
         if an.startswith("variadic:"):
             vindex = pos
-            vname = an[9:]
+            vname = an.name[9:]
             break
     return function_type({
         "name": name,

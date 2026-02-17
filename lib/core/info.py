@@ -37,7 +37,6 @@ INC_EXT_BUILTIN = {
     "match",
     "case",
     "fn",
-    "fn::static",
     "method",
     "for",
     "loop",
@@ -54,11 +53,7 @@ INC_EXT_BUILTIN = {
     "on_pop_scope",
     "list",
     "string",
-    "fn::inline",
-    "string::inline",
     "benchmark",
-    "struct",
-    "pattern"
 }
 
 # user exposed for INC and INC_EXT
@@ -125,7 +120,7 @@ KEYWORDS = {
 INC_TERMINAL = {
     'end',
     'skip', 'stop',
-    'raise'
+    'raise', 'exit'
 }
 
 ALL_INTRINSICS = INC_EXT | EXPR | {"end"} | KEYWORDS
@@ -144,7 +139,7 @@ CHARS = {
     "\\[lit_slash]": "\\"
 }
 
-OPEN_P = "[("
+OPEN_P = ("(","[")
 CLOSE_P = (")","]")
 
 class flags:

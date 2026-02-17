@@ -15,7 +15,7 @@ def dl_repo(user_name, repo_name, branch="master", use_branch_name=True, locatio
 
     try:
         print("Validating connection...")
-        socket.create_connection(("8.8.8.8", 53), timeout=5)
+        socket.create_connection(("8.8.8.8", 53), timeout=3)
     except Exception as e:
         print("Must be connected to the internet!")
         return

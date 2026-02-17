@@ -12,14 +12,12 @@ from .runtime import *
 from . import utils
 from . import objects
 from . import constants
+from . import info
 import threading
 import traceback
 import sys
 import os
 import inspect
-from .info import PERM_LIBDIR, INC_TERMINAL, get_path_with_lib, INC_EXT, ARGV
-from .varproc import preprocessing_flags
-from . import varproc
 arguments_handler = py_argument_handler.arguments_handler
 
 def copy(obj, memo=None):
@@ -73,13 +71,13 @@ def get_block(code, current_p, supress=False, start=1):
     instruction_pointer = current_p + 1
     line_position, file, ins, _, _ = code[instruction_pointer]
     k = start
-    if k == 0 and ins not in INCREAMENTS:
+    if k == 0 and ins not in info.INCREAMENTS:
         error.error(line_position, file, "Expected to have started with an instruction that indents.")
         return None
     res = []
     while instruction_pointer < len(code):
         _, _, ins, _, _ = code[instruction_pointer]
-        if ins in INC_EXT:
+        if ins in info.INC_EXT:
             k += 1
         elif ins == "end":
             k -= 1
@@ -107,42 +105,43 @@ def pprint(d, l=0, seen=None, hide=True):
     elif isinstance(d, list):
         for i in d:
             if isinstance(i, list):
-                print("  "*l+"list")
+                print("  "*l+"[")
                 pprint(i, l+1, seen)
-                print("  "*l+"end")
+                print("  "*l+"],")
             elif isinstance(i, object_type):
-                print("  "*l+f"dict # {i['_type_name']}")
+                print("  "*l+f"{i['_type_name']}{{")
                 pprint(i, l+1, seen)
-                print("  "*l+"end")
+                print("  "*l+"},")
             elif isinstance(i, dict):
-                print("  "*l+"dict")
+                print("  "*l+"{")
                 pprint(i, l+1, seen)
-                print("  "*l+"end")
+                print("  "*l+"},")
             else:
-                print("  "*l+f". {i}")
+                print("  "*l+repr(i)+",")
         return
     elif not isinstance(d, dict):
+        print("  "*l+repr(d)+",")
         return
     else:
         for name, value in d.items():
             if isinstance(name, str) and name.startswith("_") and hide:
                 ...
             elif isinstance(value, function_type):
-                print("  "*l+f"set {name!r} = {value}")
+                print("  "*l+f"{name!r}: {value}")
             elif isinstance(value, object_type):
-                print("  "*l+f"dict {name!r} # {value['_type_name']}")
+                print("  "*l+f"{name!r}: {value['_type_name']}{{")
                 pprint(value, l+1, seen)
-                print("  "*l+"end")
+                print("  "*l+"},")
             elif isinstance(value, dict):
-                print("  "*l+f"dict {name!r}")
+                print("  "*l+f"{name!r}: {{")
                 pprint(value, l+1, seen)
-                print("  "*l+"end")
+                print("  "*l+"},")
             elif isinstance(value, list):
-                print("  "*l+f"list {name!r}")
+                print("  "*l+f"{name!r}: [")
                 pprint(value, l+1, seen)
-                print("  "*l+"end")
+                print("  "*l+"],")
             else:
-                print("  "*l+f"set {name!r} = {value!r}")
+                print("  "*l+f"{name!r}: {value!r},")
 
 
 def recursive_replace(data, target, replacement):
@@ -254,7 +253,7 @@ def process_code(fcode, name="__main__"):
                 error.register_error(args[0])
             elif ins == "extend" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.abspath(get_path_with_lib(args[0][1:-1]))
+                    file = os.path.abspath(info.get_path_with_lib(args[0][1:-1]))
                 else:
                     if name != "__main__":
                         file = os.path.join(os.path.dirname(name), args[0])
@@ -267,7 +266,7 @@ def process_code(fcode, name="__main__"):
                 meta_attributes["dependencies"]["dpl"].add(file)
             elif ins == "include" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.abspath(get_path_with_lib(ofile := args[0][1:-1]))
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                     search_path = "_std"
                 else:
                     file = os.path.join(os.path.dirname(name), (ofile := args[0]))
@@ -285,7 +284,7 @@ def process_code(fcode, name="__main__"):
                 res.extend(program_code)
             elif ins == "use" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.abspath(get_path_with_lib(ofile := args[0][1:-1]))
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                     search_path = "_std"
                 else:
                     file = os.path.join(os.path.dirname(name), (ofile := args[0]))
@@ -300,7 +299,7 @@ def process_code(fcode, name="__main__"):
                     return error.PREPROCESSING_ERROR
             elif ins == "use" and argc == 3 and args[1] == "as":
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.abspath(get_path_with_lib(ofile := args[0][1:-1]))
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                     search_path = "_std"
                 else:
                     file = os.path.join(os.path.dirname(name), (ofile := args[0]))
@@ -325,7 +324,7 @@ def process_code(fcode, name="__main__"):
                     return error.PREPROCESSING_ERROR
             elif ins == "use:luaj" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.abspath(get_path_with_lib(ofile := args[0][1:-1]))
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                     search_path = "_std"
                 else:
                     if name != "__main__":
@@ -336,7 +335,7 @@ def process_code(fcode, name="__main__"):
                     return error.PREPROCESSING_ERROR
             elif ins == "use:c" and argc == 1:
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.abspath(get_path_with_lib(ofile := args[0][1:-1]))
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                     search_path = "_std"
                 else:
                     if name != "__main__":
@@ -349,7 +348,7 @@ def process_code(fcode, name="__main__"):
                     return error.PREPROCESSING_ERROR
             elif ins == "use:c" and argc == 3 and args[1] == "as":
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    file = os.path.abspath(get_path_with_lib(ofile := args[0][1:-1]))
+                    file = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                     search_path = "_std"
                 else:
                     if name != "__main__":
@@ -787,7 +786,7 @@ def execute(code, frame):
                 continue
             elif ins == "use":
                 if args[0].startswith("{") and args[0].endswith("}"):
-                    f = os.path.abspath(get_path_with_lib(ofile := args[0][1:-1]))
+                    f = os.path.abspath(info.get_path_with_lib(ofile := args[0][1:-1]))
                     search_path = "_std"
                 else:
                     f = os.path.join(os.path.dirname(name), (ofile := args[0]))
@@ -1116,28 +1115,21 @@ def execute(code, frame):
             elif ins == "for" and args[1] == "in":
                 if block:
                     name, _, iter_ = args
+                    index = None
                     if isinstance(name, tuple):
                         index, name = name
-                        for ind, i in enumerate(iter_):
-                            frame[-1][name] = i
-                            frame[-1][index] = ind
-                            err = execute(block, frame)
-                            if err:
-                                if err == STOP_RESULT:
-                                    break
-                                elif err == SKIP_RESULT:
-                                    continue
-                                return err
-                    else:
-                        for i in iter_:
-                            frame[-1][name] = i
-                            err = execute(block, frame)
-                            if err:
-                                if err == STOP_RESULT:
-                                    break
-                                elif err == SKIP_RESULT:
-                                    continue
-                                return err
+                        iter_ = enumerate(iter_)
+                    for i in iter_:
+                        if index is not None:
+                            frame[-1][index], i = i
+                        frame[-1][name] = i
+                        err = execute(block, frame)
+                        if err:
+                            if err == STOP_RESULT:
+                                break
+                            elif err == SKIP_RESULT:
+                                continue
+                            return err
                 continue
             elif ins == "exec":
                 if err:=run(process_code(args[0], name=args[1]), frame=args[2]):
@@ -1224,7 +1216,7 @@ def execute(code, frame):
                     res = function(frame, meta_attributes["internal"]["main_path"], *args)
                     if (
                         res is None
-                        and WARNINGS
+                        and info.WARNINGS
                         and is_debug_enabled("warn_no_return")
                     ):
                         error.warn(
@@ -1479,16 +1471,17 @@ def execute(code, frame):
                 error.error(line_position, module_filepath, traceback.format_exc()[:-1])
                 return error.PYTHON_ERROR
             continue
-        if not isinstance((obj := lrget(frame[-1], ins)), dict) and obj in (
-            None,
-            constants.none,
-        ):
-            print(
-                "\nAdditional Info: User may have called a partially defined function!",
-                end="",
-            )
-        error.error(line_position, module_filepath, f"Invalid instruction {ins}")
-        return error.RUNTIME_ERROR
+        else:
+            if not isinstance((obj := lrget(frame[-1], ins)), dict) and obj in (
+                None,
+                constants.none,
+            ):
+                print(
+                    "\nAdditional Info: User may have called a partially defined function!",
+                    end="",
+                )
+            error.error(line_position, module_filepath, f"Invalid instruction {ins}")
+            return error.RUNTIME_ERROR
     else:
         return 0
     error.error(line_position, module_filepath, "Error was raised!")
@@ -1496,17 +1489,17 @@ def execute(code, frame):
 
 
 class IsolatedParser:
-    def __init__(self, file_name="__main__", main_path=".", libdir=PERM_LIBDIR, argv=None):
+    def __init__(self, file_name="__main__", main_path=".", libdir=info.PERM_LIBDIR, argv=None):
         self.defaults = {
-            "libdir": PERM_LIBDIR,
-            "argv": ARGV.copy(),
+            "libdir": info.PERM_LIBDIR,
+            "argv": info.ARGV.copy(),
             "main_file": varproc.internal_attributes["main_file"],
             "main_path": varproc.internal_attributes["main_path"],
             "meta": copy(varproc.meta_attributes),
         }
         varproc.internal_attributes["main_file"] = file_name
         varproc.internal_attributes["main_path"] = main_path
-        LIBDIR = libdir
+        info.LIBDIR = libdir
 
     def __enter__(self):
         return self
@@ -1517,8 +1510,8 @@ class IsolatedParser:
         return run_code(code, frame=frame)
 
     def __exit__(self, exc, exc_ins, tb):
-        LIBDIR = self.defaults["libdir"]
-        ARGV = self.defaults["argv"]
+        info.LIBDIR = self.defaults["libdir"]
+        info.ARGV = self.defaults["argv"]
         varproc.internal_attributes["main_file"] = self.defaults["main_file"]
         varproc.internal_attributes["main_path"] = self.defaults["main_path"]
         varproc.meta_attributes.update(self.defaults["meta"])
@@ -1551,7 +1544,7 @@ debugger, we have the debugger here instead!''')
             else:
                 print(f"No error.")
             continue
-        elif act and act.split(maxsplit=1)[0] in INCREMENTS:
+        elif act and act.split(maxsplit=1)[0] in info.INCREMENTS:
             while True:
                 act1 = input("... ").strip()
                 if not act1:
@@ -1622,7 +1615,7 @@ def get_run():
 # in the future especially for LLIR
 # even define their own DSLs in DPL
 
-if "get-internals" in program_flags:
+if "get-internals" in info.program_flags:
     varproc.meta_attributes["runtime_processing"] = {
         "process_code": lambda _, __, *args: (process_code(*args),),
         "execute_code": lambda _, __, *args: (execute(*args),),
@@ -1635,7 +1628,7 @@ if "get-internals" in program_flags:
 ##################################
 # this is classified as dark magic...
 
-mod_s.dpl.execute = execute
+mod_s.dpl.execute = execute_code
 mod_s.dpl.call_dpl = run_func
 mod_s.dpl.process_code = process_code
 

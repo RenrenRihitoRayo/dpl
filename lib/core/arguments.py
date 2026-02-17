@@ -1,19 +1,21 @@
 # Used to handle arguments and expressions
 # NOT FOR THE CLI
 
+
 from . import dpl_ctypes
 from sys import flags
 import traceback
 from . import constants
 from . import varproc
 from . import error
-from .info import *
+from .info import CHARS, OPEN_P, CLOSE_P, INC_TERMINAL, RT_EXPR
 from . import py_argument_handler as pah
 from . import fmt
 from . import objects
 import uuid
 from . import utils
 import time
+import mmh3
 
 globals().update(vars(dpl_ctypes))
 
@@ -245,7 +247,6 @@ type_annotations = {
     "primitive::int": int,
     "primitive::string": str,
     "primitibe::float": float,
-    "primitive::object.reference": objects.reference_type,
     "primitive::object.function": objects.function_type,
     "primitive::object": objects.object_type,
     "primitive::sequence": list | set | tuple,
@@ -275,8 +276,74 @@ dpl_constants = {
 
 type_to_name = {value: name for name, value in (type_annotations | dpl_constants).items()}
 
+# from . import info
+# if "--liv" in info.ARGV:
+#     error.info("LIV optimization is active.")
+class ID:
+    def __init__(self, name, read=None):
+        self.name = name
+        self.split = name.split(".") # memory hungry but faster
+        self.as_class_method = (self.split[0], ".".join(self.split[1:]))
+        self.read = read
+        self.path_len = len(self.split)
+        self.hashed = hash(name) # mmh3.hash64(name)[0]
+        # read can be
+        # norm = normal variable read
+        # spec = special variable read
+        # None = treat as a normal string
+    def startswith(self, other):
+        return self.name.startswith(other)
+    def endswith(self, other):
+        return self.name.endswith(other)
+    def __getitem__(self, other):
+        raise Exception()
+        return self.name.__getitem__(other)
+    def __eq__(self, other):
+        return self.name == other
+    def __ne__(self, other):
+        return self.name != other
+    def __hash__(self):
+        return self.hashed
+    def __mul__(self, other):
+        return self.name * other
+    def __contains__(self, other):
+        return other in self.name
+    def __repr__(self):
+        return self.name
+# else:
+# class ID:
+#     def __init__(self, name, read=None):
+#         self.name = name
+#         self.split = name.split(".") # memory hungry but faster
+#         self.as_class_method = (self.split[0], ".".join(self.split[1:]))
+#         self.read = read
+#         self.path_len = len(self.split)
+#         # read can be
+#         # norm = normal variable read
+#         # spec = special variable read
+#         # None = treat as a normal string
+#     def startswith(self, other):
+#         return self.name.startswith(other)
+#     def __getitem__(self, other):
+#         return self.name.__getitem__(other)
+#     def endswith(self, other):
+#         return self.name.endswith(other)
+#     def __eq__(self, other):
+#         return self.name == other
+#     def __ne__(self, other):
+#         return self.name != other
+#     def __hash__(self):
+#         return hash(self.name)
+#     def __mul__(self, other):
+#         return self.name * other
+#     def __contains__(self, other):
+#         return other in self.name
+#     def __repr__(self):
+#         return self.name
+
 fmt_format = fmt.format
 fmt_old_format = fmt.old_format
+fmt.ID = ID
 
 rget = varproc.rget
 get_debug = varproc.get_debug
@@ -465,7 +532,7 @@ def parse_struct(frame, ffi, s_name, body):
     varproc.rset(frame[-1], s_name, f"{s_name}*")
 
 
-def flatten_dict(d, parent_key="", sep=".", seen=None):
+def flatten_dict(d, parent_key="", seen=None):
     if seen is None:
         seen = set()
     items = {}
@@ -476,11 +543,13 @@ def flatten_dict(d, parent_key="", sep=".", seen=None):
     for key, value in d.items():
         if key in ("_global", "_nonlocal", "_meta"):
             continue
-        if not isinstance(key, str):
+        if isinstance(key, ID):
+            key = str(key)
+        elif not isinstance(key, str):
             continue
-        new_key = f"{parent_key}{sep}{key}" if parent_key else key
+        new_key = f"{parent_key}.{key}" if parent_key else key
         if isinstance(value, dict):
-            items.update(flatten_dict(value, new_key, sep, seen))
+            items.update(flatten_dict(value, new_key, seen))
         elif isinstance(value, (list, tuple)):
             items[f"{new_key}"] = value
             for i, item in enumerate(value):
@@ -489,7 +558,6 @@ def flatten_dict(d, parent_key="", sep=".", seen=None):
             items[new_key] = value
     seen.remove(dict_id)
     return items
-
 
 methods = {}
 matches = {}
@@ -600,6 +668,8 @@ def expr_preruntime(arg):
     elif is_id(arg):
         return ID(arg)
     elif arg.startswith("'") and arg.endswith("'"):
+        if (arg.count("${")-arg.count("\\${")) < arg.count("}"): # optimize strings
+            return arg[1:-1]
         return InterpolatedString(arg[1:-1])
     elif arg.startswith("{") and arg.endswith("}"):
         return arg
@@ -608,7 +678,10 @@ def expr_preruntime(arg):
 def handle_in_string_expr(text, data):
     args = nest_args(exprs_preruntime(group(text)))
     args = process_args(data, args)
-    return evaluate(data, Expression(args))
+    if len(args) > 1:
+        return evaluate(data, Expression(args))
+    else:
+        return expr_runtime(data, args[0])
 
 
 def expr_runtime(frame, arg):
@@ -617,19 +690,17 @@ def expr_runtime(frame, arg):
         return evaluate(frame, arg)
     elif isinstance(arg, ID):
         if arg.read == "norm":
-            v = rget(frame[-1], arg)
-            if get_debug("disable_nil_values") and v == constants.nil:
-                raise Exception(f"{arg!r} is nil!")
+            v = rget(frame[-1], arg, default=None)
+            if v is None:
+                v = rget(frame[0], arg)
             return v
         elif arg.read == "spec":
-            v = varproc.rget(frame[-1], arg, meta=True)
-            if get_debug("disable_nil_values") and v == constants.nil:
-                raise Exception(f"{arg!r} is nil!")
+            v = rget(frame[-1], arg, default=None, meta=True)
+            if v is None:
+                v = rget(frame[0], arg, meta=True)
             return v
     elif isinstance(arg, InterpolatedString):
-        text = arg
-        for c, cc in CHARS.items():
-            text = text.replace(c, cc)
+        text = arg.s
         return fmt_format(text, frame, expr_fn=lambda text, _: handle_in_string_expr(text, frame))
     return arg
 
@@ -657,13 +728,10 @@ def is_static(code):
         elif isinstance(i, (tuple, list)):
             if not is_static(i):
                 return False
-        elif not isinstance(i, str):
-            continue
-        elif i in RT_EXPR:
-            return False
         elif isinstance(i, ID) and i.read is not None:
             return False
-        # formatted string, must always be on runtime
+        elif i in RT_EXPR:
+            return False
         elif isinstance(i, InterpolatedString):
             return False
     return True
@@ -699,36 +767,11 @@ class kwarg:
     def __repr__(self):
         return f"<{self.name} = {self.value!r}>"
 
-class ID:
-    def __init__(self, name, read=None):
-        self.name = name
-        self.split = name.split(".") # memory hungry but faster
-        self.read = read
-        self.path_len = len(self.split)
-        # read can be
-        # norm = normal variable read
-        # spec = special variable read
-        # None = treat as a normal string
-    def startswith(self, other):
-        return self.name.startswith(other)
-    def endswith(self, other):
-        return self.name.endswith(other)
-    def __eq__(self, other):
-        return self.name == other
-    def __ne__(self, other):
-        return self.name != other
-    def __hash__(self):
-        return hash(self.name)
-    def __mul__(self, other):
-        return self.name * other
-    def __contains__(self, other):
-        return other in self.name
-    def __repr__(self):
-        return self.name
-
-class InterpolatedString(str):
+class InterpolatedString:
     def __init__(self, string):
-        super().__init__(string)
+        self.s = string
+    def __repr__(self):
+        return self.s
 
 def evaluate(frame, expression):
     "Evaluate an expression"
@@ -758,9 +801,9 @@ def evaluate(frame, expression):
             return temp
         elif processed[0] == "tuple":
             return tuple(processed[1:])
-    if length == 3:
         e_ins = processed[0]
-        if isinstance(processed[1], str) and processed[1] in simple_ops:
+    if length == 3:
+        if isinstance(processed[1], (str, ID)) and processed[1] in simple_ops:
             return simple_ops[processed[1]](processed[0], processed[2])
         elif processed[1] == "->":
             obj, _, attr = processed
@@ -812,8 +855,7 @@ def evaluate(frame, expression):
             return methods[processed[1]](frame, process_args(frame, processed[2]))
         elif processed[0] == "@":
             return processed[1](frame, None, process_args(frame, processed[2]))[0]
-    elif length == 2:
-        e_ins = processed[0]
+    if length == 2:
         if e_ins == "not":
             return constants.true if not processed[1] else constants.false
         elif e_ins == "nil?":
@@ -868,6 +910,8 @@ def evaluate(frame, expression):
             return getattr(type(processed[1]), "__name__", constants.nil)
         elif e_ins == "sum":
             args = processed[1]
+            if args is constants.nil:
+                return constants.nil
             t = type(args[0])
             start = args[0]
             for i in args[1:]:
@@ -926,15 +970,15 @@ def evaluate(frame, expression):
                 return processed[0][process_arg(frame, processed[1][0])]
             except:
                 return constants.nil
-    elif length == 4:
+    if length == 4:
         if processed[0] == "join" and processed[2] == "with":
             return processed[3].join(str(x) for x in processed[1])
         elif processed[1] == "or" and processed[3] == "instead":
             return processed[0] if processed[0] else processed[2]
         elif processed[1] == "@":
             args = pah.arguments_handler(process_args(frame, processed[3]))
-            return args.call(getattr(processed[0], processed[2]))
-    elif length == 5:
+            return args.call(getattr(processed[0], processed[2].name))
+    if length == 5:
         if processed[0] == "join" and processed[3] == "with":
             if isinstance(processed[1], dict):
                 return processed[4].join(run_fn(frame, processed[1], x) for x in processed[2])
@@ -942,7 +986,7 @@ def evaluate(frame, expression):
                 return processed[4].join(processed[1](x) for x in processed[2])
         elif processed[1] == "if" and processed[3] == "else":
             return evaluate(frame, processed[0] if processed[2] else processed[4])
-    elif 1 > length <= 4 and processed[0] == "slice":
+    if 1 > length <= 4 and processed[0] == "slice":
         return slice(*processed[1:])
     for name, fn in matches.items():
         try:
@@ -978,6 +1022,8 @@ def group(text):
                 this = 1
             elif i == quotes[str_type]:
                 text = str_tmp + quotes[str_type]
+                for c, cc in CHARS.items():
+                    text = text.replace(c, cc)
                 res.append(text)
                 str_tmp = ""
             else:
@@ -1043,8 +1089,7 @@ def group(text):
 def exprs_preruntime(args):
     return [expr_preruntime(e) for e in  args]
 
-def process_arg(frame, e):
-    return expr_runtime(frame, e)
+process_arg = expr_runtime
 
 def process_args(frame, e):
     return [process_arg(frame, x) for x in e]

@@ -21,9 +21,7 @@ info.program_vflags = prog_vflags
 info.ARGC = len(info.ARGV)
 import time
 import traceback
-import json
 import os
-import configparser
 import subprocess
 
 from distutils.sysconfig import get_python_inc
@@ -53,19 +51,44 @@ if "debug-mode" in prog_flags:
 info.imported = set()
 info.unique_imports = 0
 og_import = __import__
+import _frozen_importlib_external
 def __my_import__(module, globals=None, locals=None, from_list=tuple(), level=0):
-    name = module or "???"
-    if "show-imports-as-is" in prog_flags:
-        print(":: import", name, flush=True)
+    globals = globals or {}
+    ret = og_import(module, globals, locals, from_list, level)
+    og_ret = og_import(module, globals, {}, from_list, level)
+    if hasattr(og_ret, "__path__"):
+        path = og_ret.__path__
+        while isinstance(path, _frozen_importlib_external._NamespacePath | list):
+            path = path[0]
     else:
-        if name not in info.imported:
-            print(":: import", name, flush=True)
-            info.imported.add(name)
+        path = module
+    if "import-include" in prog_vflags:
+        if prog_vflags["import-include"] not in path and prog_vflags["import-include"] not in module:
+            return ret
+    if "import-no-dupe" not in prog_flags:
+        if from_list:
+            print(":: \033[0;35mfrom\033[0;33m", module or og_ret.__name__, "\033[0;35mimport\033[0;33m", ", ".join(from_list))
+            print("\033[0m   path:",path, flush=True)
+        else:
+            print(":: \033[0;35mimport\033[0;33m", module or og_ret.__name__)
+            print("\033[0m  ",path, flush=True)
+    else:
+        if module not in info.imported:
+            if from_list:
+                print(":: \033[0;35mfrom\033[0;33m", module or og_ret.__name__, "\033[0;35mimport\033[0;33m", ", ".join(from_list))
+                print("\033[0m   path:",path, flush=True)
+            else:
+                print(":: \033[0;35mimport\033[0;33m", module or og_ret.__name__)
+                print("\033[0m  ",path, flush=True)
+            info.imported.add(module)
+            if "__name__" in globals: print(f"   By \033[0;32m{globals['__name__']}\033[0m")
+            if "__module__" in globals: print(f"      \033[0;32m{globals['__module__']}\033[0m")
     info.unique_imports += 1
-    return og_import(module, globals, locals, from_list, level)
+    return ret
 if "show-imports" in prog_flags or "show-imports-as-is" in prog_flags:
-    print("DEBUG: importlib.import_module bypass has been set.\nExpect debug output for every import.")
+    print("DEBUG: __import__ bypass has been set.\nExpect debug output for every import.")
     __builtins__.__import__ = __my_import__
+    __import__ = __my_import__
 
 if "init-time" in prog_flags:
     INIT_START_TIME = time.perf_counter()
@@ -705,9 +728,6 @@ if "init-time" in prog_flags:
     END = time.perf_counter() - INIT_START_TIME
     s, u = utils.convert_sec(END)
     print(f"DEBUG: Initialization time: {s}{u}")
-
-if "show-imports" in prog_flags and "exit-when-done-importing" in prog_flags:
-    exit(0)
 
 if "dry-run" in prog_flags:
     exit(0)

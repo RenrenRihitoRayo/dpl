@@ -1,20 +1,21 @@
 import atexit
-from . import info
-from .arguments import *
-from .varproc import *
+from .arguments import exprs_preruntime, process_arg, process_args, expr_runtime, argproc_setter, group, nest_args, Expression, to_static, evaluate, parse_match, parse_dict, ID, parse_list
+from .varproc import rget, rset, rpop, meta_attributes, register_execute, new_frame, nscope, pscope
 from . import error
-from .objects import *
+from .objects import function_type, object_type, make_function, make_method, make_object, register_run_fn
 from . import constants
 from . import error
 from . import module_handling as mod_s
 import time
+import os
 from . import utils
+from .info import SYS_OS_NAME, SYS_ARCH, SYS_INFO, EXE_FORM, SYS_MACH_INFO, SYS_PROC, SYS_OS_NAME, unique_imports, SYS_MACH, UNIX, imported, LINUX_DISTRO, LINUX_VERSION, LINUX_CODENAME, program_flags
 
 error.error_setup_meta(meta_attributes)
 
 def my_exit_atexit(code=0):
-    if info.unique_imports:
-        print(f"\nPerformed {len(info.imported):,} non-identicalimports\nPerformed {info.unique_imports:,} totalimports")
+    if unique_imports:
+        print(f"\nPerformed {len(imported):,} non-identical reported imports\nPerformed {unique_imports:,} total reported imports")
 
 atexit.register(my_exit_atexit)
 
@@ -40,14 +41,14 @@ meta_attributes["internal"]["SetEnv"] = os.putenv,
 meta_attributes["internal"]["GetEnv"] = os.getenv
 
 meta_attributes["internal"]["os"] = {
-    "uname": info.SYS_MACH_INFO,  # uname
-    "architecture": info.SYS_ARCH,  # system architecture (commonly x86 or ARMv7 or whatever arm proc)
-    "executable_format": info.EXE_FORM,  # name is self explanatory
-    "machine": info.SYS_MACH,  # machine information
-    "information": info.SYS_INFO,  # basically the tripple
-    "processor": info.SYS_PROC,  # processor (intel and such)
+    "uname": SYS_MACH_INFO,  # uname
+    "architecture": SYS_ARCH,  # system architecture (commonly x86 or ARMv7 or whatever arm proc)
+    "executable_format": EXE_FORM,  # name is self explanatory
+    "machine": SYS_MACH,  # machine information
+    "information": SYS_INFO,  # basically the tripple
+    "processor": SYS_PROC,  # processor (intel and such)
     "threads": os.cpu_count(),  # physical thread count,
-    "os_name":info.SYS_OS_NAME.lower(),
+    "os_name":SYS_OS_NAME.lower(),
 }
 
 meta_attributes["internal"]["os_name"] = os.name
@@ -56,14 +57,14 @@ meta_attributes["internal"]["os_name"] = os.name
 # posix - posix compliant systems
 # jython - running on a jython environment
 
-if info.UNIX and info.SYS_OS_NAME == "linux":
+if UNIX and SYS_OS_NAME == "linux":
     meta_attributes["internal"]["os"]["linux"] = {
-        "name": info.LINUX_DISTRO,
-        "version": info.LINUX_VERSION,
-        "codename": info.LINUX_CODENAME
+        "name": LINUX_DISTRO,
+        "version": LINUX_VERSION,
+        "codename": LINUX_CODENAME
 }
 
-if "get-internals" in info.program_flags:
+if "get-internals" in program_flags:
     meta_attributes["argument_processing"] = {
         "process_argument":process_arg,
         "process_argumemts":process_args,

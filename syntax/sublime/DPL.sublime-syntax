@@ -16,10 +16,10 @@ contexts:
       scope: constant.numeric
       pop: true
 
-    - match: '^\s*\b(switch|match|case|with|inc|dec|fallthrough|default|if|loops|expect|while|f?return|loop|for|end|pass|fn|method|stop|skip)\b'
+    - match: '^\s+\b(switch|match|case|with|inc|ifmain|dec|fallthrough|default|if|loops|expect|while|f?return|loop|for|end|pass|fn|method|stop|skip)\b'
       scope: keyword.control.dpl
 
-    - match: '^\s*?#:?' # this is intentional as comments can only stay on separate lines
+    - match: '^\s+?#:?' # this is intentional as comments can only stay on separate lines
       scope: comment.line.dpl
       push: line_comment_doc
 

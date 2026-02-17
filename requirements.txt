@@ -3,6 +3,7 @@
 dill
 lupa
 cffi
+mmh3
 
 # extras
 # flask
