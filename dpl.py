@@ -194,9 +194,11 @@ help_str = f"""Help for DPL [v{varproc.meta_attributes['internal']['version']}]
 Commands:
 dpl run [file] args...
     Runs the given DPL script.
+[UNSTABLE]
 dpl compile [file]
     Compiles the given DPL script.
     Outputs to [file].cdpl
+[UNSTABLE]
 dpl rc [file] args...
     Runs the given compiled DPL script.
 `dpl repl` ALSO JUST `dpl`
@@ -488,12 +490,13 @@ Code format: (
                     )
                     ez_run(
                         code,
-                        False,
-                        file
+                        file=file,
+                        process=False
                     )
             except Exception as e:
                 print("Something went wrong:", file)
-                print("Error:", repr(e))
+                print("Error:")
+                print(traceback.format_exc())
                 exit(1)
         case ["compile", file]:
             file = get_start_path_raw(file)

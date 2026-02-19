@@ -11,6 +11,7 @@ cffi
 ## Unecessary dependencies, when removed
 ## will break non-core features (like REPL)
 requests
+pycparser
 prompt_toolkit
 
 ## for debugging purposes

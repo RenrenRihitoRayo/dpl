@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # When ran shows the info of the dpl root dir
 
 import os, sys

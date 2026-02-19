@@ -27,8 +27,8 @@ class Expression(list):
     def __str__(self):
         string = ""
         for i in self:
-            if isinstance(i, Expression):
-                string += " "+str(i)
+            if isinstance(i, CallShortened):
+                string += " "+repr(i)
             elif isinstance(i, ID):
                 if i.read == "norm":
                     read = ":"
@@ -51,6 +51,8 @@ class Expression(list):
                 string += f' {i!r}' if any(c in i for c in "\n\t ") else f" {repr(i)[1:-1]}"
         return f"[{string.strip()}]"
 
+dpl_ctypes.Expression = Expression
+
 class CallShortened(Expression):
     def __repr__(self):
         _, name, args = self
@@ -58,7 +60,7 @@ class CallShortened(Expression):
 
 class Lazy(Expression):
     def __repr__(self):
-        return f"lazy{{{self[1]!r}}}"
+        return f"[lazy {self[1]!r}]"
 
 varproc.Lazy = Lazy
 
@@ -335,36 +337,6 @@ class ID:
             return f"<{self.name}-{self.read}>"
         else:
             return self.name
-# else:
-# class ID:
-#     def __init__(self, name, read=None):
-#         self.name = name
-#         self.split = name.split(".") # memory hungry but faster
-#         self.as_class_method = (self.split[0], ".".join(self.split[1:]))
-#         self.read = read
-#         self.path_len = len(self.split)
-#         # read can be
-#         # norm = normal variable read
-#         # spec = special variable read
-#         # None = treat as a normal string
-#     def startswith(self, other):
-#         return self.name.startswith(other)
-#     def __getitem__(self, other):
-#         return self.name.__getitem__(other)
-#     def endswith(self, other):
-#         return self.name.endswith(other)
-#     def __eq__(self, other):
-#         return self.name == other
-#     def __ne__(self, other):
-#         return self.name != other
-#     def __hash__(self):
-#         return hash(self.name)
-#     def __mul__(self, other):
-#         return self.name * other
-#     def __contains__(self, other):
-#         return other in self.name
-#     def __repr__(self):
-#         return self.name
 
 fmt_format = fmt.format
 fmt_old_format = fmt.old_format
@@ -754,7 +726,7 @@ def expr_preruntime(arg):
     elif arg == ".set":
         return set()
     elif arg == ".tuple":
-        return set()
+        return tuple()
     elif arg in dpl_constants:
         return dpl_constants[arg]
     elif arg in type_annotations:
@@ -933,7 +905,7 @@ def evaluate(frame, expression):
                 else:
                     return t[0]
             else:
-                raise Exception(f"{expression[1]} ({processed[1]}) in {expression} is not callable!")
+                raise Exception(f"{expression[1]} ({processed[1]}) in {expression!s} is not callable!")
         elif e_ins == "call::static":
             func = varproc.rget(frame[-1], processed[1], default=None, resolve=True)
             if func is None:
@@ -1174,6 +1146,7 @@ def group(text):
     if str_tmp:
         error.error(0, "<internal>", "String may be unterminated!")
         raise error.DPLError(error.SYNTAX_ERROR)
+    # Expand function!() into [call :function()]
     def process_nested(res):
         nres = []
         while res:
@@ -1192,7 +1165,7 @@ def group(text):
                     elif current == ")": k -= 1
                     if k <= 0: break
                     a.append(current)
-                nres.append(CallShortened(["call", ID(name, "norm"), nest_args(process_nested(exprs_preruntime(a)))]))
+                nres.append(CallShortened(["call", ID(name, "norm"), tuple(nest_args(process_nested(exprs_preruntime(a))))]))
             elif res and isinstance(res[0], str) and (tmp:=i+res[0]) in sym:
                 nres.append(tmp)
                 res.pop(0)

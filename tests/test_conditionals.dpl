@@ -1,0 +1,38 @@
+switch::static 90
+	case 90
+		happy_assert `switch::static properly chose correct branch
+	end
+	default
+		happy_assert false
+	end
+end
+
+set ten = 10
+
+switch 90
+	case [80 + :ten]
+		happy_assert `switch properly chose correct branch
+	end
+	default
+		happy_assert false
+	end
+end
+
+match 90 # more like if statements rather than pattern matching
+    with 90 # value == 90
+        happy_assert `match with statement succeeded
+        fallthrough
+    end
+    as value
+    case [:value > 80]
+        happy_assert `match case statement succeeded
+        fallthrough
+    end
+    default
+        happy_assert `match default statement succeeded
+    end
+end
+
+if [[9 ** 2] == 81]
+    happy_assert `9 ** 2 is 81
+end

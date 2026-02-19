@@ -15,3 +15,15 @@ end
 
 happy_assert [fib!(10) == 55]
 
+object test
+method test.new(value)
+    new :self tmp
+    set self.value = :value
+    return :tmp
+end
+method test.get_value()
+    return :self.value
+end
+
+set obj = test.new!(90)
+happy_assert [test.get_value!() == 90]

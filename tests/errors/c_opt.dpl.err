@@ -1,6 +1,0 @@
-Error Name: LIBRARY_NOT_FOUND
-Library not found: ../lib/std-c/lib/test_c.so
-use:c: Something wrong happened...
-Line 1
-File __main__
-File c_opt.dpl returned an error 2
