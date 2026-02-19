@@ -1,18 +1,17 @@
-# Core dependencies, when removed may
-# break core features
+## Core dependencies, when removed may
+## break core features
 dill
 lupa
 cffi
-mmh3
 
-# extras
+## extras
 # flask
 # flask_session
 
-# Unecessary dependencies, ehen removed
-# will break non-core features (like REPL)
+## Unecessary dependencies, when removed
+## will break non-core features (like REPL)
 requests
 prompt_toolkit
 
-# for debugging purposes
-# modulegraph
+## for debugging purposes
+## modulegraph
