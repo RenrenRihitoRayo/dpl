@@ -38,17 +38,17 @@ dependencies = {
 
 # debug options
 debug_settings = {
-    "allow_automatic_global_name_resolution":1, # set to false to get variables faster
-    "show_scope_updates": 0, # show when scope is popped or pushed onto
-    "show_value_updates": 0, # show when variables are read or changed
-    "show_imports": 0,       # show imports and includes
-    "warn_no_return": 0,     # warn about cathing python functions even when theres no return value
-    "log_events": 0,         # log output (redirects to log file)
+    "allow_automatic_global_name_resolution":constants.true, # set to false to get variables faster
+    "show_scope_updates": constants.false, # show when scope is popped or pushed onto
+    "show_value_updates": constants.false, # show when variables are read or changed
+    "show_imports": constants.false,       # show imports and includes
+    "warn_no_return": constants.false,     # warn about cathing python functions even when theres no return value
+    "log_events": constants.false,         # log output (redirects to log file)
     "debug_output_file": "debug_log.txt",
-    "disable_nil_values": 0, # raises an error when nil values are accessed. useful for debugging missing values.
-    "error_on_undefined_vars": 0, # "NameError" like errors when variables that do not exist are read.
-    "warn_undefined_vars": 1,     # Like "error_on_undefined_vars" but a warning instead.
-    "_set_only_when_defined": 1,  # make sure that only defined variables in this scope can be set.
+    "disable_nil_values": constants.false, # raises an error when nil values are accessed. useful for debugging missing values.
+    "error_on_undefined_vars": constants.false, # "NameError" like errors when variables that do not exist are read.
+    "warn_undefined_vars": constants.true,     # Like "error_on_undefined_vars" but a warning instead.
+    "_set_only_when_defined": constants.true,  # make sure that only defined variables in this scope can be set.
 }
 
 # preruntime flags
@@ -56,7 +56,7 @@ preprocessing_flags = {
     "EXPRESSION_FOLDING": constants.true,
     # Fixed expression folding,
     # more stable than before
-    "DEAD_CODE_ELLIMIMATION": constants.false,
+    "DEAD_CODE_ELLIMIMATION": constants.true,
     "WARNINGS": constants.true, # display warnings
     "STRICT": constants.false, # treat warnings as errors
     "RUNTIME_ERRORS": constants.true, # Yep this is a thing
@@ -65,7 +65,8 @@ preprocessing_flags = {
     # when enabled REPL_ON_ERROR would invoke a REPL when an error is encountered,
     # this makes it possible to investigate what may have happened.
     # on exit the error will propagate as the exit code
-    "_set_only_when_defined": 1,
+    "FOR_LOOP_SUBSTITUTION": constants.false,
+    "_set_only_when_defined": constants.true,
 }
 
 to_be_methods = set()
@@ -104,7 +105,7 @@ meta_attributes = {
     "dependencies": dependencies,
     "err": {},
     "file_cache": {},
-    "_set_only_when_defined": 1,
+    "_set_only_when_defined": constants.true,
 }
 
 error.error_setup_meta(meta_attributes)

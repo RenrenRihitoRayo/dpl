@@ -1,21 +1,20 @@
 ext = dpl.extension(meta_name="io", alias=__alias__)
-import asyncio
+import sys
 
 frame_stack[0]["io"] = data = {
-    "output": modules.sys.stdout,
     "take_input": True
 }
 
 @ext.add_func("print")
 def myPrint(_, __, *args, end="", sep=" "):
     "Print args, with sep inbetween, ending with end"
-    print(*args, end=end, sep=sep, file=data["output"], flush=True)
+    print(*args, end=end, sep=sep, flush=True)
 
 
 @ext.add_func()
 def println(_, __, *args, sep=" "):
     "Prints args, with sep inbetween, always inserts newline"
-    print(*args, sep=sep, file=data["output"], flush=True)
+    print(*args, sep=sep, flush=True)
 
 
 @ext.add_func()
@@ -33,7 +32,7 @@ def myInput(frame, __, name=None, prompt=None, default=dpl.state_none):
     if data["take_input"]:
         res = input(prompt if prompt else "")
     else:
-        print(f"[USED DEFAULT VALUE] {prompt if prompt else ''}{default}", file=data["output"])
+        print(f"[USED DEFAULT VALUE] {prompt if prompt else ''}{default}")
         res = default
     if name is not None:
         dpl.varproc.rset(frame[-1], name, res)
@@ -72,4 +71,4 @@ def rawoutput(_, __, *values):
 @ext.add_func()
 def flush(_, __):
     "Manually flush the current output file"
-    data["output"].flush()
+    sys.stdout.flush()

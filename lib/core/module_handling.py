@@ -134,7 +134,7 @@ def process_cdef(frame, code, local=None):
             data[name] = name
     else:
         print(f"Library not found: {data['_path'][os.name]}")
-        return
+        return None
     return data
 
 def register_execute(func):
@@ -177,7 +177,7 @@ class extension:
             else:
                 self._name = alias
 
-    def add_func(self, name=None, typed=None, sig=None):
+    def add_func(self, name=None, typed=None, sig=None, terminal=False):
         "Add a function."
         def wrap(func):
             nonlocal name
@@ -188,6 +188,8 @@ class extension:
                 func.__doc__ = self.mangle(name) + ": Default doc string..."
             func.__text_signature__ = sig or str(inspect.Signature(list(inspect.signature(func).parameters.values())[2:]))
             self.__func[self.mangle(name)] = func
+            if terminal == True:
+                info.INC_TERMINAL.add(self.mangle(name))
             return func
         return wrap
 
@@ -464,7 +466,7 @@ def c_import(frame, file, search_path=None, loc=varproc.meta_attributes["interna
         return
     result = process_cdef(file, open(file).read())
     if result is None:
-        return 1
+        return 2
     name = alias or result["_name"]
     frame[-1][name] = result
     file_cache[file] = result

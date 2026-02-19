@@ -1,0 +1,5 @@
+&use:c {std-c/test_c.cdef}
+
+test_c.print_greetings()
+
+assert [:test == "it works!"], "C library couldnt load properly."

@@ -1,0 +1,21 @@
+
+string test
+	"test"
+	"test"
+end
+
+happy_assert [:test == "testtest"]
+
+string test new_line
+	"test"
+	"test"
+end
+
+happy_assert [:test == "test\ntest"]
+
+string test new_line as "\t"
+	"test"
+	"test"
+end
+
+happy_assert [:test == "test\ttest"]

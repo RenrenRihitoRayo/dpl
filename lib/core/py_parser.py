@@ -101,13 +101,17 @@ def pprint(d, l=0, seen=None, hide=True):
         print("  "*l+"...")
         return
     seen.add(id(d))
-    if isinstance(d, object_type):
+    if isinstance(d, function_type):
         print(("  "*l+repr(d))+",")
         return
-    elif isinstance(d, list):
+    elif isinstance(d, list | tuple):
         for i in d:
             if isinstance(i, list):
                 print("  "*l+"list")
+                pprint(i, l+1, seen)
+                print("  "*l+"end")
+            elif isinstance(i, tuple):
+                print("  "*l+"tuple")
                 pprint(i, l+1, seen)
                 print("  "*l+"end")
             elif isinstance(i, object_type):
@@ -118,8 +122,16 @@ def pprint(d, l=0, seen=None, hide=True):
                 print("  "*l+"dict")
                 pprint(i, l+1, seen)
                 print("  "*l+"end")
-            else:
+            elif callable(i):
+                print("  "*l+f"... # {i!r}")
+            elif isinstance(i, bool):
+                print("  "*l+f". {'true' if i else 'false'}")
+            elif isinstance(i, ID):
                 print("  "*l+f". {i}")
+            elif not isinstance(i, str | int | float):
+                print("  "*l+f"... # {i!r}")
+            else:
+                print("  "*l+f". {i!r}")
         return
     elif not isinstance(d, dict):
         return
@@ -128,7 +140,9 @@ def pprint(d, l=0, seen=None, hide=True):
             if isinstance(name, str) and name.startswith("_") and hide:
                 ...
             elif isinstance(value, function_type):
-                print("  "*l+f"set {name!r} = {value}")
+                print("  "*l+f"dict {name!r} # {value}")
+                pprint(dict(value), l+1, seen)
+                print("  "*l+"end")
             elif isinstance(value, object_type):
                 print("  "*l+f"dict {name!r} # {value['_type_name']}")
                 pprint(value, l+1, seen)
@@ -141,6 +155,18 @@ def pprint(d, l=0, seen=None, hide=True):
                 print("  "*l+f"list {name!r}")
                 pprint(value, l+1, seen)
                 print("  "*l+"end")
+            elif isinstance(value, tuple):
+                print("  "*l+f"tuple {name!r}")
+                pprint(value, l+1, seen)
+                print("  "*l+"end")
+            elif callable(value):
+                print("  "*l+f"set {name!r} = ... # {value!r}")
+            elif isinstance(value, bool):
+                print("  "*l+f"set {name!r} = {'true' if value else 'false'}")
+            elif isinstance(value, ID):
+                print("  "*l+f"set {name!r} = {value}")
+            elif not isinstance(value, str | int | float):
+                print("  "*l+f"set {name!r} = ... # {value!r}")
             else:
                 print("  "*l+f"set {name!r} = {value!r}")
 
@@ -172,7 +198,6 @@ def process_inline(args, inline_fn):
         res.append((line_pos, module_name, ins, m, to_static(nargs) if varproc.meta_attributes["preprocessing_flags"]["EXPRESSION_FOLDING"] else nargs))
     return res
 
-
 def process_blocks(frame, code):
     pos = 0
     res = []
@@ -184,8 +209,12 @@ def process_blocks(frame, code):
             except Exception as e:
                 error.error(lpos, fpos, traceback.format_exc() + ":: to_static couldnt process")
                 exit(error.PREPROCESSING_ERROR)
+
         if ins in INC_TERMINAL:
-            res.append(entire_line)
+            if body is not None:
+                res.append((lpos, fpos, ins, process_blocks(frame, body), args))
+            else:
+                res.append(entire_line)
             break
         if ins in INC_EXT and not body:
             temp = get_block(code, pos)
@@ -193,13 +222,52 @@ def process_blocks(frame, code):
                 error.error(lpos, fpos, f"{ins} statement isnt closed!")
                 exit(error.PREPROCESSING_ERROR)
             pos, block = temp
-            if not block or \
-            (ins in ("for", "loop") and block[0][2] in ("exit", "skip", "stop")) and \
-            (ins == "fn" and block[0][2] in ("return", "exit", "skip", "stop")) and \
+            if (not block) and ins in ("for", "loop", "fn") and \
             preprocessing_flags["DEAD_CODE_ELLIMIMATION"]:
                 error.warning(lpos, fpos, f"{ins} statement is empty!")
                 if ins == "for":
-                    error.warning(lpos, fpos, f"variable {args[0]} would not be defined!")
+                    if not preprocessing_flags["FOR_LOOP_SUBSTITUTION"]:
+                        error.warning(lpos, fpos, f"variable {args[0]} would not be defined!")
+                    else:
+                        if isinstance(args[2], list | tuple):
+                            last = args[2][-1]
+                        elif isinstance(args[2], range):
+                            last = args[2].start + ((args[2].stop - 1 - args[2].start) // args[2].step) * args[2].step
+                        else:
+                            print(args[2])
+                            error.warning(lpos, fpos, f"variable {args[0]} would not be defined!\nFor loop substitution failed!")
+                            pos += 1
+                            continue
+                        res.append((lpos, fpos, "set", None, [args[0], "=", last]))
+                elif ins == "fn":
+                    error.warning(lpos, fpos, f"function {args[0]} would not be defined!")
+
+            if block and ins in ("for", "loop", "fn") and block[0][2] in INC_TERMINAL and \
+            preprocessing_flags["DEAD_CODE_ELLIMIMATION"]:
+                if ins == "fn" and block[-1][2] == "return" and block[-1][4]:
+                    if is_static(block[-1][4]):
+                        error.warning(lpos, fpos, f"In function {args[0]}, a constant wrapped by a function is not good practice. Use variables instead. In the future this will be an error.")
+                    res.append((lpos, fpos, ins, process_blocks(frame, block), args))
+                    pos += 1
+                    continue
+
+                error.warning(lpos, fpos, f"{ins} statement is empty!")
+                if ins == "for":
+                    if not preprocessing_flags["FOR_LOOP_SUBSTITUTION"]:
+                        error.warning(lpos, fpos, f"variable {args[0]} would not be defined!")
+                    else:
+                        if isinstance(args[2], list | tuple):
+                            last = args[2][-1]
+                        elif isinstance(args[2], range):
+                            last = args[2].start + ((args[2].stop - 1 - args[2].start) // args[2].step) * args[2].step
+                        else:
+                            print(args[2])
+                            error.warning(lpos, fpos, f"variable {args[0]} would not be defined!\nFor loop substitution failed!")
+                            pos += 1
+                            continue
+                        res.append((lpos, fpos, "set", None, [args[0], "=", last]))
+                elif ins == "fn":
+                    error.warning(lpos, fpos, f"function {args[0]} would not be defined!")
             else:
                 res.append((lpos, fpos, ins, process_blocks(frame, block), args))
         else:
@@ -344,9 +412,12 @@ def process_code(fcode, name="__main__"):
                     else:
                         file = args[0]
                     search_path = "_loc"
-                if mod_s.c_import(nframe, file, search_path, loc="."):
+                if errcode:=mod_s.c_import(nframe, file, search_path, loc="."):
                     print(f"use:c: Something wrong happened...\nLine {lpos}\nFile {name}")
-                    return error.PREPROCESSING_ERROR
+                    if errcode == 2:
+                        return error.LIBRARY_NOT_FOUND
+                    else:
+                        return error.PREPROCESSING_ERROR
             elif ins == "use:c" and argc == 3 and args[1] == "as":
                 if args[0].startswith("{") and args[0].endswith("}"):
                     file = os.path.abspath(get_path_with_lib(ofile := args[0][1:-1]))
@@ -424,7 +495,7 @@ def process_code(fcode, name="__main__"):
         while pos < len(nres):
             entire_line = line_pos, file, ins, _, args = nres[pos]
             argc = len(args)
-            if not isinstance(ins, str):
+            if not isinstance(ins, str | ID):
                 res.append(entire_line)
             elif ins == "switch::static":
                 body = {None: []}
@@ -439,14 +510,18 @@ def process_code(fcode, name="__main__"):
                 while sub_pos < len(switch_block):
                     line_pos, file, ins, _, args = switch_block[sub_pos]
                     if ins == "case" and len(args) == 1:
-                        if not is_static(args[0]):
-                            error.warning(line_pos, file, f"Expression {args[0]!r} is not a constant. Use `switch` instead!")
+                        if not is_static([args[0]]):
+                            error.error(line_pos, file, f"Case {args[0]!s} is not constant for static::switch at {og_lpos}.")
+                            return error.PREPROCESSING_ERROR
                         temp = get_block(switch_block, sub_pos)
                         if temp is None:
                             error.error(line_pos, file, f"Switch statement is invalid! For case '{args[0]}'")
                             return error.PREPROCESSING_ERROR
                         sub_pos, bod = temp
-                        body[process_arg(nframe, args[0])] = process_blocks(None, bod)
+                        body_tag = process_arg(nframe, args[0])
+                        if not isinstance(body_tag, str | int | float | set | tuple | ID):
+                            body_tag = f"{type(body_tag)}:{repr(body_tag)}"
+                        body[body_tag] = process_blocks(None, bod)
                     elif ins == "default" and not args:
                         temp = get_block(switch_block, sub_pos)
                         if temp is None:
@@ -494,109 +569,6 @@ def process_code(fcode, name="__main__"):
                         return error.PREPROCESSING_ERROR
                     sub_pos += 1
                 res.append([og_lpos, file, "_intern.switch::dynamic", None, [body, arg_val]])
-            elif ins == "match::pattern" and argc == 1:
-                body = {"default": [], "opts": []}
-                opts = body["opts"]
-                arg_val = args[0]
-                og_lpos = line_pos
-                temp = get_block(nres, pos)
-                if temp is None:
-                    error.error(line_pos, file, "match::pattern statement is invalid!")
-                    return error.PREPROCESSING_ERROR
-                pos, switch_block = temp
-                sub_pos = 0
-                while sub_pos < len(switch_block):
-                    line_pos, file, ins, _, args = switch_block[sub_pos]
-                    if ins == "case" and len(args) == 1:
-                        temp = get_block(switch_block, sub_pos)
-                        if temp is None:
-                            error.error(line_pos, file, f"match::pattern statement is invalid! For case '{args[0]}'")
-                            return error.PREPROCESSING_ERROR
-                        sub_pos, tbody = temp
-                        opts.append({
-                            "value": args[0],
-                            "body": process_blocks(nframe, tbody),
-                            "types": ()
-                        })
-                    elif ins == "case" and len(args) == 2:
-                        temp = get_block(switch_block, sub_pos)
-                        if temp is None:
-                            error.error(line_pos, file, f"match::pattern statement is invalid! For case '{args[0]}'")
-                            return error.PREPROCESSING_ERROR
-                        sub_pos, tbody = temp
-                        opts.append({
-                            "value": args[0],
-                            "body": process_blocks(nframe, tbody),
-                            "types": args[1]
-                        })
-                    elif ins == "default" and not args:
-                        temp = get_block(switch_block, sub_pos)
-                        if temp is None:
-                            error.error(line_pos, file, f"match::pattern statement is invalid! For case '{args[0]}'")
-                            return error.PREPROCESSING_ERROR
-                        sub_pos, bod = temp
-                        body["default"] = process_blocks(nframe, bod)
-                    else:
-                        error.error(line_pos, file, "Invalid match::pattern statement!")
-                        return error.PREPROCESSING_ERROR
-                    sub_pos += 1
-                res.append([og_lpos, file, "_intern.match::pattern", None, [body, arg_val]])
-            elif ins == "fn::inline" and argc == 2:
-                inline_name, param = process_args(nframe, args)
-                temp = get_block(nres, pos)
-                if temp is None:
-                    error.error(line_pos, file, "Inline function statement is invalid!")
-                    return error.PREPROCESSING_ERROR
-                pos, inlines[f"{inline_name}"] = temp[0], {
-                    "args": param,
-                    "body": temp[1]
-                }
-            elif ins == "fn::static" and argc == 2:
-                function_name, params = args
-                temp_block = get_block(nres, pos)
-                if temp_block is None:
-                    break
-                else:
-                    pos, body = temp_block
-                doc = []
-                for _, _, ins, _, args in body:
-                    if ins == "doc" and len(args) == 1:
-                        doc.append(process_arg(nframe, args[0]))
-                func = make_function(nframe[-1], function_name, process_blocks(nframe, body), process_args(nframe, params))
-                rset(nframe[-1], function_name, func)
-                if doc:
-                    func["help"] = "\n".join(doc)
-                func["capture"] = nframe[-1] # automatically store the scope it was defined in
-            elif ins == "string::static" and argc == 1:
-                name = process_arg(nframe, args[0])
-                temp = get_block(nres, pos)
-                if temp is None:
-                    error.error(line_pos, file, "Static string statement is invalid!")
-                    return error.PREPROCESSING_ERROR
-                pos, block = temp
-                lines = []
-                og_line = line_pos
-                og_file = file
-                for [line_pos, file, ins, _, args] in block:
-                    if len(args) > 1:
-                        error.error(line_pos, file, f"Invalid line length!")
-                        return error.PREPROCESSING_ERROR
-                    args = process_args(nframe, args)
-                    if ins == ".":
-                        lines.append((args[0] if args else "")+"\n")
-                    elif ins == "+":
-                        lines.append(args[0] if args else "")
-                    else:
-                        error.error(line_pos, file, f"Invalid operator length!")
-                        return error.PREPROCESSING_ERROR
-                rset(nframe[-1], name, "".join(lines))
-            elif ins.startswith("inline::") and argc == 1:
-                name = ins[8:]
-                if name in inlines:
-                    res.extend(process_inline(args[0], inlines[name]))
-                else:
-                    error.error(line_pos, file, f"Invalid inline function: {name}")
-                    return error.PREPROCESSING_ERROR
             else:
                 res.append(entire_line)
             pos += 1
@@ -684,7 +656,6 @@ def execute(code, frame):
     # was previously here
     # and ran every recursive call
 
-    instruction_pointer = 0
     code_length = len(code)
     lrset = rset; lrget = rget
 
@@ -817,11 +788,12 @@ def execute(code, frame):
             elif ins == "get_time":
                 lrset(frame[-1], args[0], time.time())
                 continue
-            elif ins == "dump_vars" and argc == 1 and isinstance(args[0], dict):
+            elif ins == "dump_vars" and isinstance(args[0], dict):
                 pprint(args[0], hide=False)
                 continue
             elif ins == "dump_vars_fancy":
-                pprint({args[0]: lrget(frame[-1], args[0])}, hide=False)
+                d = {args[0]: lrget(frame[-1], args[0])}
+                pprint(d, hide=False)
                 continue
             elif ins == "loop":
                 if block:
@@ -835,10 +807,7 @@ def execute(code, frame):
                             return err
                 continue
             elif ins == "while":
-                if isinstance(args[0], (tuple, list)):
-                    expr = Expression(args[0])
-                else:
-                    expr = args[0]
+                expr = Expression(args[0])
                 if block:
                     while evaluate(frame, expr):
                         err = execute(block, frame)
@@ -885,13 +854,17 @@ def execute(code, frame):
                 if parse_dict(frame, args[0], block):
                     break
                 continue
-            elif ins == "LOG_TIME":
-                ct, unit = utils.convert_sec(time.perf_counter() - start_time)
-                error.info(f"Elapsed time: {ct:,.8f}{unit} {args[0]}")
-                continue
             elif ins == "list":
                 if parse_list(frame, args[0], block):
                     break
+                continue
+            elif ins == "tuple":
+                if parse_tuple(frame, args[0], block):
+                    break
+                continue
+            elif ins == "LOG_TIME":
+                ct, unit = utils.convert_sec(time.perf_counter() - start_time)
+                error.info(f"Elapsed time: {ct:,.8f}{unit} {args[0]}")
                 continue
             elif ins == "local":
                 execute(args[0]["body"], frame)
@@ -903,6 +876,21 @@ def execute(code, frame):
             elif ins == "raise" and isinstance(args[0], int):
                 error.error(line_position, module_filepath, f"Error [{args[0]}]: {error.ERRORS_DICT.get(args[0], '???')}")
                 return args[0]
+            elif ins == "assert":
+                if not args[0]:
+                    error.error(line_position, module_filepath, f"Error [ASSERTION_ERROR]: Assertion failed for {oargs[0]}!")
+                    return error.ASSERTION_ERROR
+                continue
+            elif ins == "happy_assert":
+                if not args[0]:
+                    error.info_assert_false(line_position, module_filepath, oargs[0])
+                    return error.ASSERTION_ERROR
+                error.info_assert_true(line_position, module_filepath, oargs[0])
+                continue
+            elif ins == "string":
+                if parse_string(frame, args[0], block, False):
+                    break
+                continue
         ## VARIADIC >= 1
         if ins == "del" and argc >= 1:
             for name in args:
@@ -919,9 +907,11 @@ def execute(code, frame):
                 lrset(frame[-1], name, fn)
                 continue
             elif ins == "_intern.switch::static" :
-                temp_body = args[0].get(args[1], args[0][None])
+                body_tag = args[1]
+                if not isinstance(body_tag, str | int | float | set | tuple | ID):
+                    body_tag = f"{type(body_tag)}:{repr(body_tag)}"
+                temp_body = args[0].get(body_tag, args[0][None])
                 if not temp_body:
-                    instruction_pointer += 1
                     continue
                 if err:= execute(temp_body, frame):
                     error.error(line_position, module_filepath, f"Error in switch block '{args[1]}'")
@@ -973,7 +963,6 @@ def execute(code, frame):
                 for name, value in obj.items():
                     if isinstance(value, function_type):
                         value["self"] = obj
-                obj["_instance_name"] = object_name
                 lrset(frame[-1], object_name, obj)
                 continue
             elif ins == "benchmark":
@@ -1024,6 +1013,11 @@ def execute(code, frame):
                 return args[0]
             elif ins == "cmd":
                 frame[-1][args[1]] = os.system(args[0])
+                continue
+            elif ins == "assert":
+                if not args[0]:
+                    error.error(line_position, module_filepath, f"Error [ASSERTION_ERROR]: {args[1]}")
+                    return error.ASSERTION_ERROR
                 continue
         ## VARIADIC >= 2
         if argc >= 2:
@@ -1396,8 +1390,67 @@ def execute(code, frame):
                     for name, value in zip(latched_names, args):
                         lrset(frame[-1]["_nonlocal"], name, value)
             return error.STOP_FUNCTION
-        if (
+        if isinstance(ins, (str, ID)) and (
             (function_obj := lrget(frame[-1], ins, default=lrget(frame[0], ins)))
+            != constants.nil
+            and isinstance(function_obj, dict)
+            and "body" in function_obj and
+                "args" in function_obj and
+                "capture" in function_obj and
+                argc == 1
+            ):  # Call a function
+            if function_obj["tags"]["preserve-args"]:
+                raw_args = args[0]
+            args = process_args(frame, args[0])
+            nscope(frame)
+            if function_obj["tags"]["preserve-args"]:
+                frame[-1]["_raw_args"] = raw_args
+            if function_obj["self"] is not None:
+                frame[-1]["self"] = function_obj["self"]
+            frame[-1]["_args"] = args
+            if function_obj["variadic"]["name"] != constants.nil:
+                if len(args)-1 >= function_obj["variadic"]["index"]:
+                    variadic = []
+                    for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
+                        if name in function_obj["checks"]:
+                            if not run_func(frame, func_obj["checks"], value):
+                                error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][4][0]}")
+                                return error.CHECK_ERROR
+                        if variadic:
+                            variadic.append(value)
+                        elif line_position >= function_obj["variadic"]["index"]:
+                            variadic.append(value)
+                        else:
+                            frame[-1][name] = value
+                    frame[-1][function_obj["variadic"]["name"]] = variadic
+                else:
+                    error.error(line_position, module_filepath, f"Function {ins} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
+                    return error.RUNTIME_ERROR
+            else:
+                if len(args) != len(function_obj["args"]) and not function_obj["defaults"]:
+                    text = "more" if len(args) > len(function_obj["args"]) else "less"
+                    error.error(line_position, module_filepath, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
+                    return error.RUNTIME_ERROR
+                for n, v in function_obj["defaults"].items():
+                    frame[-1][n] = v
+                for name, value in itertools.zip_longest(function_obj["args"], args, fillvalue=constants.nil):
+                    if name == constants.nil:
+                        break
+                    if name in function_obj["checks"]:
+                        if not run_func(frame, function_obj["checks"][name], value):
+                            error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][4][0]}")
+                            return error.CHECK_ERROR
+                    frame[-1][name] = value
+            if function_obj["capture"] != constants.nil:
+                frame[-1]["_capture"] = function_obj["capture"]
+            err = execute(function_obj["body"], frame)
+            if err and err != error.STOP_FUNCTION:
+                if err > 0: error.error(line_position, module_filepath, f"Error in function {ins!r}: [{err}] {error.ERRORS_DICT.get(err, '???')}")
+                return err
+            pscope(frame)
+            continue
+        if (
+            (function_obj := ins)
             != constants.nil
             and isinstance(function_obj, dict)
             and "body" in function_obj and

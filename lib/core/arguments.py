@@ -15,7 +15,6 @@ from . import objects
 import uuid
 from . import utils
 import time
-import mmh3
 
 globals().update(vars(dpl_ctypes))
 
@@ -25,17 +24,37 @@ inf = float("inf")
 class Expression(list):
     def __hash__(self):
         return hash(str(self))
+    def __str__(self):
+        string = ""
+        for i in self:
+            if isinstance(i, Expression):
+                string += " "+str(i)
+            elif isinstance(i, ID):
+                if i.read == "norm":
+                    read = ":"
+                elif i.read == "spec":
+                    read = "?:"
+                else:
+                    read = ""
+                string += f" {read}{i.name}"
+            elif not isinstance(i, str):
+                string += " "+repr(i)
+            else:
+                string += f' {i!r}' if any(c in i for c in "\n\t ") else f" {repr(i)[1:-1]}"
+        return f"[{string.strip()}]"
     def __repr__(self):
         string = ""
         for i in self:
             if not isinstance(i, str):
-                string += " "+str(i)
-            elif i.startswith(":"):
-                string += f" {i}"
+                string += " "+repr(i)
             else:
-                string += f' "{i}"' if " " in i else f" {i}"
+                string += f' {i!r}' if any(c in i for c in "\n\t ") else f" {repr(i)[1:-1]}"
         return f"[{string.strip()}]"
-                
+
+class CallShortened(Expression):
+    def __repr__(self):
+        _, name, args = self
+        return f"[{name.name}!({repr(args)[1:-1]})]"
 
 class Lazy(Expression):
     def __repr__(self):
@@ -224,6 +243,8 @@ simple_ops = {
     '/': lambda a, b: a / b,
     '//': lambda a, b: a // b,
     '%': lambda a, b: a % b,
+    '>>': lambda a, b: a >> b,
+    '<<': lambda a, b: a << b,
     '%%': lambda x, y: constants.true if x % y == 0 else constants.false,
     '<': lambda a, b: constants.true if a < b else constants.false,
     '<=': lambda a, b: constants.true if a <= b else constants.false,
@@ -286,7 +307,7 @@ class ID:
         self.as_class_method = (self.split[0], ".".join(self.split[1:]))
         self.read = read
         self.path_len = len(self.split)
-        self.hashed = hash(name) # mmh3.hash64(name)[0]
+        self.hashed = hash(name)
         # read can be
         # norm = normal variable read
         # spec = special variable read
@@ -296,7 +317,6 @@ class ID:
     def endswith(self, other):
         return self.name.endswith(other)
     def __getitem__(self, other):
-        raise Exception()
         return self.name.__getitem__(other)
     def __eq__(self, other):
         return self.name == other
@@ -306,10 +326,15 @@ class ID:
         return self.hashed
     def __mul__(self, other):
         return self.name * other
+    def __add__(self, other):
+        return self.name + other
     def __contains__(self, other):
         return other in self.name
     def __repr__(self):
-        return self.name
+        if self.read:
+            return f"<{self.name}-{self.read}>"
+        else:
+            return self.name
 # else:
 # class ID:
 #     def __init__(self, name, read=None):
@@ -476,8 +501,22 @@ def parse_dict(frame, temp_name, body):
             tmp = [data]
             if parse_list(tmp, args[0], block):
                 return 1
+        elif ins == "tuple" and argc == 1:
+            tmp = [data]
+            if parse_tuple(tmp, args[0], block):
+                return 1
+        elif ins == "fn" and argc == 2:
+            data[args[0]] = objects.make_function(frame[-1], args[0], block, args[1])
+        elif ins == "method" and argc == 2:
+            data[args[0]] = objects.make_method(frame[-1], args[0], block, args[1], data)
+        elif ins == "string" and argc == 1:
+            parse_string(data, args[0], block)
+        elif ins == "string" and argc == 2:
+            parse_string(data, args[0], block, True)
+        elif ins == "string" and argc == 4:
+            parse_string(data, args[0], block, True, args[3])
         else:
-            error.error(pos, file, f"Invalid statement!")
+            error.error(pos, file, f"Invalid statement {ins!r}!")
             return 1
         p += 1
 
@@ -504,10 +543,76 @@ def parse_list(frame, temp_name, body):
             if parse_list(tmp, "???", block):
                 return 1
             data.append(tmp[-1]["???"])
+        elif ins == "tuple" and argc == 0:
+            tmp = [{}]
+            if parse_tuple(tmp, "???", block):
+                return 1
+            data.append(tmp[-1]["???"])
+        elif ins == "fn" and argc == 2:
+            data.append(objects.make_function(None, args[0], block, args[1]))
+        elif ins == "string" and argc == 1:
+            tmp = [{}]
+            parse_string(tmp, "???", block)
+            data.append(tmp[-1]["???"])
+        elif ins == "string" and argc == 2:
+            tmp = [{}]
+            parse_string(tmp, "???", block, True)
+            data.append(tmp[-1]["???"])
+        elif ins == "string" and argc == 4:
+            tmp = [{}]
+            parse_string(tmp, "???", block, True, args[3])
+            data.append(tmp[-1]["???"])
         else:
             error.error(pos, file, f"Invalid statement!")
             return 1
         p += 1
+
+
+def parse_tuple(frame, temp_name, body):
+    data = []
+    p = 0
+    while p < len(body):
+        [pos, file, ins, block, args] = body[p]
+        args = process_args(frame, args or [])
+        argc = len(args)
+        if ins == "expand" and argc == 1:
+            data.extend(args[0])
+        elif ins == "." and argc == 1:
+            data.append(args[0])
+        elif ins == "dict" and argc == 0:
+            tmp = [{}]
+            if parse_dict(tmp, "???", block):
+                return 1
+            data.append(tmp[-1]["???"])
+        elif ins == "list" and argc == 0:
+            tmp = [{}]
+            if parse_list(tmp, "???", block):
+                return 1
+            data.append(tmp[-1]["???"])
+        elif ins == "tuple" and argc == 0:
+            tmp = [{}]
+            if parse_tuple(tmp, "???", block):
+                return 1
+            data.append(tmp[-1]["???"])
+        elif ins == "fn" and argc == 2:
+            data.append(objects.make_function(None, args[0], block, args[1]))
+        elif ins == "string" and argc == 1:
+            tmp = [{}]
+            parse_string(tmp, "???", block)
+            data.append(tmp[-1]["???"])
+        elif ins == "string" and argc == 2:
+            tmp = [{}]
+            parse_string(tmp, "???", block, True)
+            data.append(tmp[-1]["???"])
+        elif ins == "string" and argc == 4:
+            tmp = [{}]
+            parse_string(tmp, "???", block, True, args[3])
+            data.append(tmp[-1]["???"])
+        else:
+            error.error(pos, file, f"Invalid statement!")
+            return 1
+        p += 1
+    varproc.rset(frame[-1], temp_name, tuple(data))
 
 
 def parse_string(frame, temp_name, body, new_line=False, sep="\n"):
@@ -668,7 +773,7 @@ def expr_preruntime(arg):
     elif is_id(arg):
         return ID(arg)
     elif arg.startswith("'") and arg.endswith("'"):
-        if (arg.count("${")-arg.count("\\${")) < arg.count("}"): # optimize strings
+        if ((arg.count("${")-arg.count("\\${"))+(arg.count("&{")-arg.count("\\&{"))) < arg.count("}"): # optimize strings
             return arg[1:-1]
         return InterpolatedString(arg[1:-1])
     elif arg.startswith("{") and arg.endswith("}"):
@@ -751,6 +856,8 @@ def to_static(code, env=None):
                     code[pos] = f'"{value}"'
                 else:
                     code[pos] = value
+            # elif len(i) == 3 and i[1] == "*" and i[2] == 2:
+            #     code[pos] = Expression([i[0], "<<", 2])
             else:
                 code[pos] = to_static(i, env=env)
     return code if t is None else t(code)
@@ -819,12 +926,14 @@ def evaluate(frame, expression):
         elif e_ins == "call":
             if isinstance(processed[1], dict):
                 return run_fn(processed[1]["capture"]["_frame_stack"], processed[1], *process_args(frame, processed[2]))
-            else:
+            elif hasattr(processed[1], "__call__"):
                 t = processed[1](frame, None, *process_args(frame, processed[2]))
                 if t is None:
                     return constants.nil
                 else:
-                    return t
+                    return t[0]
+            else:
+                raise Exception(f"{expression[1]} ({processed[1]}) in {expression} is not callable!")
         elif e_ins == "call::static":
             func = varproc.rget(frame[-1], processed[1], default=None, resolve=True)
             if func is None:
@@ -880,7 +989,10 @@ def evaluate(frame, expression):
             except:
                 return constants.nil
         elif e_ins == "?dict":
-            return str(processed[1])
+            try:
+                return dict(processed[1])
+            except:
+                return constants.nil
         elif e_ins == "?bytes":
             try:
                 item = processed[0]
@@ -999,8 +1111,8 @@ def evaluate(frame, expression):
 
 varproc.evaluate = evaluate
 sep = " ,"
-special_sep = "@()+/*[]π<>=!π%"
-sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//", "%%", "..", "..+", "]."]
+special_sep = "@()+/*[]π<>=!%#"
+sym = [">=", "<=", "->", "=>", "==", "!=", "**", "//", "%%", "..", "..+", "].", ">>", "<<"]
 
 
 def group(text):
@@ -1029,11 +1141,15 @@ def group(text):
             else:
                 str_tmp += i
             continue
+        elif i == "`":
+            res.append('"'+"".join(text)+'"')
         elif i in sep:
             if id_tmp:
                 res.append("".join(id_tmp))
                 id_tmp.clear()
         elif i in special_sep:
+            if i == "#":
+                break
             if id_tmp:
                 res.append("".join(id_tmp))
                 id_tmp.clear()
@@ -1076,7 +1192,7 @@ def group(text):
                     elif current == ")": k -= 1
                     if k <= 0: break
                     a.append(current)
-                nres.append(Expression(["call", f":{name}", nest_args(process_nested(a))]))
+                nres.append(CallShortened(["call", ID(name, "norm"), nest_args(process_nested(exprs_preruntime(a)))]))
             elif res and isinstance(res[0], str) and (tmp:=i+res[0]) in sym:
                 nres.append(tmp)
                 res.pop(0)

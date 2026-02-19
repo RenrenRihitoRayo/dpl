@@ -1,0 +1,17 @@
+&use {std/text_io.py}
+
+fn fib(n)
+    set a = 1
+    set b = 0
+    while (:n > 0)
+        set c = [:a + :b]
+        set b = :a
+        set a = :c
+        dec n
+    end
+
+    return :b
+end
+
+happy_assert [fib!(10) == 55]
+

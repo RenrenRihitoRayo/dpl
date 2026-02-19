@@ -34,7 +34,7 @@ end
 # in the future itll have templates but not now
 fn display_text() (flask:route("/test", [! "GET", "POST"]))
     switch :request.method
-        case POST
+        case "POST"
             set str = :request.form.text
             string template new_line
                 "<!DOCTYPE html>"
@@ -45,7 +45,7 @@ fn display_text() (flask:route("/test", [! "GET", "POST"]))
             end
             return :template
         end
-        case GET
+        case "GET"
             return "<!DOCTYPE html><style> body { background-color: grey; } </style><meta name='viewport' content='width=device-width, initial-scale=175%'>Submit a post request first!"
         end
         default

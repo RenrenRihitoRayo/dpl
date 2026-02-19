@@ -1,22 +1,22 @@
 
-failed_test=()
+declare -A failed_test
 timed_out=()
 fails=0
 time=5s
 
-rm errors/*
+mkdir errors &> /dev/null
+rm errors/* &> /dev/null
 
-for file in *; do
+for file in *.dpl; do
 	if [ "${file%%-*}" = "xx" ]; then
 		continue
 	fi
 	if [ -f "$file" ]; then
-		if [ "${file##*.}" != "dpl" ]; then
-			continue
-		fi
-		echo -n "$file: "
+		echo "Testing $file..."
 		timeout $time python3 ../dpl.py -simple-mode -simple-run $file &> temp.txt
 		command_res=$?
+		error_type=$(grep "^Error Name:" temp.txt)
+		echo -n "$file: "
 		if [ "$command_res" -eq "124" ]; then
 			if file_msg=$(grep "^$file :timeout: " "excluded.txt"); then
                 echo -e "\033[0;33mTimeout ($time)" ${file_msg#* :timeout: } "\033[0m"
@@ -40,7 +40,7 @@ for file in *; do
     		    echo -e "\033[0;31mFailed [$command_res]\033[0m"
     			cp temp.txt "./errors/${file}.err"
     			fails=$((fails + 1))
-    			failed_test+=($file)
+    			failed_test[$file]="[$command_res] ${error_type##Error Name: }"
 			fi
 			continue
 		fi
@@ -57,8 +57,8 @@ fi
 
 if [ $fails -ne 0 ]; then
 	echo -e "\nFailed Tests:"
-	for file in "${failed_test[@]}"; do
-		echo "- $file"
+	for file in "${!failed_test[@]}"; do
+		echo "- $file ${failed_test[$file]}"
 	done
 	echo -e "\n$fails Tests failed!"
 elif [ $fails -eq 0 ] && [ ${#timed_out[@]} == 0 ]; then

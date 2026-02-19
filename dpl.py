@@ -282,28 +282,24 @@ def rec(this, ind=0):
     "Print errors [rec]ursively."
     if not isinstance(this, (tuple, list)):
         print(
-            f"{'  '*ind}Error Name: {error.ERRORS_DICT.get(this, f'ERROR NAME NOT FOUND <{this}>')}"
+            f"{'  '*ind}Error Name: {error.ERRORS_DICT.get(this, f'ERROR NAME NOT FOUND <{this}>')}",
+            file=sys.stderr
         )
     else:
         for pos, i in enumerate(this):
             if isinstance(i, (tuple, list)):
-                print(f"{'  '*ind}Cause:")
+                print(f"{'  '*ind}Cause:", file=sys.stderr)
                 rec(i, ind + 1)
             else:
                 print(
-                    f"{'  '*ind}Error Name {'(root) ' if pos == 0 else '(cause)'}: {error.ERRORS_DICT.get(i, f'ERROR NAME NOT FOUND <{i}>')}"
+                    f"{'  '*ind}Error Name {'(root) ' if pos == 0 else '(cause)'}: {error.ERRORS_DICT.get(i, f'ERROR NAME NOT FOUND <{i}>')}",
+                    file=sys.stderr
                 )
 
 
 def ez_run(code, file="???", argv=None, process=True):
     "Run a DPL script in an easier way, hence ez_run"
-    if process:
-        code = parser.process_code(code)
-        if isinstance(code, int):
-            print(f"File {file} returned an error {code}")
-            return code
-        frame = code["frame"]
-    elif isinstance(code, dict):
+    if isinstance(code, dict):
         frame = code["frame"]
     else:
         frame = varproc.new_frame()
@@ -312,11 +308,17 @@ def ez_run(code, file="???", argv=None, process=True):
         frame[0]["_meta"]["argc"] = len(argv)
     frame[0]["_meta"]["internal"]["main_path"] = os.path.dirname(file)
     frame[0]["_meta"]["internal"]["main_file"] = file
+    if process:
+        code = parser.process_code(code)
+        if isinstance(code, int):
+            print(f"File {file} returned an error {code}")
+            return code
+        frame = code["frame"]
     if err := parser.run_code(code, frame=frame):
         if frame[0]["_meta"]["preprocessing_flags"]["REPL_ON_ERROR"]:
             parser.investigation_repl(frame, err)
         rec(err)
-        print(f"\n[{file}]\nFinished with an error: {err}")
+        print(f"\n[{file}]\nFinished with an error: {err}", file=sys.stderr)
         if isinstance(err, tuple):
             exit(err[0])
         else:
@@ -344,21 +346,27 @@ if "instant-help" in prog_flags:
 # if you just need to run a simple script.
 # no cli just the script, no bloat.
 if "simple-run" in prog_flags:
-    if "init-time" in prog_flags:
-        END = time.perf_counter() - INIT_START_TIME
-        s, u = utils.convert_sec(END)
-        print(f"DEBUG: Initialization time: {s}{u}")
-    if "profile" in prog_flags:
-        START = time.perf_counter()
-    with open(path:=get_start_path_raw(info.ARGV[1]), "r") as f:
-        varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
-        if err:=ez_run(f.read(), file=path, argv=info.ARGV[1], process=True):
-            rec(err)
-            exit(err)
-    if "profile" in prog_flags:
-        END = time.perf_counter() - START
-        s, u = utils.convert_sec(END)
-        print(f"DEBUG: Elapsed Time: {s}{u}")
+    try:
+        if "init-time" in prog_flags:
+            END = time.perf_counter() - INIT_START_TIME
+            s, u = utils.convert_sec(END)
+            print(f"DEBUG: Initialization time: {s}{u}")
+        if "profile" in prog_flags:
+            START = time.perf_counter()
+        with open(path:=get_start_path_raw(info.ARGV[1]), "r") as f:
+            varproc.meta_attributes["argc"] = info.ARGC = len(info.ARGV)
+            # varproc.meta_attributes["internal"]["main_file"] = path
+            # varproc.meta_attributes["internal"]["main_path"] = os.path.dirname(path)
+            if err:=ez_run(f.read(), file=path, argv=info.ARGV[1], process=True):
+                rec(err)
+                exit(err)
+        if "profile" in prog_flags:
+            END = time.perf_counter() - START
+            s, u = utils.convert_sec(END)
+            print(f"DEBUG: Elapsed Time: {s}{u}")
+    except error.DPLError as e:
+        rec(e.code)
+        exit(e.code)
     exit(0)
 
 def handle_args():
@@ -369,15 +377,19 @@ def handle_args():
         return
     match (info.ARGV[1:]):
         case ["run", file, *args]:
-            if "profile" in prog_flags:
-                START = time.perf_counter()
-            if err:=ez_run(open(file).read(), argv=args, file=file):
-                rec(err)
-                exit(err)
-            if "profile" in prog_flags:
-                END = time.perf_counter() - START
-                s, u = utils.convert_sec(END)
-                print(f"DEBUG: Elapsed time: {s}{u}")
+            file = get_start_path_raw(file)
+            try:
+                if "profile" in prog_flags:
+                    START = time.perf_counter()
+                if err:=ez_run(open(file).read(), argv=args, file=file):
+                    rec(err)
+                    exit(err)
+                if "profile" in prog_flags:
+                   END = time.perf_counter() - START
+                   s, u = utils.convert_sec(END)
+                   print(f"DEBUG: Elapsed time: {s}{u}")
+            except error.DPLError as e:
+                exit(e.code)
         case ["dump-llir", file]:
             if not has_pp2:
                 print("Suply the '-use-py-parser2' flag first!")

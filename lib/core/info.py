@@ -43,6 +43,7 @@ INC_EXT_BUILTIN = {
     "while",
     "if",
     "dict",
+    "tuple",
     "with",
     "default",
     "enum",
@@ -118,7 +119,7 @@ KEYWORDS = {
 }
 
 INC_TERMINAL = {
-    'end',
+    'return',
     'skip', 'stop',
     'raise', 'exit'
 }
