@@ -40,7 +40,7 @@ end
 
 set app = [pycall :tkinter.Tk()]
 
-set label = [pycall :tkinter.Label(:app [text="Keep clickin'"])]
+set label = [pycall :tkinter.Label(:app ["text"="Keep clickin'"])]
 set _ = [:label@pack()]
 
 fn update_text()
@@ -48,12 +48,12 @@ fn update_text()
         if [nil? [:text(:num)]]
             exit
         end
-        set _ = [:label@config([text=[:text(:num)]])]
+        set _ = [:label@config(["text"=[:text(:num)]])]
     end
 end
 
 fn button_command()
-    set _ = [:button@config([text='Clicked ${num} times!'])]
+    set _ = [:button@config(["text"='Clicked ${num} times!'])]
     update_text()
     inc _global.num
 end
@@ -63,7 +63,7 @@ ecatch (button) to_py:to_py(:button_command)
 set _ = [:app@title("This is from DPL! No wrappers!")]
 set _ = [:app@geometry("500x200")]
 
-set button = [pycall :tkinter.Button(:app [text='Clicked ${num} times!'] [command=:button])]
+set button = [pycall :tkinter.Button(:app ["text"='Clicked ${num} times!'] ["command"=:button])]
 set _ = [:tkinter.Button@pack(:button)]
 
 set _ = [:app@mainloop()]

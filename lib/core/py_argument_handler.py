@@ -13,7 +13,8 @@ class arguments_handler:
             self.args = []
         for i in args:
             if isinstance(i, dict):
-                self.kwargs.update(i)
+                [name, value], = i.items()
+                self.kwargs[name] = value
             else:
                 self.args.append(i)
 

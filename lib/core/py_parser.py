@@ -22,6 +22,8 @@ from .varproc import preprocessing_flags
 from . import varproc
 arguments_handler = py_argument_handler.arguments_handler
 
+start_time = end_time = 0
+
 def copy(obj, memo=None):
     if memo is None:
         memo = {}
@@ -127,7 +129,10 @@ def pprint(d, l=0, seen=None, hide=True):
             elif isinstance(i, bool):
                 print("  "*l+f". {'true' if i else 'false'}")
             elif isinstance(i, ID):
-                print("  "*l+f". {i}")
+                if i.read == "norm": r = ":"
+                elif i.read == "spec": r = "?:"
+                else: r = ""
+                print("  "*l+f". {r}{i.name}")
             elif not isinstance(i, str | int | float):
                 print("  "*l+f"... # {i!r}")
             else:
@@ -140,6 +145,8 @@ def pprint(d, l=0, seen=None, hide=True):
             if isinstance(name, str) and name.startswith("_") and hide:
                 ...
             elif isinstance(value, function_type):
+                print("  "*l+f"set {value['name']} = ... # {value!r}")
+                continue # as of now just print the function normally
                 print("  "*l+f"dict {name!r} # {value}")
                 pprint(dict(value), l+1, seen)
                 print("  "*l+"end")
@@ -164,7 +171,10 @@ def pprint(d, l=0, seen=None, hide=True):
             elif isinstance(value, bool):
                 print("  "*l+f"set {name!r} = {'true' if value else 'false'}")
             elif isinstance(value, ID):
-                print("  "*l+f"set {name!r} = {value}")
+                if value.read == "norm": r = ":"
+                elif value.read == "spec": r = "?:"
+                else: r = ""
+                print("  "*l+f"set {name!r} = {r}{value.name}")
             elif not isinstance(value, str | int | float):
                 print("  "*l+f"set {name!r} = ... # {value!r}")
             else:
@@ -656,11 +666,10 @@ def execute(code, frame):
     # was previously here
     # and ran every recursive call
 
-    code_length = len(code)
     lrset = rset; lrget = rget
-
     for line_position, module_filepath, ins, block, oargs in code:
-        ins = process_arg(frame, ins)
+        if isinstance(ins, Expression):
+            ins = process_arg(frame, ins)
         try:
             args = process_args(frame, oargs)
             argc = len(args)
@@ -671,6 +680,166 @@ def execute(code, frame):
                 f"{traceback.format_exc()}\nSomething went wrong when arguments were processed:\n{e}\n> {oargs!r}",
             )
             return error.PYTHON_ERROR
+        ## THREE ARGS
+        if argc == 3:
+            if ins == "dec":
+                lrset(frame[-1], args[0], res if (res:=lrget(frame[-1], args[0], default=0) - 1) > args[1] else args[2])
+                continue
+            elif ins == "for" and args[1] == "in":
+                if block:
+                    name, _, iter_ = args
+                    if isinstance(name, tuple):
+                        index, name = name
+                        for ind, i in enumerate(iter_):
+                            frame[-1][name] = i
+                            frame[-1][index] = ind
+                            err = execute(block, frame)
+                            if err:
+                                if err == STOP_RESULT:
+                                    break
+                                elif err == SKIP_RESULT:
+                                    continue
+                                return err
+                    else:
+                        for i in iter_:
+                            frame[-1][name] = i
+                            err = execute(block, frame)
+                            if err:
+                                if err == STOP_RESULT:
+                                    break
+                                elif err == SKIP_RESULT:
+                                    continue
+                                return err
+                continue
+            elif ins == "rfor" and args[1] == "in":
+                if block:
+                    name, _, iter_ = args
+                    if isinstance(name, tuple):
+                        index, name = name
+                        for ind, i in enumerate(iter_):
+                            frame[-1][name] = i
+                            frame[-1][index] = ind
+                            err = execute(block, frame)
+                    else:
+                        for i in iter_:
+                            frame[-1][name] = i
+                            err = execute(block, frame)
+                continue
+            elif ins == "exec":
+                if err:=run(process_code(args[0], name=args[1]), frame=args[2]):
+                    return err
+                continue
+            elif ins == "set" and args[1] == "=":
+                if isinstance(args[0], (list, tuple)):
+                    for name, value in flatten_dict(unpack(args[0], args[1])).items():
+                        print(name, value)
+                else:
+                    lrset(frame[-1], args[0], args[2])
+                continue
+            elif ins == "lset" and args[1] == "=":
+                frame[-1][args[0]] = args[2]
+                continue
+            elif ins == "mset" and args[1] == "=":
+                if args[0] != "_":
+                    if isinstance(args[0], (tuple, list)):
+                        for name, value in zip(args[0], args[2]):
+                            lrset(frame[-1], name, value, meta=True)
+                    else:
+                        lrset(frame[-1], args[0], args[2], meta=True)
+                continue
+            elif ins == "catch":  # catch return value of a function
+                rets, func_name, args = args
+                if (function_obj := lrget(frame[-1], func_name, default=lrget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
+                    error.error(line_position, module_filepath, f"Invalid function {func_name!r}!")
+                    break
+                if function_obj["tags"]["preserve-args"]:
+                    raw_args = args[0]
+                args = process_args(frame, args)
+                nscope(frame)
+                if function_obj["self"] is not None:
+                    frame[-1]["self"] = function_obj["self"]
+                if function_obj["tags"]["preserve-args"]:
+                    frame[-1]["_raw_args"] = raw_args
+                frame[-1]["_args"] = args
+                if function_obj["capture"] != constants.nil:
+                    frame[-1]["_capture"] = function_obj["capture"]
+                if function_obj["variadic"]["name"] != constants.nil:
+                    if len(args)-1 >= function_obj["variadic"]["index"]:
+                        variadic = []
+                        for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
+                            if name in function_obj["checks"]:
+                                if not run_func(frame, func_obj["checks"], value):
+                                    error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][4][0]}")
+                                    return error.CHECK_ERROR
+                            if variadic:
+                                variadic.append(value)
+                            elif line_position >= function_obj["variadic"]["index"]:
+                                variadic.append(value)
+                            else:
+                                frame[-1][name] = value
+                        frame[-1][function_obj["variadic"]["name"]] = variadic
+                    else:
+                        error.error(line_position, module_filepath, f"Function {ins} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
+                        return error.RUNTIME_ERROR
+                else:
+                    if len(args) != len(function_obj["args"]) and not function_obj["defaults"]:
+                        text = "more" if len(args) > len(function_obj["args"]) else "less"
+                        error.error(line_position, module_filepath, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
+                        return error.RUNTIME_ERROR
+                    for n, v in function_obj["defaults"].items():
+                        frame[-1][n] = v
+                    for name, value in itertools.zip_longest(function_obj["args"], args):
+                        if name is None:
+                            break
+                        if name in function_obj["checks"]:
+                            if not run_func(frame, function_obj["checks"][name], value):
+                                error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][4][0]}")
+                                return error.CHECK_ERROR
+                        frame[-1][name] = value
+                frame[-1]["_returns"] = rets
+                err = execute(function_obj["body"], frame)
+                if err > 0:
+                    error.error(line_position, module_filepath, f"Error in function {ins!r}")
+                    return err
+                pscope(frame)
+                continue
+            elif ins == "ecatch":  # catch return value of a python function
+                rets, name, args = args
+                args = process_args(frame, args)
+                if (function := lrget(frame[-1], name, default=lrget(frame[0], name))) == constants.nil or not hasattr(function, "__call__"):
+                    error.error(line_position, module_filepath, f"Invalid function {name!r}!")
+                    return error.NAME_ERROR
+                try:
+                    res = function(frame, meta_attributes["internal"]["main_path"], *args)
+                    if (
+                        res is None
+                        and WARNINGS
+                        and is_debug_enabled("warn_no_return")
+                    ):
+                        error.warn(
+                            "Function doesnt return anything. To reduce overhead please dont use pycatch.\nLine {line_position}\nFile {module_filepath}"
+                        )
+                    if isinstance(res, tuple):
+                        if rets != "_":
+                            for name, value in zip(rets, res):
+                                lrset(frame[-1], name, value)
+                    elif isinstance(res, int) and res:
+                        return res
+                    elif isinstance(res, str):
+                        if res == "err":
+                            break
+                        elif res == "stop":
+                            return error.STOP_RESULT
+                        elif res == "skip":
+                            return error.SKIP_RESULT
+                        elif res.startswith("err:"):
+                            _, ecode, message = res.split(":", 2)
+                            error.error(line_position, module_filepath, message)
+                            return int(ecode)
+                except:
+                    error.error(line_position, module_filepath, traceback.format_exc()[:-1])
+                    return error.PYTHON_ERROR
+                continue
         ## NO ARGS
         if ins == "pass": continue
         if ins == "doc": continue
@@ -710,7 +879,7 @@ def execute(code, frame):
                         fr[0]["scope"] = scope
                         fr[0]["scope_id"] = scope_id
                         fr[0]["globals"] = parent_frame[0]
-                        return asyncio.run(execute_async(ons_b, fr))
+                        return execute(ons_b, fr)
                     return on_new_scope_tmp_fn
                 on_new_scope.append({
                     "func": make_on_new_scope_fn(body, frame),
@@ -726,7 +895,7 @@ def execute(code, frame):
                         fr[0]["scope"] = scope
                         fr[0]["scope_id"] = scope_id
                         fr[0]["globals"] = parent_frame[0]
-                        return asyncio.run(execute_async(ons_b, fr))
+                        return execute_async(ons_b, fr)
                     return on_new_scope_tmp_fn
                 on_pop_scope.append({
                     "func": make_on_new_scope_fn(body, frame),
@@ -752,6 +921,17 @@ def execute(code, frame):
         if argc == 1:
             if ins == "inc":
                 lrset(frame[-1], args[0], lrget(frame[-1], args[0], default=0) + 1)
+                continue
+            elif ins == "loop":
+                if block:
+                    for _ in itertools.repeat(None,args[0]):
+                        err = execute(block, frame)
+                        if err:
+                            if err == error.STOP_RESULT:
+                                break
+                            elif err == error.SKIP_RESULT:
+                                continue
+                            return err
                 continue
             elif ins == "dec":
                 lrset(frame[-1], args[0], lrget(frame[-1], args[0], default=0) - 1)
@@ -792,19 +972,8 @@ def execute(code, frame):
                 pprint(args[0], hide=False)
                 continue
             elif ins == "dump_vars_fancy":
-                d = {args[0]: lrget(frame[-1], args[0])}
+                d = {args[0]: lrget(frame[-1], args[0], meta=True)}
                 pprint(d, hide=False)
-                continue
-            elif ins == "loop":
-                if block:
-                    for _ in range(args[0]):
-                        err = execute(block, frame)
-                        if err:
-                            if err == error.STOP_RESULT:
-                                break
-                            elif err == error.SKIP_RESULT:
-                                continue
-                            return err
                 continue
             elif ins == "while":
                 expr = Expression(args[0])
@@ -965,45 +1134,6 @@ def execute(code, frame):
                         value["self"] = obj
                 lrset(frame[-1], object_name, obj)
                 continue
-            elif ins == "benchmark":
-                times, var_name = args
-                deltas = []
-                # run once to check time
-                # to decide whether to use threads or not
-                start = time.perf_counter()
-                if (err:=execute(block, frame)) > 0:
-                    error.error(line_position, module_filepath, f"Benchmark raised an error: [{err}] {error.ERRORS_DICT.get(err, '???')}")
-                    return err
-                first_delta = time.perf_counter() - start
-                dlock = threading.Lock()
-                use_thread = False
-                # if more than once, and takes more than 10 seconds
-                if times < 3 and first_delta[0] > 10 and first_delta[1] == "s":
-                    use_thread = True
-                if use_thread:
-                    for _ in range(times):
-                        def th():
-                            start = time.perf_counter()
-                            if (err:=execute(block, frame)) > 0:
-                                error.error(line_position, module_filepath, f"Benchmark raised an error: [{err}] {error.ERRORS_DICT.get(err, '???')}")
-                                return err
-                            delta = time.perf_counter() - start
-                            with dlock:
-                                deltas.append(delta)
-                        tht = threading.Thread(talrget=th)
-                        tht.deamon = True
-                        tht.start()
-                else:
-                    for _ in range(times):
-                        start = time.perf_counter()
-                        if (err:=execute(block, frame)) > 0:
-                            error.error(line_position, module_filepath, f"Benchmark raised an error: [{err}] {error.ERRORS_DICT.get(err, '???')}")
-                            return err
-                        delta = time.perf_counter() - start
-                        deltas.append(delta)
-                ct, unit = utils.convert_sec(sum(deltas)/len(deltas))
-                lrset(frame[-1], var_name, (ct, unit))
-                continue
             elif ins == "string" and args[1] == "new_line":
                 if parse_string(frame, args[0], block, True):
                     break
@@ -1101,149 +1231,6 @@ def execute(code, frame):
                         doc.append(process_arg(frame, args[0]))
                 if doc:
                     func["help"] = "\n".join(doc)
-                continue
-        ## THREE ARGS
-        if argc == 3:
-            if ins == "dec":
-                lrset(frame[-1], args[0], res if (res:=lrget(frame[-1], args[0], default=0) - 1) > args[1] else args[2])
-                continue
-            elif ins == "for" and args[1] == "in":
-                if block:
-                    name, _, iter_ = args
-                    if isinstance(name, tuple):
-                        index, name = name
-                        for ind, i in enumerate(iter_):
-                            frame[-1][name] = i
-                            frame[-1][index] = ind
-                            err = execute(block, frame)
-                            if err:
-                                if err == STOP_RESULT:
-                                    break
-                                elif err == SKIP_RESULT:
-                                    continue
-                                return err
-                    else:
-                        for i in iter_:
-                            frame[-1][name] = i
-                            err = execute(block, frame)
-                            if err:
-                                if err == STOP_RESULT:
-                                    break
-                                elif err == SKIP_RESULT:
-                                    continue
-                                return err
-                continue
-            elif ins == "exec":
-                if err:=run(process_code(args[0], name=args[1]), frame=args[2]):
-                    return err
-                continue
-            elif ins == "set" and args[1] == "=":
-                if isinstance(args[0], (tuple, list)):
-                    for name, value in utils.pack(args[0], args[2]).items():
-                        lrset(frame[-1], name, value)
-                else:
-                    lrset(frame[-1], args[0], args[2])
-                continue
-            elif ins == "mset" and args[1] == "=":
-                if args[0] != "_":
-                    if isinstance(args[0], (tuple, list)):
-                        for name, value in zip(args[0], args[2]):
-                            lrset(frame[-1], name, value, meta=True)
-                    else:
-                        lrset(frame[-1], args[0], args[2], meta=True)
-                continue
-            elif ins == "catch":  # catch return value of a function
-                rets, func_name, args = args
-                if (function_obj := lrget(frame[-1], func_name, default=lrget(frame[0], func_name))) == constants.nil or not isinstance(function_obj, dict):
-                    error.error(line_position, module_filepath, f"Invalid function {func_name!r}!")
-                    break
-                if function_obj["tags"]["preserve-args"]:
-                    raw_args = args[0]
-                args = process_args(frame, args)
-                nscope(frame)
-                if function_obj["self"] is not None:
-                    frame[-1]["self"] = function_obj["self"]
-                if function_obj["tags"]["preserve-args"]:
-                    frame[-1]["_raw_args"] = raw_args
-                frame[-1]["_args"] = args
-                if function_obj["capture"] != constants.nil:
-                    frame[-1]["_capture"] = function_obj["capture"]
-                if function_obj["variadic"]["name"] != constants.nil:
-                    if len(args)-1 >= function_obj["variadic"]["index"]:
-                        variadic = []
-                        for line_position, [name, value] in enumerate(itertools.zip_longest(function_obj["args"], args)):
-                            if name in function_obj["checks"]:
-                                if not run_func(frame, func_obj["checks"], value):
-                                    error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][4][0]}")
-                                    return error.CHECK_ERROR
-                            if variadic:
-                                variadic.append(value)
-                            elif line_position >= function_obj["variadic"]["index"]:
-                                variadic.append(value)
-                            else:
-                                frame[-1][name] = value
-                        frame[-1][function_obj["variadic"]["name"]] = variadic
-                    else:
-                        error.error(line_position, module_filepath, f"Function {ins} is a variadic and requires {function_obj['variadic']['index']+1} arguments or more.")
-                        return error.RUNTIME_ERROR
-                else:
-                    if len(args) != len(function_obj["args"]) and not function_obj["defaults"]:
-                        text = "more" if len(args) > len(function_obj["args"]) else "less"
-                        error.error(line_position, module_filepath, f"Function got {text} than expected arguments!\nExpected {len(function_obj['args'])} arguments but got {len(args)} arguments.")
-                        return error.RUNTIME_ERROR
-                    for n, v in function_obj["defaults"].items():
-                        frame[-1][n] = v
-                    for name, value in itertools.zip_longest(function_obj["args"], args):
-                        if name is None:
-                            break
-                        if name in function_obj["checks"]:
-                            if not run_func(frame, function_obj["checks"][name], value):
-                                error.error(line_position, module_filepath, f"Argument {name!r} ({value!r}) of function {function_obj['name']} does not pass check {function_obj['checks'][name]['body'][0][4][0]}")
-                                return error.CHECK_ERROR
-                        frame[-1][name] = value
-                frame[-1]["_returns"] = rets
-                err = execute(function_obj["body"], frame)
-                if err > 0:
-                    error.error(line_position, module_filepath, f"Error in function {ins!r}")
-                    return err
-                pscope(frame)
-                continue
-            elif ins == "ecatch":  # catch return value of a python function
-                rets, name, args = args
-                args = process_args(frame, args)
-                if (function := lrget(frame[-1], name, default=lrget(frame[0], name))) == constants.nil or not hasattr(function, "__call__"):
-                    error.error(line_position, module_filepath, f"Invalid function {name!r}!")
-                    return error.NAME_ERROR
-                try:
-                    res = function(frame, meta_attributes["internal"]["main_path"], *args)
-                    if (
-                        res is None
-                        and WARNINGS
-                        and is_debug_enabled("warn_no_return")
-                    ):
-                        error.warn(
-                            "Function doesnt return anything. To reduce overhead please dont use pycatch.\nLine {line_position}\nFile {module_filepath}"
-                        )
-                    if isinstance(res, tuple):
-                        if rets != "_":
-                            for name, value in zip(rets, res):
-                                lrset(frame[-1], name, value)
-                    elif isinstance(res, int) and res:
-                        return res
-                    elif isinstance(res, str):
-                        if res == "err":
-                            break
-                        elif res == "stop":
-                            return error.STOP_RESULT
-                        elif res == "skip":
-                            return error.SKIP_RESULT
-                        elif res.startswith("err:"):
-                            _, ecode, message = res.split(":", 2)
-                            error.error(line_position, module_filepath, message)
-                            return int(ecode)
-                except:
-                    error.error(line_position, module_filepath, traceback.format_exc()[:-1])
-                    return error.PYTHON_ERROR
                 continue
         ## FOUR ARGS
         if argc == 4:

@@ -4,5 +4,5 @@ set uiiai = ["uiiai " * 100]
 
 for char in :uiiai
     io:println(:char)
-    sleep
+    sleep 0.1
 end

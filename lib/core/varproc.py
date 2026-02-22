@@ -8,6 +8,9 @@ from . import constants
 from . import info
 from . import state
 from . import error
+from . import common_types
+
+ShrunkFrame = common_types.ShrunkFrame
 
 execute_code = None
 Lazy = None
@@ -37,7 +40,7 @@ dependencies = {
 }
 
 # debug options
-debug_settings = {
+debug_settings = ShrunkFrame({
     "allow_automatic_global_name_resolution":constants.true, # set to false to get variables faster
     "show_scope_updates": constants.false, # show when scope is popped or pushed onto
     "show_value_updates": constants.false, # show when variables are read or changed
@@ -49,10 +52,10 @@ debug_settings = {
     "error_on_undefined_vars": constants.false, # "NameError" like errors when variables that do not exist are read.
     "warn_undefined_vars": constants.true,     # Like "error_on_undefined_vars" but a warning instead.
     "_set_only_when_defined": constants.true,  # make sure that only defined variables in this scope can be set.
-}
+})
 
 # preruntime flags
-preprocessing_flags = {
+preprocessing_flags = ShrunkFrame({
     "EXPRESSION_FOLDING": constants.true,
     # Fixed expression folding,
     # more stable than before
@@ -67,12 +70,12 @@ preprocessing_flags = {
     # on exit the error will propagate as the exit code
     "FOR_LOOP_SUBSTITUTION": constants.false,
     "_set_only_when_defined": constants.true,
-}
+})
 
 to_be_methods = set()
 
 # Core interpreter attributes
-internal_attributes = {
+internal_attributes = ShrunkFrame({
     "main_path": constants.none,
     "main_file": "__main__",
     "version": info.VERSION,
@@ -84,7 +87,7 @@ internal_attributes = {
     "_set_only_when_defined": 1,
     "methods": to_be_methods,
     "module_index": {}
-}
+})
 
 flags = set()
 
@@ -93,7 +96,7 @@ flags = set()
 # this exposes as much internal data as possible
 # the interpreter must fetch its info from here
 # at least on runtime
-meta_attributes = {
+meta_attributes = ShrunkFrame({
     "debug": debug_settings,
     "argv": info.ARGV,
     "argc": info.ARGC,
@@ -106,7 +109,7 @@ meta_attributes = {
     "err": {},
     "file_cache": {},
     "_set_only_when_defined": constants.true,
-}
+})
 
 error.error_setup_meta(meta_attributes)
 
@@ -135,13 +138,12 @@ def update_globals(stuff):
 
 def new_frame():
     "Generate a new scope frame"
-    t = {"_meta": meta_attributes, "_scope_number": 0}
+    t = ShrunkFrame({"_meta": meta_attributes, "_scope_number": 0})
     t["_global"] = t
     t["_nonlocal"] = t
     t["_local"] = t
     values_stack = [t]
     t["_frame_stack"] = values_stack
-    t["_scope_uuid"] = "disabled" # global scope wont just disappear
     return values_stack
 
 
@@ -162,10 +164,9 @@ def set_debug(name, value):
 
 def nscope(frame):
     "New scope"
-    t = {
+    t = ShrunkFrame({
         "_meta": meta_attributes,
-        "_scope_uuid": str(uuid4()),
-    }
+    })
     if frame:
         t["_global"] = frame[0]
         t["_nonlocal"] = frame[-1]
@@ -206,27 +207,18 @@ def pscope(frame):
 def rget(dct, full_name, default=constants.nil, meta=False, resolve=False):
     "Get a variable"
     if "." not in full_name:
-        temp = dct.get(full_name, default)
-        if is_debug_enabled("show_value_updates"):
-            error.info(f"Variable {full_name!r} was read!")
-        if not meta and evaluate and Lazy and isinstance(temp, Lazy):
-            return evaluate(temp[0], temp[1])
+        temp = dct[full_name]
+        if not meta and isinstance(temp, Lazy):
+            return evaluate([temp[0][0]], temp[1])
         return temp
     last = full_name.path_len
     node = dct
     for pos, name in enumerate(full_name.split, 1):
-        if (
-            pos != last
-            and name in node
-            and isinstance(node[name], dict)
-        ):
+        if pos != last and isinstance(node[name], dict):
             node = node[name]
         elif pos == last and name in node:
-            if is_debug_enabled("show_value_updates"):
-                error.info(f"Variable {full_name!r} was read!")
-            
-            if not meta and evaluate and Lazy and isinstance(node[name], Lazy):
-                return evaluate(node[name][0], node[name][1])
+            if not meta and isinstance(node[name], Lazy):
+                return evaluate([node[name][0][0]], node[name][1])
             return node[name]
         else:
             break
@@ -239,22 +231,16 @@ def rget(dct, full_name, default=constants.nil, meta=False, resolve=False):
 
 
 def rpop(dct, full_name, default=constants.nil):
-    "Pop a variable"
+    "Pop a variabletemp"
     if "." not in full_name:
         temp = dct.get(full_name, default)
         return temp
     last = full_name.path_len
     node = dct
     for pos, name in enumerate(full_name.split, 1):
-        if (
-            pos != last
-            and name in node
-            and isinstance(node[name], dict)
-        ):
+        if pos != last and isinstance(node[name], dict):
             node = node[name]
         elif pos == last and name in node:
-            if is_debug_enabled("show_value_updates"):
-                error.info(f"Variable {full_name!r} was popped!")
             return node.pop(name)
         else:
             return default
@@ -264,21 +250,17 @@ def rpop(dct, full_name, default=constants.nil):
 def rset(dct, full_name, value, meta=False):
     "Set a variable"
     if "." not in full_name:
-            if dct.get("_set_only_when_defined") and full_name not in dct:
-                error.warn(
-                    f"Tried to set {full_name!r} but scope was set to set only when defined."
-                )
-                return
-            dct[full_name] = value
+        if dct.get("_set_only_when_defined") and full_name not in dct:
+            error.warn(
+                f"Tried to set {full_name!r} but scope was set to set only when defined."
+            )
             return
+        dct[full_name] = value
+        return
     last = full_name.path_len
     node = dct
     for pos, name in enumerate(full_name.split, 1):
-        if (
-            pos != last
-            and name in node
-            and isinstance(node[name], dict)
-        ):
+        if pos != last and isinstance(node[name], dict):
             node = node[name]
         elif pos == last:
             if node.get("_set_only_when_defined") and name not in node:
@@ -291,23 +273,6 @@ def rset(dct, full_name, value, meta=False):
                 if item is None:
                     node[name] = value
                     return
-                if "_internal::set_meta_value" in item:
-                    frame = dct["_frame_stack"]
-                    lscope = nscope(frame)
-                    fn = item["_internal::set_meta_value"]
-                    if "self" in fn:
-                        frame[-1]["self"] = item
-                    if "capture" in fn:
-                        frame[-1]["_capture"] = fn["capture"]
-                    if fn["args"]:
-                        frame[-1][fn["args"][0]] = value
-                    else:
-                        frame[-1]["value"] = value
-                    if (err := execute_code(fn["body"], frame)) > 0:
-                        raise error.DPLError(err)
-                    pscope(frame)
-                else:
-                    item[name]["_internal::meta_value"] = value
                 node[name] = item
                 return
             node[name] = value

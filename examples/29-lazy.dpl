@@ -20,3 +20,11 @@ set x = 10
 
 # 100
 io:println(:this)
+
+fn test(lazy)
+    set x = 80
+    dump_vars_fancy lazy
+    return :lazy
+end
+
+io:println(test!(?:this))

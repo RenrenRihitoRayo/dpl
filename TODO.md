@@ -6,6 +6,7 @@
 Speed optimization could be futher improved with hashmap based dispatch
 moving from O(n) (from the if else chain) to O(1) theoretically.
 
+* Memory optimizations as well
 * Move some standard library functions into core.
 * Add template generation
 

@@ -6,7 +6,6 @@
 # explicit though
 set res = [. 1 + 8 * 2]
 
-if [:res != 17]
-    raise :_meta.err.RUNTIME_ERROR, "result is unexpected"
-end
+assert [:res != 17], "result is unexpected"
+
 io:println('\e[33mResult: ${:res}\e[0m')

@@ -14,53 +14,14 @@ from . import fmt
 from . import objects
 import uuid
 from . import utils
+from .common_types import Expression, Lazy, CallShortened
+import itertools
 import time
 
 globals().update(vars(dpl_ctypes))
 
 inf = float("inf")
-
-# custom type to distinguish lists and expressions
-class Expression(list):
-    def __hash__(self):
-        return hash(str(self))
-    def __str__(self):
-        string = ""
-        for i in self:
-            if isinstance(i, CallShortened):
-                string += " "+repr(i)
-            elif isinstance(i, ID):
-                if i.read == "norm":
-                    read = ":"
-                elif i.read == "spec":
-                    read = "?:"
-                else:
-                    read = ""
-                string += f" {read}{i.name}"
-            elif not isinstance(i, str):
-                string += " "+repr(i)
-            else:
-                string += f' {i!r}' if any(c in i for c in "\n\t ") else f" {repr(i)[1:-1]}"
-        return f"[{string.strip()}]"
-    def __repr__(self):
-        string = ""
-        for i in self:
-            if not isinstance(i, str):
-                string += " "+repr(i)
-            else:
-                string += f' {i!r}' if any(c in i for c in "\n\t ") else f" {repr(i)[1:-1]}"
-        return f"[{string.strip()}]"
-
 dpl_ctypes.Expression = Expression
-
-class CallShortened(Expression):
-    def __repr__(self):
-        _, name, args = self
-        return f"[{name.name}!({repr(args)[1:-1]})]"
-
-class Lazy(Expression):
-    def __repr__(self):
-        return f"[lazy {self[1]!r}]"
 
 varproc.Lazy = Lazy
 
@@ -134,59 +95,49 @@ def glob_match(pattern, text):
         result = match(pattern, text)
     return not result if negate else result
 
-
-def match_pattern(pattern, values):
-    star_idx = None
-    star_name = None
-    for i, p in enumerate(pattern):
-        if not isinstance(p, str):
-             continue
-        if p.startswith("..."):
-            star_idx = i
-            star_name = p[3:]
-            break
-    if star_idx is None:
+def unpack(pattern, values):
+    if not isinstance(pattern, list):
+        raise TypeError("Pattern must be a list")
+    if not isinstance(values, (list, tuple)):
+        raise TypeError("Values must be list or tuple")
+    result = {}
+    star_indices = [i for i, p in enumerate(pattern)
+                    if isinstance(p, str) and p.startswith("*")]
+    if len(star_indices) > 1:
+        raise ValueError("Only one starred expression allowed per level")
+    if not star_indices:
         if len(pattern) != len(values):
-            return None
-        bindings = {}
+            raise ValueError("Length mismatch")
         for p, v in zip(pattern, values):
-            if not isinstance(p, str):
-                if p != v: return None
-                continue
-            elif p.startswith('"') and p.endswith('"') and p[1:-1] != v:
-                return None
-            else:
-                bindings[p] = v
-        return bindings
-    head = pattern[:star_idx]
-    tail = pattern[star_idx + 1:]
-    if len(values) < len(head) + len(tail):
-        return None
-    head_values = values[:len(head)]
-    tail_values = values[-len(tail):] if tail else []
-    bindings = {}
-    for p, v in zip(head, head_values):
-        if not isinstance(p, str):
-             if p != v: return None
-             continue
-        elif p.startswith('"') and p.endswith('"') and p[1:-1] != v:
-             return None
-        else:
-            bindings[p] = v
-    for p, v in zip(tail, tail_values):
-        if not isinstance(p, str):
-             if p != v: return None
-             continue
-        elif p.startswith('"') and p.endswith('"') and p[1:-1] != v:
-             return None
-        else:
-            bindings[p] = v
-    mid = values[len(head):len(values) - len(tail)] if tail else values[len(head):]
-    if not mid:
-        return None
-    bindings[star_name] = mid
-    return bindings
+            _assign(p, v, result)
+        return result
+    star_index = star_indices[0]
+    before = pattern[:star_index]
+    after = pattern[star_index + 1:]
+    star_name = pattern[star_index][1:]
+    if len(values) < len(before) + len(after):
+        raise ValueError("Not enough values to unpack")
+    # before
+    for p, v in zip(before, values):
+        _assign(p, v, result)
+    # starce(values, (list, tuple)):
+    start = len(before)
+    end = len(values) - len(after)
+    result[star_name] = list(values[start:end])
+    # after
+    for p, v in zip(after, values[end:]):
+        _assign(p, v, result)
+    return result
 
+
+def _assign(pattern_part, value, result):
+    if isinstance(pattern_part, list):
+        if not isinstance(value, (list, tuple)):
+            raise ValueError("Cannot recursively unpack non-sequence")
+        nested = unpack(pattern_part, value)
+        result.update(nested)
+    else:
+        result[pattern_part] = value
 
 def nest_math(tokens):
     if not tokens:
@@ -303,6 +254,7 @@ type_to_name = {value: name for name, value in (type_annotations | dpl_constants
 # if "--liv" in info.ARGV:
 #     error.info("LIV optimization is active.")
 class ID:
+    __slots__ = ("name", "split", "as_class_method", "read", "path_len", "hashed")
     def __init__(self, name, read=None):
         self.name = name
         self.split = name.split(".") # memory hungry but faster
@@ -763,7 +715,7 @@ def handle_in_string_expr(text, data):
 
 def expr_runtime(frame, arg):
     "Process an argument at runtime"
-    if isinstance(arg, Expression):
+    if not isinstance(arg, Lazy) and isinstance(arg, Expression):
         return evaluate(frame, arg)
     elif isinstance(arg, ID):
         if arg.read == "norm":
@@ -914,8 +866,12 @@ def evaluate(frame, expression):
             return run_fn(func["capture"]["_frame_stack"], func, *processed[2])
         elif e_ins == "range":
             return tuple(my_range(processed[1], processed[2]))
+        elif e_ins == "repeat":
+            return tuple(itertools.repeat(processed[1], processed[2]))
         elif e_ins == "irange":
             return my_range(processed[1], processed[2])
+        elif e_ins == "irepeat":
+            return itertools.repeat(processed[1], processed[2])
         elif e_ins == "fn":
             return objects.make_function(
                 frame,
@@ -1115,6 +1071,7 @@ def group(text):
             continue
         elif i == "`":
             res.append('"'+"".join(text)+'"')
+            break
         elif i in sep:
             if id_tmp:
                 res.append("".join(id_tmp))

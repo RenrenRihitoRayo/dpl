@@ -1,6 +1,6 @@
 import atexit
-from .arguments import exprs_preruntime, process_arg, process_args, expr_runtime, argproc_setter, group, nest_args, Expression, to_static, evaluate, parse_match, parse_dict, ID, parse_list, is_static, parse_tuple, parse_string, tag_handlers
-from .varproc import rget, rset, rpop, meta_attributes, register_execute, new_frame, nscope, pscope
+from .arguments import exprs_preruntime, process_arg, process_args, expr_runtime, argproc_setter, group, nest_args, Expression, to_static, evaluate, parse_match, parse_dict, ID, parse_list, is_static, parse_tuple, parse_string, tag_handlers, flatten_dict, unpack
+from .varproc import rget, rset, rpop, meta_attributes, register_execute, new_frame, nscope, pscope, on_new_scope, on_pop_scope
 from . import error
 from .error import STOP_FUNCTION, STOP_RESULT, SKIP_RESULT
 from .objects import function_type, object_type, make_function, make_method, make_object, register_run_fn
@@ -52,7 +52,7 @@ meta_attributes["internal"]["os"] = {
     "os_name":SYS_OS_NAME.lower(),
 }
 
-meta_attributes["internal"]["os_name"] = os.name
+meta_attributes["internal"]["os_name_general"] = os.name
 # Above can be
 # nt - windows based
 # posix - posix compliant systems
