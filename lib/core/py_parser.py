@@ -1386,12 +1386,8 @@ def execute(code, frame):
                 "capture" in function_obj and
                 argc == 1
             ):  # Call a function
-            if function_obj["tags"]["preserve-args"]:
-                raw_args = args[0]
             args = process_args(frame, args[0])
             nscope(frame)
-            if function_obj["tags"]["preserve-args"]:
-                frame[-1]["_raw_args"] = raw_args
             if function_obj["self"] is not None:
                 frame[-1]["self"] = function_obj["self"]
             frame[-1]["_args"] = args

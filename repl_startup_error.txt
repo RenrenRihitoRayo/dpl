@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/home/renren/proj/python/dpl/dpl.py", line 592, in handle_args
+    with parser.IsolatedParser(file_name="start_up_script") as pip:
+         ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/renren/proj/python/dpl/lib/core/py_parser.py", line 1545, in __init__
+    "meta": copy(varproc.meta_attributes),
+            ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/renren/proj/python/dpl/lib/core/py_parser.py", line 34, in copy
+    dup = type(obj)()
+  File "/home/renren/proj/python/dpl/lib/core/common_types.py", line 48, in __init__
+    self.update(data)
+    ~~~~~~~~~~~^^^^^^
+TypeError: 'NoneType' object is not iterable

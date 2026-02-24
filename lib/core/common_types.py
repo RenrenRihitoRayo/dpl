@@ -43,8 +43,9 @@ class Lazy(list):
         return f"[lazy {self[1]!s}]"
 
 class ShrunkFrame(collections.defaultdict):
-    def __init__(self, data):
+    def __init__(self, data=None):
         super().__init__(lambda: constants.nil)
-        self.update(data)
+        if data is not None:
+            self.update(data)
     def __repr__(self):
         return f"<shrunk ({', '.join(map(str, self.keys()))})>"

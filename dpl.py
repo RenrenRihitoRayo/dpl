@@ -667,7 +667,7 @@ Code format: (
                         acc = []
                         for f in frame:
                             acc.extend(utils.flatten_dict(f).keys())
-                            acc.extend(map(lambda x:":"+x, utils.flatten_dict(f).keys()))
+                            acc.extend(map(lambda x:":"+str(x), utils.flatten_dict(f).keys()))
                 except Exception as e:
                     print(f"Python Exception was raised while running:\n{traceback.format_exc()}")
         case ["extract", file]:
