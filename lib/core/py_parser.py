@@ -212,13 +212,28 @@ def process_blocks(frame, code):
     pos = 0
     res = []
     while pos < len(code):
-        entire_line = lpos, fpos, ins, body, args = code[pos]
+        entire_line = [lpos, fpos, ins, body, args] = code[pos]
+        argc = len(args)
         if args and preprocessing_flags["EXPRESSION_FOLDING"]:
+            entire_line = list(entire_line)
             try:
                 args = to_static(args, env=frame)
+                entire_line[4] = args
             except Exception as e:
-                error.error(lpos, fpos, traceback.format_exc() + ":: to_static couldnt process")
+                error.error(lpos, fpos, traceback.format_exc() + "to_static couldnt process")
                 exit(error.PREPROCESSING_ERROR)
+            entire_line = tuple(entire_line)
+
+        if ins == "set::static" and argc == 3 and args[1] == "=":
+            name, _, value = process_args(frame[-1], args)
+            rset(frame[-1], name, value)
+            pos += 1
+            continue
+        
+        if ins == "set" and argc == 3 and args[1] == "=":
+            name = process_arg(frame[-1], args[0])
+            if rget(frame[-1], name, default=None) is not None:
+                rpop(frame[-1], name)
 
         if ins in INC_TERMINAL:
             if body is not None:
@@ -478,7 +493,7 @@ def process_code(fcode, name="__main__"):
                 ins, *args = nest_args(exprs_preruntime(l))
                 if isinstance(ins, Expression):
                     try:
-                        ins = to_static(ins)
+                        ins = to_static(ins, env=nframe)
                     except Exception as e:
                         error.error(lpos, file, repr(e))
                         return error.TYPE_ERROR

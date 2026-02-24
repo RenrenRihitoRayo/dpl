@@ -207,7 +207,7 @@ def pscope(frame):
 def rget(dct, full_name, default=constants.nil, meta=False, resolve=False):
     "Get a variable"
     if "." not in full_name:
-        temp = dct[full_name]
+        temp = dct[full_name.name]
         if not meta and isinstance(temp, Lazy):
             return evaluate([temp[0][0]], temp[1])
         return temp
@@ -233,8 +233,11 @@ def rget(dct, full_name, default=constants.nil, meta=False, resolve=False):
 def rpop(dct, full_name, default=constants.nil):
     "Pop a variabletemp"
     if "." not in full_name:
-        temp = dct.get(full_name, default)
-        return temp
+        if full_name in dct:
+            temp = dct.pop(full_name)
+            return temp
+        else:
+            return default
     last = full_name.path_len
     node = dct
     for pos, name in enumerate(full_name.split, 1):

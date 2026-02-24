@@ -14,7 +14,7 @@ from . import fmt
 from . import objects
 import uuid
 from . import utils
-from .common_types import Expression, Lazy, CallShortened
+from .common_types import Expression, Lazy, CallShortened, ShrunkFrame, ID
 import itertools
 import time
 
@@ -250,50 +250,9 @@ dpl_constants = {
 
 type_to_name = {value: name for name, value in (type_annotations | dpl_constants).items()}
 
-# from . import info
-# if "--liv" in info.ARGV:
-#     error.info("LIV optimization is active.")
-class ID:
-    __slots__ = ("name", "split", "as_class_method", "read", "path_len", "hashed")
-    def __init__(self, name, read=None):
-        self.name = name
-        self.split = name.split(".") # memory hungry but faster
-        self.as_class_method = (self.split[0], ".".join(self.split[1:]))
-        self.read = read
-        self.path_len = len(self.split)
-        self.hashed = hash(name)
-        # read can be
-        # norm = normal variable read
-        # spec = special variable read
-        # None = treat as a normal string
-    def startswith(self, other):
-        return self.name.startswith(other)
-    def endswith(self, other):
-        return self.name.endswith(other)
-    def __getitem__(self, other):
-        return self.name.__getitem__(other)
-    def __eq__(self, other):
-        return self.name == other
-    def __ne__(self, other):
-        return self.name != other
-    def __hash__(self):
-        return self.hashed
-    def __mul__(self, other):
-        return self.name * other
-    def __add__(self, other):
-        return self.name + other
-    def __contains__(self, other):
-        return other in self.name
-    def __repr__(self):
-        if self.read:
-            return f"<{self.name}-{self.read}>"
-        else:
-            return self.name
-
 fmt_format = fmt.format
 fmt_old_format = fmt.old_format
 fmt.ID = ID
-
 rget = varproc.rget
 get_debug = varproc.get_debug
 
@@ -747,17 +706,20 @@ def my_range(start, end):
     return pos(start, end) if start < end else neg(start, end)
 
 
-def is_static(code):
+def is_static(code, env=None):
+    env = env or [ShrunkFrame()]
     for i in code:
         if isinstance(i, Expression) and len(i) == 3 and i[0] == "call::static":
             if not is_static(i[2]):
                 name, args = i[1:]
                 i.clear()
                 i.extend(["call", f":_global.{name}", args])
-        elif isinstance(i, (tuple, list)):
+        elif isinstance(i, list):
             if not is_static(i):
                 return False
-        elif isinstance(i, ID) and i.read is not None:
+        elif isinstance(i, ID) and i.read is not None and rget(env[-1], i, default=None) is None:
+            return False
+        elif isinstance(i, ID) and i.read is not None and rget(env[0], i, default=None) is None:
             return False
         elif i in RT_EXPR:
             return False
@@ -767,8 +729,10 @@ def is_static(code):
 
 
 def to_static(code, env=None):
-    env = env or [{}]
+    env = env or [ShrunkFrame()]
     t = None
+    if len(code) == 3 and isinstance(code, Expression) and code[0] == "lazy":
+        return code
     if not isinstance(code, list):
         t = type(code)
         code = list(code)
@@ -776,14 +740,15 @@ def to_static(code, env=None):
         if isinstance(i, Expression):
             if is_static(i):
                 value = evaluate(env, to_static(i, env=env))
-                if isinstance(value, str):
-                    code[pos] = f'"{value}"'
-                else:
-                    code[pos] = value
+                code[pos] = value
             # elif len(i) == 3 and i[1] == "*" and i[2] == 2:
             #     code[pos] = Expression([i[0], "<<", 2])
             else:
                 code[pos] = to_static(i, env=env)
+        elif isinstance(i, ID) and i.read is not None and rget(env[-1], i, default=None) is not None:
+            code[pos] = rget(env[-1], i)
+        elif isinstance(i, ID) and i.read is not None and rget(env[0], i, default=None) is not None:
+            code[pos] = rget(env[0], i)
     return code if t is None else t(code)
 
 

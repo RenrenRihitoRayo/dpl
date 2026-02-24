@@ -1,6 +1,43 @@
 import collections
 from . import constants
 
+class ID:
+    __slots__ = ("name", "split", "as_class_method", "read", "path_len", "hashed")
+    def __init__(self, name, read=None):
+        self.name = name
+        self.split = name.split(".") # memory hungry but faster
+        self.as_class_method = (self.split[0], ".".join(self.split[1:]))
+        self.read = read
+        self.path_len = len(self.split)
+        self.hashed = hash(name)
+        # read can be
+        # norm = normal variable read
+        # spec = special variable read
+        # None = treat as a normal string
+    def startswith(self, other):
+        return self.name.startswith(other)
+    def endswith(self, other):
+        return self.name.endswith(other)
+    def __getitem__(self, other):
+        return self.name.__getitem__(other)
+    def __eq__(self, other):
+        return self.name == other
+    def __ne__(self, other):
+        return self.name != other
+    def __hash__(self):
+        return self.hashed
+    def __mul__(self, other):
+        return self.name * other
+    def __add__(self, other):
+        return self.name + other
+    def __contains__(self, other):
+        return other in self.name
+    def __repr__(self):
+        if self.read:
+            return f"<{self.name}-{self.read}>"
+        else:
+            return self.name
+
 class Expression(list):
     def __hash__(self):
         return hash(str(self))
