@@ -62,6 +62,10 @@ INC_EXT = INC_EXT_BUILTIN.copy()
 
 INCREMENTS = INC_EXT
 
+INC_NSCOPE = {
+    "fn", "method"
+}
+
 # methods where they depend on
 # runtime but are unclear
 # for example

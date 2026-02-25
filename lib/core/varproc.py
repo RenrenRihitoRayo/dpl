@@ -230,6 +230,21 @@ def rget(dct, full_name, default=constants.nil, meta=False, resolve=False):
     return default
 
 
+def rexists(dct, full_name):
+    if "." not in full_name:
+        return full_name.name in dct
+    last = full_name.path_len
+    node = dct
+    for pos, name in enumerate(full_name.split, 1):
+        if pos != last and isinstance(node[name], dict):
+            node = node[name]
+        elif pos == last and name in node:
+            return True
+        else:
+            return False
+    return False
+
+
 def rpop(dct, full_name, default=constants.nil):
     "Pop a variabletemp"
     if "." not in full_name:

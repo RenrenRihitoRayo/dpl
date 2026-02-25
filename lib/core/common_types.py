@@ -33,15 +33,14 @@ class ID:
     def __contains__(self, other):
         return other in self.name
     def __repr__(self):
-        if self.read:
-            return f"<{self.name}-{self.read}>"
-        else:
-            return self.name
+        if self.read == "norm": return f":{self.name}"
+        if self.read == "spec": return f"?:{self.name}"
+        return self.name
 
 class Expression(list):
     def __hash__(self):
         return hash(str(self))
-    def __str__(self):
+    def __repr__(self):
         string = ""
         for i in self:
             if isinstance(i, CallShortened):
@@ -55,14 +54,6 @@ class Expression(list):
                     read = ""
                 string += f" {read}{i.name}"
             elif not isinstance(i, str):
-                string += " "+repr(i)
-            else:
-                string += f' {i!r}' if any(c in i for c in "\n\t ") else f" {repr(i)[1:-1]}"
-        return f"[{string.strip()}]"
-    def __repr__(self):
-        string = ""
-        for i in self:
-            if not isinstance(i, str):
                 string += " "+repr(i)
             else:
                 string += f' {i!r}' if any(c in i for c in "\n\t ") else f" {repr(i)[1:-1]}"

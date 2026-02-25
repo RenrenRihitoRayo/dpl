@@ -254,6 +254,7 @@ fmt_format = fmt.format
 fmt_old_format = fmt.old_format
 fmt.ID = ID
 rget = varproc.rget
+rexists = varproc.rexists
 get_debug = varproc.get_debug
 
 execute_code = None  # to be set by py_parser
@@ -678,15 +679,13 @@ def expr_runtime(frame, arg):
         return evaluate(frame, arg)
     elif isinstance(arg, ID):
         if arg.read == "norm":
-            v = rget(frame[-1], arg, default=None)
-            if v is None:
-                v = rget(frame[0], arg)
-            return v
+            if rexists(frame[-1], arg):
+                return rget(frame[-1], arg)
+            return rget(frame[0], arg)
         elif arg.read == "spec":
-            v = rget(frame[-1], arg, default=None, meta=True)
-            if v is None:
-                v = rget(frame[0], arg, meta=True)
-            return v
+            if rexists(frame[-1], arg):
+                return rget(frame[-1], arg, meta=True)
+            return rget(frame[0], arg, meta=True)
     elif isinstance(arg, InterpolatedString):
         text = arg.s
         return fmt_format(text, frame, expr_fn=lambda text, _: handle_in_string_expr(text, frame))
@@ -709,17 +708,12 @@ def my_range(start, end):
 def is_static(code, env=None):
     env = env or [ShrunkFrame()]
     for i in code:
-        if isinstance(i, Expression) and len(i) == 3 and i[0] == "call::static":
-            if not is_static(i[2]):
-                name, args = i[1:]
-                i.clear()
-                i.extend(["call", f":_global.{name}", args])
-        elif isinstance(i, list):
+        if isinstance(i, list):
             if not is_static(i):
                 return False
-        elif isinstance(i, ID) and i.read is not None and rget(env[-1], i, default=None) is None:
+        elif isinstance(i, ID) and i.read is not None and not rexists(env[-1], i):
             return False
-        elif isinstance(i, ID) and i.read is not None and rget(env[0], i, default=None) is None:
+        elif isinstance(i, ID) and i.read is not None and rexists(env[0], i):
             return False
         elif i in RT_EXPR:
             return False
@@ -727,8 +721,24 @@ def is_static(code, env=None):
             return False
     return True
 
+def is_const(code, env=None):
+    env = env or [ShrunkFrame()]
+    for i in code:
+        if isinstance(i, list):
+            if not is_const(i):
+                return False
+        elif isinstance(i, ID) and i.read is not None:
+            if not (rexists(env[0], i) or rexists(env[-1], i)):
+                return False
+        elif i in RT_EXPR:
+            return False
+        elif isinstance(i, InterpolatedString):
+            return False
+    return True
 
-def to_static(code, env=None):
+
+def to_static(code, env=None, no_go=None):
+    no_go = no_go or []
     env = env or [ShrunkFrame()]
     t = None
     if len(code) == 3 and isinstance(code, Expression) and code[0] == "lazy":
@@ -741,13 +751,11 @@ def to_static(code, env=None):
             if is_static(i):
                 value = evaluate(env, to_static(i, env=env))
                 code[pos] = value
-            # elif len(i) == 3 and i[1] == "*" and i[2] == 2:
-            #     code[pos] = Expression([i[0], "<<", 2])
             else:
                 code[pos] = to_static(i, env=env)
-        elif isinstance(i, ID) and i.read is not None and rget(env[-1], i, default=None) is not None:
+        elif isinstance(i, ID) and i.read and i not in no_go and rexists(env[-1], i):
             code[pos] = rget(env[-1], i)
-        elif isinstance(i, ID) and i.read is not None and rget(env[0], i, default=None) is not None:
+        elif isinstance(i, ID) and i.read and i not in no_go and rexists(env[0], i):
             code[pos] = rget(env[0], i)
     return code if t is None else t(code)
 

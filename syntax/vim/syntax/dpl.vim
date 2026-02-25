@@ -5,7 +5,9 @@
 syntax match dplIncludeDirective "&\(define_error\|set_name\|extend\|whatever\|file\|version\|embed\|embed_binary\|\(warn\|dead\)_code_\(disable\|enable\)\|def_fn_\(enable\|disable\)\|save_config\|include\|use\|includec\|extend\|set\|use:luaj\)"
 
 " Keywords
-syntax keyword dplKeyword fallthrough as in is not and or export catch safe stop skip pass help DEFINE_ERROR pycatch ecatch raise local setref set cmd use_luaj use dec inc on_new_scope on_pop_scope return happy_assert assert
+" syntax keyword dplKeyword 
+
+syntax match dplKeyword "\<\(fallthrough\|set::static\|as\|in\|is\|not\|and\|or\|export\|catch\|safe\|stop\|skip\|pass\|help\|DEFINE_ERROR\|pycatch\|ecatch\|raise\|local\|setref\|set\|cmd\|use_luaj\|use\|dec\|inc\|on_new_scope\|on_pop_scope\|return\|happy_assert\|assert\|set::static\)\>"
 
 " - Keywords that indent
 syntax match keyword_indent "\<\(tuple\|dict\|list\|keyword_indent\|string\|string::static\|switch::static\|fn::static\|fn\|if\|match\|case\|with\|default\|module\|while\|ifmain\|method\|switch\|begin\|enum\|loop\|for\)\>"

@@ -208,22 +208,26 @@ def process_inline(args, inline_fn):
         res.append((line_pos, module_name, ins, m, to_static(nargs) if varproc.meta_attributes["preprocessing_flags"]["EXPRESSION_FOLDING"] else nargs))
     return res
 
-def process_blocks(frame, code):
+scope_pop = []
+def process_blocks(frame, code, no_go=None):
+    no_go = no_go or []
     pos = 0
     res = []
     while pos < len(code):
         entire_line = [lpos, fpos, ins, body, args] = code[pos]
         argc = len(args)
+        if ins in INC_NSCOPE:
+            nscope(frame)
         if args and preprocessing_flags["EXPRESSION_FOLDING"]:
             entire_line = list(entire_line)
             try:
-                args = to_static(args, env=frame)
+                args = to_static(args, env=frame, no_go=no_go)
                 entire_line[4] = args
             except Exception as e:
                 error.error(lpos, fpos, traceback.format_exc() + "to_static couldnt process")
                 exit(error.PREPROCESSING_ERROR)
             entire_line = tuple(entire_line)
-
+        
         if ins == "set::static" and argc == 3 and args[1] == "=":
             name, _, value = process_args(frame[-1], args)
             rset(frame[-1], name, value)
@@ -232,7 +236,12 @@ def process_blocks(frame, code):
         
         if ins == "set" and argc == 3 and args[1] == "=":
             name = process_arg(frame[-1], args[0])
-            if rget(frame[-1], name, default=None) is not None:
+            if rexists(frame[-1], name):
+                rpop(frame[-1], name)
+        
+        if ins == "for" and argc == 3 and argc[1] == "in":
+            name = process_arg(frame[-1], args[0])
+            if rexists(frame[-1], name):
                 rpop(frame[-1], name)
 
         if ins in INC_TERMINAL:
@@ -241,6 +250,7 @@ def process_blocks(frame, code):
             else:
                 res.append(entire_line)
             break
+
         if ins in INC_EXT and not body:
             temp = get_block(code, pos)
             if temp is None:
@@ -270,9 +280,13 @@ def process_blocks(frame, code):
             if block and ins in ("for", "loop", "fn") and block[0][2] in INC_TERMINAL and \
             preprocessing_flags["DEAD_CODE_ELLIMIMATION"]:
                 if ins == "fn" and block[-1][2] == "return" and block[-1][4]:
-                    if is_static(block[-1][4]):
-                        error.warning(lpos, fpos, f"In function {args[0]}, a constant wrapped by a function is not good practice. Use variables instead. In the future this will be an error.")
-                    res.append((lpos, fpos, ins, process_blocks(frame, block), args))
+                    if is_const(block[-1][4], frame):
+                        error.warning(lpos, fpos, f"In function {args[0]} `return {block[-1][4]}`, a constant wrapped by a function is not good practice. Use variables instead. In the future this will be an error.")
+                    no_go = []
+                    for arg in args[1]: no_go.append(arg[9:]) if arg.startswith("variadic:") else no_go.append(arg)
+                    res.append((lpos, fpos, ins, process_blocks(frame, block, no_go=no_go), args))
+                    if ins in INC_NSCOPE:
+                        pscope(frame)
                     pos += 1
                     continue
 
@@ -294,7 +308,11 @@ def process_blocks(frame, code):
                 elif ins == "fn":
                     error.warning(lpos, fpos, f"function {args[0]} would not be defined!")
             else:
-                res.append((lpos, fpos, ins, process_blocks(frame, block), args))
+                no_go = []
+                for arg in args[1]: no_go.append(arg[9:]) if arg.startswith("variadic:") else no_go.append(arg)
+                res.append((lpos, fpos, ins, process_blocks(frame, block, no_go=no_go), args))
+                if ins in INC_NSCOPE:
+                    pscope(frame)
         else:
             res.append(entire_line)
         pos += 1
@@ -1377,7 +1395,7 @@ def execute(code, frame):
                 continue
         # MISC
         if ins == "return":  # Return to the latched names
-            if (latched_names := lrget(frame[-1], "_returns")) != constants.nil:
+            if (latched_names := lrget(frame[-1], ID("_returns"))) != constants.nil:
                 if latched_names == "_":
                     return error.STOP_FUNCTION
                 if len(latched_names) == 1:
