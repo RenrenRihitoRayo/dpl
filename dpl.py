@@ -447,7 +447,7 @@ Pipe line:
                     print("Done!")
         case ["dump-hlir", file]:
             file = get_start_path_raw(file)
-            with open(os.path.basename(file)+".hlir", "w") as output:
+            with open(os.path.basename(file)+".from-hlir", "w") as output:
                 varproc.meta_attributes["internal"]["main_path"] = (
                     os.path.dirname(os.path.abspath(file)) + os.sep
                 )
