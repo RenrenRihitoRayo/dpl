@@ -1,0 +1,37 @@
+&enable:BYTECODE_COMMENTS
+&use {std/text_io.py}
+
+set::static test = 90
+
+fn what1()
+    return :test
+end
+
+set test = 80
+fn what2()
+    return :test
+end
+
+START_TIME
+io:println(what1!())
+STOP_TIME
+LOG_TIME "optimized (w call overhead)"
+
+START_TIME
+io:println(what2!())
+STOP_TIME
+LOG_TIME "runtime (w call overhead)"
+
+set::static test1 = 90
+
+START_TIME
+pass :test1
+STOP_TIME
+LOG_TIME "folded (direct)"
+
+set test1 = 80
+
+START_TIME
+pass :test1
+STOP_TIME
+LOG_TIME "runtime read (direct)"

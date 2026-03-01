@@ -32,6 +32,10 @@ except ImportError:
 ARGV = sys.argv
 ARGC = len(ARGV)
 
+INC_RUNTIME_IGNORED = {
+    "set::static"
+}
+
 # only one increments
 INC_EXT_BUILTIN = {
     "match",

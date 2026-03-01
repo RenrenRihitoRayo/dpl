@@ -62,7 +62,7 @@ class Expression(list):
 class CallShortened(Expression):
     def __repr__(self):
         _, name, args = self
-        return f"[{name.name}!({repr(args)[1:-1]})]"
+        return f"{name.name}!({repr(args)[1:-1]})"
 
 class Lazy(list):
     def __str__(self):

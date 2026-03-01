@@ -10,7 +10,7 @@ from . import module_handling as mod_s
 import time
 import os
 from . import utils
-from .info import SYS_OS_NAME, SYS_ARCH, SYS_INFO, EXE_FORM, SYS_MACH_INFO, SYS_PROC, SYS_OS_NAME, unique_imports, SYS_MACH, UNIX, imported, LINUX_DISTRO, LINUX_VERSION, LINUX_CODENAME, program_flags, INC_TERMINAL, INC_NSCOPE
+from .info import SYS_OS_NAME, SYS_ARCH, SYS_INFO, EXE_FORM, SYS_MACH_INFO, SYS_PROC, SYS_OS_NAME, unique_imports, SYS_MACH, UNIX, imported, LINUX_DISTRO, LINUX_VERSION, LINUX_CODENAME, program_flags, INC_TERMINAL, INC_NSCOPE, INC_RUNTIME_IGNORED
 
 error.error_setup_meta(meta_attributes)
 

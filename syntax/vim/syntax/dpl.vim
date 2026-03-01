@@ -2,7 +2,7 @@
 " Save as ~/.vim/syntax/dpl.vim
 
 " Directives
-syntax match dplIncludeDirective "&\(define_error\|set_name\|extend\|whatever\|file\|version\|embed\|embed_binary\|\(warn\|dead\)_code_\(disable\|enable\)\|def_fn_\(enable\|disable\)\|save_config\|include\|use\|includec\|extend\|set\|use:luaj\)"
+syntax match dplIncludeDirective "&\(define_error\|set_name\|extend\|whatever\|file\|version\|embed\|embed_binary\|save_config\|include\|includec\|extend\|set\|use:luaj\|use:c\|use\|enable:\)"
 
 " Keywords
 " syntax keyword dplKeyword 

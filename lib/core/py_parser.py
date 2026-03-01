@@ -228,8 +228,14 @@ def process_blocks(frame, code, no_go=None):
                 exit(error.PREPROCESSING_ERROR)
             entire_line = tuple(entire_line)
         
+        if preprocessing_flags["BYTECODE_COMMENTS"] and ins in INC_RUNTIME_IGNORED:
+            res.append(("internal", "::internal::", "pass", None, [f"`{ins} {repr(Expression(args))[1:-1]}` was called here!"]))
+
         if ins == "set::static" and argc == 3 and args[1] == "=":
             name, _, value = process_args(frame[-1], args)
+            if rexists(frame[-1], name):
+                error.error(lpos, fpos, f"Static variable {name} was reset, maybe use set if {name} is supposedly dynamic!")
+                raise error.DPLError(error.PREPROCESSING_ERROR)
             rset(frame[-1], name, value)
             pos += 1
             continue
@@ -239,7 +245,7 @@ def process_blocks(frame, code, no_go=None):
             if rexists(frame[-1], name):
                 rpop(frame[-1], name)
         
-        if ins == "for" and argc == 3 and argc[1] == "in":
+        if (ins == "for" or ins == "rfor") and argc == 3 and argc[1] == "in":
             name = process_arg(frame[-1], args[0])
             if rexists(frame[-1], name):
                 rpop(frame[-1], name)
@@ -281,7 +287,7 @@ def process_blocks(frame, code, no_go=None):
             preprocessing_flags["DEAD_CODE_ELLIMIMATION"]:
                 if ins == "fn" and block[-1][2] == "return" and block[-1][4]:
                     if is_const(block[-1][4], frame):
-                        error.warning(lpos, fpos, f"In function {args[0]} `return {block[-1][4]}`, a constant wrapped by a function is not good practice. Use variables instead. In the future this will be an error.")
+                        error.warning(lpos, fpos, f"In function {args[0]} `return {block[-1][4] if len(block[-1][4]) > 1 else block[-1][4][0]}`, a constant wrapped by a function is not good practice. Use variables instead. In the future this will be an error.")
                     no_go = []
                     for arg in args[1]: no_go.append(arg[9:]) if arg.startswith("variadic:") else no_go.append(arg)
                     res.append((lpos, fpos, ins, process_blocks(frame, block, no_go=no_go), args))
@@ -359,6 +365,8 @@ def process_code(fcode, name="__main__"):
             args = nest_args(exprs_preruntime(args))
             args = process_args(nframe, args)
             argc = len(args)
+            if preprocessing_flags["BYTECODE_COMMENTS"]:
+                res.append((lpos, name, "pass", None, [f"`{line}` was called here!"]))
             if ins == "set_name" and argc == 1:
                 name = str(args[0])
             elif ins == "define_error" and argc == 1:

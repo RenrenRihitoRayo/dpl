@@ -69,6 +69,7 @@ preprocessing_flags = ShrunkFrame({
     # this makes it possible to investigate what may have happened.
     # on exit the error will propagate as the exit code
     "FOR_LOOP_SUBSTITUTION": constants.false,
+    "BYTECODE_COMMENTS": constants.false, # include preruntime instructions in the byetcode for debugging
     "_set_only_when_defined": constants.true,
 })
 

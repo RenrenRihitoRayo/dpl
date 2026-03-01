@@ -40,6 +40,7 @@ ProgramNode
 ```
 '''
 
+from .common_types import Expression
 from . import serialize_dpl
 from . import info
 from . import py_parser
@@ -53,86 +54,78 @@ def set_main(main):
 
 def blockade(tokens):
     "Called blockade because it generates blocks. Blocking... blockades."
-    stack = [[]]
+    instructions = []
     for token in tokens:
-        line, _, ins, _ = token
-        if ins in info.INC_EXT:
-            new_list = []
-            if ins == "fn":
-                node = FunctionNode(token)
-            elif ins == "method":
-                node = MethodNode(token)
-            elif ins == "loop":
-                node = LoopNode(token)
-            elif ins == "for":
-                node = ForLoopNode(token)
-            elif ins == "if":
-                node = IfNode(token)
-            elif ins == "match":
-                node = MatchNode(token)
-            elif ins == "case":
-                node = CaseNode(token)
-            elif ins == "with":
-                node = WithNode(token)
-            elif ins == "default":
-                node = DefaultNode(token)
-            elif ins == "switch":
-                node = SwitchNode(token)
-            elif ins == "switch::static":
-                node = SwitchNode(token)
-            elif ins == "while":
-                node = WhileLoopNode(token)
-            elif ins == "string":
-                node = StringNode(token)
-            elif ins == "dict":
-                node = DictNode(token)
-            elif ins == "list":
-                node = ListNode(token)
-            else:
-                node = InstructionNode(token)
-            stack[-1].append(node)
-            node.body = new_list
-            stack[-1].append(new_list)
-            stack.append(new_list)
-        elif ins in info.DEC:
-            if len(stack) == 1:
-                raise ValueError(f"Mismatched blocks!\nLine {line}")
-            stack.pop()
-            stack[-1][-1] = BodyNode(stack[-1][-1])
+        line, _, ins, body, args = token
+        if ins == "fn":
+            node = FunctionNode(token)
+        elif ins == "method":
+            node = MethodNode(token)
+        elif ins == "loop":
+            node = LoopNode(token)
+        elif ins == "for":
+            node = ForLoopNode(token)
+        elif ins == "if":
+            node = IfNode(token)
+        elif ins == "match":
+            node = MatchNode(token)
+        elif ins == "case":
+            node = CaseNode(token)
+        elif ins == "with":
+            node = WithNode(token)
+        elif ins == "default":
+            node = DefaultNode(token)
+        elif ins == "switch":
+            node = SwitchNode(token)
+        elif ins == "switch::static":
+            node = SwitchNode(token)
+        elif ins == "while":
+            node = WhileLoopNode(token)
+        elif ins == "string":
+            node = StringNode(token)
+        elif ins == "dict":
+            node = DictNode(token)
+        elif ins == "list":
+            node = ListNode(token)
+        elif ins == "set":
+            node = AssignNode(token)
+        elif ins == "del":
+            node = UnassignNode(token)
+        elif ins == "use":
+            node = UseNode(token)
+        elif ins == "use_luaj":
+            node = UseLuaNode(token)
+        elif ins == "catch":
+            node = CatchNode(token)
+        elif ins == "return":
+            node = ReturnNode(token)
+        elif ins == "new":
+            node = NewNode(token)
+        elif ins == "tuple":
+            node = TupleNode(token)
+        elif ins == "use_c":
+            node = UseCNode(token)
+        elif args and isinstance(args[0], tuple | list):
+            node = CallNode(token)
         else:
-            if ins == "set":
-                node = AssignNode(token)
-            elif ins == "del":
-                node = UnassignNode(token)
-            elif ins == "use":
-                node = UseNode(token)
-            elif ins == "use_luaj":
-                node = UseLuaNode(token)
-            elif ins == "catch":
-                node = CatchNode(token)
-            elif ins == "return":
-                node = ReturnNode(token)
-            elif ins == "new":
-                node = NewNode(token)
-            else:
-                node = InstructionNode(token)
-            stack[-1].append(node)
-    if len(stack) > 1:
-        raise ValueError(f"Mismatched parentheses: {tokens}")
-    return stack[0]
+            node = InstructionNode(token)
+        instructions.append(node)
+    return instructions
 
-def gen_ast_from_str(code):
+def gen_ast_from_str(code, file=None):
     return [ProgramNode(
         blockade(
             py_parser.process_code(code)["code"]
-        )
+        ),
+        file
     )]
 
-def gen_ast_from_hlir(code):
+def gen_ast_from_hlir(code, file=None):
     return [ProgramNode(
         blockade(
             code
-        )
+        ),
+        file
     )]
 
 def gen_ast_from_cdpl(file):
@@ -157,51 +150,16 @@ def walk(tree, depth=0, file=sys.stdout):
     for ins in tree:
         match ins:
             case ProgramNode(instructions):
-                print("  "*depth + ins.node_type, file=file)
+                if ins.file:
+                    print("  "*depth + f"# ProgramNode `{ins.file}`", file=file)
+                else:
+                    print("  "*depth + f"# ProgramNode", file=file)
                 walk(ins, depth+1, file=file)
-            case LoopNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, iterations: {ins.iterations!r}", file=file)
-                walk(ins.body, depth+1, file=file)
-            case WhileLoopNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, condition: {ins.condition!r}", file=file)
-                walk(ins.body, depth+1, file=file)
-            case ForLoopNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, item: {ins.item_name}, iterable: {ins.iterable!r}", file=file)
-                walk(ins.body, depth+1, file=file)
-            case IfNode() | CaseNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, condition: {ins.condition!r}", file=file)
-                walk(ins.body, depth+1, file=file)
-            case WithNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, constant: {ins.constant!r}", file=file)
-                walk(ins.body, depth+1, file=file)
-            case MatchNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, value: {ins.match_value!r}", file=file)
-                walk(ins.body, depth+1, file=file)
-            case SwitchNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, value: {ins.switch_value!r}", file=file)
-                walk(ins.body, depth+1, file=file)
-            case AssignNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, name: {ins.variable_name}, value: {ins.variable_value!r}", file=file)
-            case MethodNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, name: {ins.function_name}, object: {ins.object_root}", file=file)
-                walk(ins.body, depth+1, file=file)
-            case FunctionNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, name: {ins.function_name}", file=file)
-                walk(ins.body, depth+1, file=file)
-            case UseNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, module: {ins.module}", file=file)
-                if ins.alias:
-                    print("  "*(depth+1) + f"alias: {ins.alias}", file=file)
-            case UseLuaNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, module: {ins.module}", file=file)
-            case UnassignNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, name: {ins.variable_name}", file=file)
-            case ReturnNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, name: {ins.return_expr}", file=file)
-            case NewNode():
-                print("  "*depth + f"line: {ins.line_pos}, {ins.instruction}, object: {ins.object}, name: {ins.instance_name}", file=file)
-            case InstructionNode():
-                print("  "*depth + f"line: {ins.line_pos}, ins: {ins.instruction}", file=file)
+            case _:
+                print("  "*depth + f"{ins}", file=file)
+                if ins.body:
+                    walk(ins.body, depth+1, file=file)
+                    print("  "*depth + "end", file=file)
 
 class ASTNode:
     __match_args__ = ("name", "value")
@@ -237,25 +195,23 @@ class ASTNode:
 
 class ProgramNode(ASTNode):
     __match_args__ = ("value",)
-    def __init__(self, value):
+    def __init__(self, value, file=None):
         super().__init__("ProgramNode", value)
+        self.file = file
 
 class InstructionNode(ASTNode):
     __match_args__ = ("value",)
     def __init__(self, value):
-        self.line_pos, self.source_file, self.instruction, self.args = value
+        self.line_pos, self.source_file, self.instruction, self.body, self.args = value
+        if self.body:
+            self.body = blockade(self.body)
         if self.source_file == "__main__":
             self.source_file = MAIN_FILE
         super().__init__("InstructionNode", value)
-
-class CatchNode(InstructionNode):
-    __match_args__ = ("value",)
-    def __init__(self, value):
-        super().__init__(value)
-        self.node_type = "CatchNode"
-        self.catch_list = self.args[0]
-        self.function_name = self.args[1]
-        self.function_args = self.args[2]
+    def __repr__(self):
+        if self.args:
+            return f"{self.instruction} {repr(Expression(self.args))[1:-1]} # {self.__class__.__name__} in line {self.line_pos} @ {self.source_file}"
+        return f"{self.instruction} # {self.__class__.__name__} in line {self.line_pos} @ {self.source_file}"
 
 class ReturnNode(InstructionNode):
     __match_args__ = ("value",)
@@ -269,7 +225,7 @@ class DictNode(InstructionNode):
     def __init__(self, value):
         super().__init__(value)
         self.node_type = "DictNode"
-        self.name = self.args[0] # can be a variable
+        self.name = self.args[0] if self.args else "???" # can be a variable
         self.is_object = self.args[0].startswith(":")
         self.body = None
 
@@ -278,7 +234,7 @@ class ListNode(InstructionNode):
     def __init__(self, value):
         super().__init__(value)
         self.node_type = "ListNode"
-        self.name = self.args[0] # can be a variable
+        self.name = self.args[0] if self.args else "???" # can be a variable
         self.is_object = self.args[0].startswith(":")
         self.body = None
 
@@ -287,7 +243,15 @@ class StringNode(InstructionNode):
     def __init__(self, value):
         super().__init__(value)
         self.node_type = "StringNode"
-        self.name = self.args[0]
+        self.name = self.args[0] if self.args else "???"
+        self.body = None
+
+class TupleNode(InstructionNode):
+    __match_args__ = ("value",)
+    def __init__(self, value):
+        super().__init__(value)
+        self.node_type = "TupleNode"
+        self.name = self.args[0] if self.args else "???"
         self.body = None
 
 class FunctionNode(InstructionNode):
@@ -304,7 +268,6 @@ class FunctionNode(InstructionNode):
                 function_tags[name] = value
             else:
                 function_tags[item] = True
-        self.body = None
 
 class MethodNode(FunctionNode):
     __match_args__ = ("value",)
@@ -323,6 +286,17 @@ class MethodNode(FunctionNode):
                 function_tags[item] = True
         self.body = None
 
+class CallNode(InstructionNode):
+    __math_args__ = ("value",)
+    def __init__(self, value):
+        super().__init__(value)
+        self.node_type = "CallNode"
+        self.function_name = self.instruction
+        self.args_list, = self.args
+
+    def __repr__(self):
+        return f"{self.function_name}({repr(Expression(self.args_list))[1:-1]}) # CallNode in line {self.line_pos} @ {self.source_file}"
+
 class UseNode(InstructionNode):
     __match_args__ = ("value",)
     def __init__(self, value):
@@ -340,6 +314,14 @@ class UseLuaNode(InstructionNode):
         super().__init__(value)
         self.node_type = "UseLuaNode"
         self.module = self.args[0]
+
+class UseCNode(InstructionNode):
+    __match_args__ = ("value",)
+    def __init__(self, value):
+        super().__init__(value)
+        self.node_type = "UseCNode"
+        self.module = self.args[0]
+
 
 class AssignNode(InstructionNode):
     __match_args__ = ("value",)

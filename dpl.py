@@ -391,6 +391,7 @@ def handle_args():
                    s, u = utils.convert_sec(END)
                    print(f"DEBUG: Elapsed time: {s}{u}")
             except error.DPLError as e:
+                rec(e.code)
                 exit(e.code)
         case ["dump-llir", file]:
             if not has_pp2:
@@ -469,9 +470,9 @@ Code format: (
                     print("Done!")
         case ["dump-ast", file]:
             file = get_start_path_raw(file)
-            with open(f"{file}.dplad", "w") as output:
+            with open(f"{file[:-4]}.from-ast.dpl", "w") as output:
                 with open(file) as input:
-                    ast_gen.walk(ast_gen.gen_ast_from_str(input.read()), file=output)
+                    ast_gen.walk(ast_gen.gen_ast_from_str(input.read(), file=file), file=output)
         case ["dump-ast-cdpl", file]:
             file = get_start_path_raw(file)
             with open(f"{file}.dplad", "w") as output:
